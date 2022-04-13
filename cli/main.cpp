@@ -3,6 +3,7 @@
 #include <iostream>
 
 int main(int argc, const char* argv[]) {
-    log::trace() << "Test" << std::endl;
+    logger::init("./log.txt");
+    logger::error() << "Test" << std::endl;
     return 101;
 }

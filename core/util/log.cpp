@@ -2,10 +2,12 @@
 
 #include <fstream>
 #include <ios>
+#include <memory>
 
+std::unique_ptr<std::ostream> logger::_detail::log_stream{nullptr};
+std::mutex logger::_detail::log_lock{};
 
-void log::init(const char * const fname) {
-    std::ofstream* of = new std::ofstream(fname, std::ofstream::out);
-    log::_detail::log_stream = std::unique_ptr<std::ostream>(of);
+void logger::init(const char * const fname) {
+    logger::_detail::log_stream = std::make_unique<std::ofstream>(fname);
 }
 
