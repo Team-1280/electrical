@@ -15,7 +15,7 @@ include(FetchContent)
 
 add_subdirectory(core)
 
-if(FRONTEND STREQUAL "cli")
+if(FRONTEND STREQUAL  "cli")
     add_subdirectory(cli)
 elseif(FRONTEND STREQUAL "gui")
     message("gui frontend not yet implemented")
