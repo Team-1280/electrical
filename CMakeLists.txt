@@ -13,6 +13,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FetchContent)
 
+FetchContent_Declare(
+    nlohmann-json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
+)
+FetchContent_MakeAvailable(nlohmann-json)
+
 add_subdirectory(core)
 
 if(FRONTEND STREQUAL  "cli")

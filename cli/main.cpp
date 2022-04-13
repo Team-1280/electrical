@@ -4,6 +4,6 @@
 
 int main(int argc, const char* argv[]) {
     logger::init("./log.txt");
-    logger::error() << "Test" << std::endl;
+
     return 101;
 }

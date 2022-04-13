@@ -12,7 +12,6 @@
 #include <functional>
 #include <iomanip>
 
-
 namespace logger {
 
 /**
