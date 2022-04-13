@@ -40,7 +40,7 @@ extern std::mutex log_lock;
  * and writes it to the global log file in a thread-safe way upon destruction
  */
 template<LogLevel LVL> class LogBuf final {
-    static constexpr const char * const LVL_STR = "";
+    static const char * const LVL_STR;
 public:
     LogBuf() = default;
     LogBuf(const LogBuf&) = delete;
@@ -60,7 +60,7 @@ public:
 
     ~LogBuf() {
         std::lock_guard<std::mutex> lock{log_lock};
-        *log_stream << LVL_STR << ": " << ss.rdbuf() << std::endl;
+        (*log_stream) << LVL_STR << ": " << ss.rdbuf() << std::endl;
     }
 private:
     std::stringstream ss;
