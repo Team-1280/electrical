@@ -17,7 +17,13 @@ class Component {
 public:
     
 private:
+    //! @brief Hash of the ID string required in the component file
+    // used to reference the component type
     const id m_id;
+    //! @brief User-facing name of the component
+    std::string m_name;
+    //! @brief 
+    
 };
 
 }
