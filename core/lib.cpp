@@ -16,4 +16,13 @@ constexpr id fnv1a(const std::string_view s) {
     return hash;
 }
 
+id Component::s_id_count = 0;
+
+Component::Component(const json& val) {
+    this->m_id = s_id_count;
+    s_id_count += 1;
+
+    val["name"].get_to(this->m_name);
+}
+
 }
