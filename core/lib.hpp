@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <initializer_list>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -42,11 +43,11 @@ private:
 class LengthUnit {
 public:
     enum Unit: uint8_t {
-        Millimeters,
-        Centimeters,
-        Meters,
-        Inches,
-        Feet
+        Millimeters = 0,
+        Centimeters = 1,
+        Meters = 2,
+        Inches = 3,
+        Feet = 4
     };
     
     LengthUnit() = delete;
@@ -61,28 +62,16 @@ public:
      * @return A measurement in meters
      */
     constexpr inline double to_meters(const double val) const {
-        switch(this->m_u) {
-            case Unit::Millimeters: return val / 1000.;
-            case Unit::Centimeters: return val / 100.;
-            case Unit::Meters: return val;
-            case Unit::Inches: return val / 39.37;
-            case Unit::Feet: return val / 3.281;
-        }
+        return val / FACTORS[this->m_u]; 
     }
     
     /**
      * @brief Convert a measurement from meters to this unit
      * @param m A measurement in meters
-     * @return A measurement in our units
+     * @return A measurement in this units
      */
     constexpr inline double from_meters(const double m) const {
-        switch(this->m_u) {
-            case Unit::Millimeters: return m * 1000.;
-            case Unit::Centimeters: return m * 100.;
-            case Unit::Meters: return m;
-            case Unit::Inches: return m * 39.37;
-            case Unit::Feet: return m * 3.281;
-        }
+        return m * FACTORS[this->m_u]; 
     }
     
     /**
@@ -91,7 +80,7 @@ public:
      * @param measure The measure to convert from our unit to `unit`
      */
     constexpr inline double conv(const double measure, const LengthUnit unit) const {
-        return unit.from_meters(this->to_meters(measure));
+        return measure / FACTORS[this->m_u] * FACTORS[unit];
     }
     
     /**
@@ -101,6 +90,13 @@ public:
      */
     LengthUnit(const std::string_view unit_str);
 private:
+    static constexpr double FACTORS[5] = {
+        1000.,
+        100.,
+        1.,
+        39.37,
+        3.281
+    };
     Unit m_u;
 };
 
@@ -117,6 +113,9 @@ public:
     constexpr Length(const LengthUnit unit, const double measure) : m_unit{unit}, m_len{measure} {}
     constexpr Length(const Length& other) : m_len{other.m_len}, m_unit{other.m_unit} {}
     
+    /**
+     * @brief Create a new length from a length of a different unit
+     */
     constexpr Length(const Length& other, const LengthUnit unit) : 
         m_unit{unit}, 
         m_len{other.m_unit.conv(other.m_len, unit)} {}
@@ -128,6 +127,18 @@ private:
     const LengthUnit m_unit;
     /** Measurement in the stored unit */
     double m_len;
+};
+
+/**
+ * @brief A 2D point on the workspace plane
+ */
+struct Point {
+public:
+    
+    constexpr Point(const Length (&list)[2]) : x{list[0]}, y{list[1]} {}
+
+    Length x;
+    Length y;
 };
 
 
