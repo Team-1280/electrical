@@ -51,20 +51,47 @@ public:
     
     LengthUnit() = delete;
     constexpr LengthUnit(Unit u) : m_u{u} {}
+    constexpr LengthUnit(const LengthUnit& other) : m_u{other.m_u} {}
     constexpr LengthUnit(LengthUnit&& u) : m_u{u.m_u} {}
     
     constexpr operator Unit() const { return this->m_u; }
     /**
      * @brief Convert a length in these units to a length in meters
+     * @param val A length measurement in our units
+     * @return A measurement in meters
      */
-    constexpr inline double to_meters(double val) const {
+    constexpr inline double to_meters(const double val) const {
         switch(this->m_u) {
-            case Unit::Millimeters: return val * 1000.;
-            case Unit::Centimeters: return val * 100.;
+            case Unit::Millimeters: return val / 1000.;
+            case Unit::Centimeters: return val / 100.;
             case Unit::Meters: return val;
             case Unit::Inches: return val / 39.37;
             case Unit::Feet: return val / 3.281;
         }
+    }
+    
+    /**
+     * @brief Convert a measurement from meters to this unit
+     * @param m A measurement in meters
+     * @return A measurement in our units
+     */
+    constexpr inline double from_meters(const double m) const {
+        switch(this->m_u) {
+            case Unit::Millimeters: return m * 1000.;
+            case Unit::Centimeters: return m * 100.;
+            case Unit::Meters: return m;
+            case Unit::Inches: return m * 39.37;
+            case Unit::Feet: return m * 3.281;
+        }
+    }
+    
+    /**
+     * @brief Convert a measure in this unit into different unit
+     * @param unit The units to convert to
+     * @param measure The measure to convert from our unit to `unit`
+     */
+    constexpr inline double conv(const double measure, const LengthUnit unit) const {
+        return unit.from_meters(this->to_meters(measure));
     }
     
     /**
@@ -82,13 +109,25 @@ private:
  */
 struct Length {
 public:
-    Length(const LengthUnit unit, const double measure) {
-        
-    }
-
-    Length(Length&& other) : m_meters{other.m_meters} {} 
+    /**
+     * @brief Create a new length of a unit 
+     * @param unit The units (persistent)
+     * @param measure Measure of length in the given unit
+     */
+    constexpr Length(const LengthUnit unit, const double measure) : m_unit{unit}, m_len{measure} {}
+    constexpr Length(const Length& other) : m_len{other.m_len}, m_unit{other.m_unit} {}
+    
+    constexpr Length(const Length& other, const LengthUnit unit) : 
+        m_unit{unit}, 
+        m_len{other.m_unit.conv(other.m_len, unit)} {}
 private:
-    double m_meters;
+    /** 
+     * Saved unit to ensure user-entered lengths are kept in their
+     * original units instead of being converted to meters
+     */
+    const LengthUnit m_unit;
+    /** Measurement in the stored unit */
+    double m_len;
 };
 
 
@@ -100,7 +139,7 @@ class Footprint {
 public:
     
 private:
-
+    
 };
 
 }
