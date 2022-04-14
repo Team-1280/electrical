@@ -48,12 +48,12 @@ public:
     LogBuf& operator=(LogBuf&&) = delete;
     LogBuf(LogBuf&& other) : ss(std::move(other.ss)) {}
 
-    template<typename T> LogBuf& operator<<(const T& msg) {
+    template<typename T> inline LogBuf& operator<<(const T& msg) {
         ss << msg;
         return *this;
     }
 
-    LogBuf& operator<<(std::ostream& (*manip)(std::ostream&)) {
+    inline LogBuf& operator<<(std::ostream& (*manip)(std::ostream&)) {
 	    manip(ss);
 	    return *this;
     }
@@ -72,8 +72,8 @@ template<> constexpr const char * const LogBuf<LogLevel::Trace>::LVL_STR = "[TRA
 
 #ifdef DISABLE_TRACE
 template<> class LogBuf<LogLevel::Trace> final {
-    template<typename T> constexpr LogBuf& operator<<(T&& msg) { return *this; }
-    LogBuf& operator<<(std::ostream& (*manip)(std::ostream&)) { return *this; }
+    template<typename T> inline constexpr LogBuf& operator<<(T&& msg) { return *this; }
+    inline LogBuf& operator<<(std::ostream& (*manip)(std::ostream&)) { return *this; }
     ~LogBuf() {}
 };
 #endif

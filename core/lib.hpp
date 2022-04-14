@@ -1,5 +1,8 @@
 #pragma once
+#include <algorithm>
+#include <cctype>
 #include <cstdint>
+#include <map>
 #include <stdexcept>
 #include <string>
 #include <nlohmann/json.hpp>
@@ -54,7 +57,7 @@ public:
     /**
      * @brief Convert a length in these units to a length in meters
      */
-    constexpr inline double to_meters(double val) {
+    constexpr inline double to_meters(double val) const {
         switch(this->m_u) {
             case Unit::Millimeters: return val * 1000.;
             case Unit::Centimeters: return val * 100.;
@@ -69,16 +72,7 @@ public:
      * @throws std::invalid_argument if the passed unit string does not match any expected 
      * units
      */
-    LengthUnit(const std::string_view unit_str) {
-        if(unit_str.empty()) {
-            throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
-        }
-
-        char start = unit_str.at(0);
-        switch(start) {
-
-        }
-    }
+    LengthUnit(const std::string_view unit_str);
 private:
     Unit m_u;
 };
