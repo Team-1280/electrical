@@ -1,3 +1,5 @@
+#include <cmath>
+#include <charconv>
 #include <lib.hpp>
 
 static bool equal_ignore_case(const std::string_view a, const std::string_view b) {
@@ -26,61 +28,77 @@ constexpr id fnv1a(const std::string_view s) {
     return hash;
 }
 
-id Component::s_id_count = 0;
 
 LengthUnit::LengthUnit(const std::string_view unit_str) {
     if(unit_str.empty()) {
-            throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
-        }
-        
-        static const auto metric = [&](const char * const prefix, Unit unit) {
-            if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'm') {
-                this->m_u = unit;
-            } else if(unit_str.length() >= 6 && equal_ignore_case(unit_str.substr(0, 4), prefix)) {
-                if((unit_str.length() == 6 && std::tolower(unit_str.at(5)) == 'm') ||
-                    (unit_str.length() >= 10 && equal_ignore_case(unit_str.substr(5, 5), "meter"))
-                ) {
-                    this->m_u = unit;
-                }
-            } else {
-                throw std::invalid_argument("LengthUnit#LengthUnit called with invalid string");
-            }
-        };
-
-        char first = std::tolower(unit_str.at(0));
-        switch(first) {
-            case 'c': metric("centi", Unit::Centimeters); break;
-            case 'm': {
-                if(unit_str.length() >= 6 && equal_ignore_case(unit_str, "meter")) {
-                    this->m_u = Unit::Meters;
-                    break;
-                }
-                metric("milli", Unit::Millimeters); 
-            } break;
-            case 'i': {
-                if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'n' ||
-                    (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "inch"))
-                ) {
-                    this->m_u = Unit::Inches;
-                }
-            } break;
-            case 'f': {
-                if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 't' ||
-                    (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "feet"))
-                ) {
-                    this->m_u = Unit::Feet;
-                }
-            } break;
-        }
-            
-        throw std::invalid_argument("LengthUnit#LengthUnit(string) called with invalid string");
+        throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
     }
+        
+    static const auto metric = [&](const char * const prefix, Unit unit) {
+        if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'm') {
+            this->m_u = unit;
+        } else if(unit_str.length() >= 6 && equal_ignore_case(unit_str.substr(0, 4), prefix)) {
+            if((unit_str.length() == 6 && std::tolower(unit_str.at(5)) == 'm') ||
+                (unit_str.length() >= 10 && equal_ignore_case(unit_str.substr(5, 5), "meter"))
+            ) {
+                this->m_u = unit;
+            }
+        } else {
+            throw std::invalid_argument("LengthUnit#LengthUnit called with invalid string");
+        }
+    };
 
-Component::Component(const json& val) {
+    char first = std::tolower(unit_str.at(0));
+    switch(first) {
+        case 'c': metric("centi", Unit::Centimeters); break;
+        case 'm': {
+            if(unit_str.length() >= 6 && equal_ignore_case(unit_str, "meter")) {
+                this->m_u = Unit::Meters;
+                break;
+            }
+            metric("milli", Unit::Millimeters); 
+        } break;
+        case 'i': {
+            if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'n' ||
+                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "inch"))
+            ) {
+                this->m_u = Unit::Inches;
+            }
+        } break;
+        case 'f': {
+            if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 't' ||
+                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "feet"))
+            ) {
+                this->m_u = Unit::Feet;
+            }
+        } break;
+    }
+        
+    throw std::invalid_argument("LengthUnit#LengthUnit(string) called with invalid string");
+}
+
+Length::Length(const std::string_view str) {
+    size_t num_end = 0;
+    std::from_chars_result len_res =  std::from_chars(str.data(), str.data() + )
+    
+}
+
+Component::Component(const json& val, const id id) : m_id{id} {
     this->m_id = s_id_count;
     s_id_count += 1;
 
     val["name"].get_to(this->m_name);
+}
+
+constexpr Length Point::distance(const Point &other) const {
+    const LengthUnit units = this->x.m_unit;
+    return Length(
+        units,
+        std::sqrt(
+            std::pow(this->x.m_len - other.x.conv(units), 2) +
+            std::pow(this->y.m_len - other.y.conv(units), 2)
+        )
+    );
 }
 
 }

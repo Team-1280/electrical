@@ -8,6 +8,5 @@ int main(int argc, const char* argv[]) {
     json j;
     std::ifstream("../assets/components/test.json") >> j;
     model::Component a(j);
-    model::Point b{model::Length(model::LengthUnit::Centimeters, 2), model::Length(model::LengthUnit::Feet, 3)};
     return 101;
 }
