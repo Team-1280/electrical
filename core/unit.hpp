@@ -29,6 +29,10 @@ concept QuantityVal = requires(V v) {
     {v * std::declval<float>()} -> std::convertible_to<V>;
 };
 
+static_assert(QuantityVal<float>);
+static_assert(QuantityVal<double>);
+static_assert(QuantityVal<int>);
+
 template<typename T>
 concept SerializableToString = requires(T v) {
     std::constructible_from<const std::string_view>;
@@ -182,6 +186,7 @@ public:
 private:
     UnitVal m_u;
 };
+static_assert(Unit<LengthUnit>);
 
 using Length = Quantity<LengthUnit, float>;
 

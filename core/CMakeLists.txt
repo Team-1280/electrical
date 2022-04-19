@@ -2,6 +2,7 @@ set(
     SRC
     "lib.cpp"
     "unit.cpp"
+    "ser.cpp"
     "util/log.cpp"
 )
 
