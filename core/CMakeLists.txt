@@ -1,6 +1,8 @@
+cmake_minimum_required(VERSION 3.23)
 set(
     SRC
     "lib.cpp"
+    "unit.cpp"
     "util/log.cpp"
 )
 
