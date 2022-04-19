@@ -37,7 +37,7 @@ LengthUnit::LengthUnit(const std::string_view original_unit_str) {
     switch(first) {
         case 'c': metric("centi", UnitVal::Centimeters); break;
         case 'm': {
-            if(unit_str.length() >= 6 && equal_ignore_case(unit_str, "meter")) {
+            if(unit_str.length() == 1 || (unit_str.length() >= 6 && equal_ignore_case(unit_str, "meter"))) {
                 this->m_u = UnitVal::Meters;
                 break;
             }

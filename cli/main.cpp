@@ -7,6 +7,6 @@ int main(int argc, const char* argv[]) {
     
     json j;
     std::ifstream("../assets/components/test.json") >> j;
-    std::cout << model::Length{"12 in"}.to(model::LengthUnit::Feet).to_string() << std::endl;
+    std::cout << model::Component(j).to_json();
     return 101;
 }

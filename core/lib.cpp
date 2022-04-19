@@ -1,28 +1,82 @@
 #include <cmath>
 #include <lib.hpp>
 #include <stdexcept>
+
 namespace model {
 
-constexpr id FNV_PRIME = 1099511628211ULL;
-constexpr id FNV_OFFSET = 14695981039346656037ULL;
+constexpr std::uint64_t FNV_PRIME = 1099511628211ULL;
+constexpr std::uint64_t FNV_OFFSET = 14695981039346656037ULL;
 
 /**
  * @brief Compute the FNV-1A hash of the given string
  */
-constexpr id fnv1a(const std::string_view s) {
-    id hash = FNV_OFFSET;
+inline constexpr std::uint64_t fnv1a(const std::string_view s) {
+    std::uint64_t hash = FNV_OFFSET;
     for(char c : s) {
         hash = (hash * FNV_PRIME) ^ c;
     }
     return hash;
 }
 
+constexpr id::id(std::uint8_t const * str) {
+    this->m_n = FNV_OFFSET;
+    while(*str != 0) {
+        this->m_n = (this->m_n * FNV_PRIME) ^ *str;
+        str += 1;
+    }
+}
 
+constexpr id::id(const std::string_view str) {
+    this->m_n = FNV_OFFSET;
+    for(std::uint8_t c : str) {
+        this->m_n = (this->m_n * FNV_PRIME) ^ c;
+    }
+}
 
+Footprint::Footprint(const json& val) : m_pts{} {
+    for(const json& v : val) {
+        this->m_pts.push_back(Point(v));
+    }
+}
+
+json Footprint::to_json() const {
+    json::array_t arr{};
+    for(const Point& pt : this->m_pts) {
+        arr.push_back(pt.to_json());
+    }
+    return arr;
+}
 
 Component::Component(const json& val) {
-    this->m_id = fnv1a(val["id"].get<std::string_view>());
+    this->m_id = std::string_view{val["id"].get<std::string>()};
     val["name"].get_to(this->m_name);
+    this->m_fp = val["footprint"];
+}
+
+json id::to_json() const {
+    return this->m_n;
+}
+
+json Component::to_json() const {
+    return json::object({
+        {"id", this->m_id.to_json()},
+        {"name", this->m_name},
+        {"footprint", this->m_fp.to_json()}
+    });
+}
+
+Point::Point(const json& val) :
+    x{std::string_view{val[0].get<std::string>()}},
+    y{std::string_view(val[1].get<std::string>())}
+    {
+
+}
+
+json Point::to_json() const {
+    return json::array({
+        this->x.to_string(),
+        this->y.to_string()
+    });
 }
 
 constexpr Length Point::distance(const Point &other) const {

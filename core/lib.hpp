@@ -7,7 +7,7 @@
 #include <initializer_list>
 #include <map>
 #include <stdexcept>
-#include <string>
+#include <string> 
 #include <nlohmann/json.hpp>
 #include <string_view>
 #include <type_traits>
@@ -20,7 +20,34 @@ using json = nlohmann::json;
 
 namespace model {
 
-using id = size_t;
+/**
+ * @brief A unique identifier for a component type, internally containing
+ * the hash of a string
+ */
+struct id {
+    inline constexpr id() : m_n{0} {}
+    /** Create a new identifier from a raw number */
+    inline constexpr id(const std::uint64_t n) : m_n{n} {}
+    
+    /**
+     * @brief Create a new ID from the FNV-1A hash of a string
+     */
+    constexpr id(const std::string_view str);
+
+    json to_json() const;
+
+    /**
+     * @brief Create a new ID from the FNV-1A hash of the given NULL-terminated
+     * string
+     */
+    constexpr id(std::uint8_t const * str);
+
+    inline constexpr id(const id& other) : m_n{other.m_n} {}
+    inline constexpr auto operator <=>(const id& other) const = default;
+
+private:
+    std::uint64_t m_n;
+};
 
 /**
  * @brief A 2D point on the workspace plane
@@ -33,7 +60,9 @@ public:
     /** 
      * @brief Deserialize a point from a JSON value
      */
-    Point(const json& jval);
+    Point(const json& val);
+    /** Convert this point into a JSON value */
+    json to_json() const;
 
     constexpr bool operator==(const Point& other) const {
         return other.x == this->x && other.y == this->y;
@@ -59,6 +88,12 @@ public:
 
     Footprint() = default;
     
+    /** Create a new footprint from the JSON array */
+    Footprint(const json& json);
+        
+    /** Convert this footprint to a JSON array */
+    json to_json() const;
+
     /**
      * @brief Create a new footprint from a list of connected points
      */
@@ -80,14 +115,16 @@ private:
  * footprint
  */ 
 class Component {
-private:
+public:
     /**
      * @brief Deserialize a component from a JSON value, throwing an
      * exception if the passed JSON is invalid
      */
     Component(const json& jsonval); 
-
-public:
+        
+    /** Convert this component to a JSON value */
+    json to_json() const;
+    
     Component(Component&& other) : 
         m_id{other.m_id},
         m_name{std::move(other.m_name)},
@@ -100,6 +137,15 @@ private:
     std::string m_name;
     //! @brief Shape of the component in the workspace 
     Footprint m_fp;
+
+    friend class BoardGraph;
+};
+
+/** 
+ * @brief A structure storing component types with methods to lazy load
+ */
+class ComponentStore {
+
 };
 
 
