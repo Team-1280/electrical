@@ -1,6 +1,6 @@
 #include <cmath>
-#include <charconv>
 #include <lib.hpp>
+#include <stdexcept>
 
 static bool equal_ignore_case(const std::string_view a, const std::string_view b) {
     return std::equal(
@@ -29,12 +29,14 @@ constexpr id fnv1a(const std::string_view s) {
 }
 
 
-LengthUnit::LengthUnit(const std::string_view unit_str) {
-    if(unit_str.empty()) {
+LengthUnit::LengthUnit(const std::string_view original_unit_str) {
+    if(original_unit_str.empty()) {
         throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
     }
+
+    const std::string_view unit_str = original_unit_str.substr(original_unit_str.find_first_not_of(' '));
         
-    static const auto metric = [&](const char * const prefix, Unit unit) {
+    static const auto metric = [&](const char * const prefix, UnitVal unit) {
         if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'm') {
             this->m_u = unit;
         } else if(unit_str.length() >= 6 && equal_ignore_case(unit_str.substr(0, 4), prefix)) {
@@ -44,59 +46,61 @@ LengthUnit::LengthUnit(const std::string_view unit_str) {
                 this->m_u = unit;
             }
         } else {
-            throw std::invalid_argument("LengthUnit#LengthUnit called with invalid string");
+            throw std::invalid_argument("LengthUnit#LengthUnit called with invalid string \"" + std::string(unit_str) + '\"');
         }
     };
 
     char first = std::tolower(unit_str.at(0));
     switch(first) {
-        case 'c': metric("centi", Unit::Centimeters); break;
+        case 'c': metric("centi", UnitVal::Centimeters); break;
         case 'm': {
             if(unit_str.length() >= 6 && equal_ignore_case(unit_str, "meter")) {
-                this->m_u = Unit::Meters;
+                this->m_u = UnitVal::Meters;
                 break;
             }
-            metric("milli", Unit::Millimeters); 
+            metric("milli", UnitVal::Millimeters); 
         } break;
         case 'i': {
             if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'n' ||
                 (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "inch"))
             ) {
-                this->m_u = Unit::Inches;
+                this->m_u = UnitVal::Inches;
             }
         } break;
         case 'f': {
             if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 't' ||
                 (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "feet"))
             ) {
-                this->m_u = Unit::Feet;
+                this->m_u = UnitVal::Feet;
             }
         } break;
+        default: throw std::invalid_argument("LengthUnit#LengthUnit(string) called with invalid string \"" + std::string(unit_str) + '\"');
     }
-        
-    throw std::invalid_argument("LengthUnit#LengthUnit(string) called with invalid string");
 }
 
-Length::Length(const std::string_view str) {
-    size_t num_end = 0;
-    std::from_chars_result len_res =  std::from_chars(str.data(), str.data() + )
-    
+std::string LengthUnit::to_string() const noexcept {
+    switch(this->m_u) {
+        case UnitVal::Feet: return "ft";
+        case UnitVal::Inches: return "in";
+        case UnitVal::Millimeters: return "mm";
+        case UnitVal::Centimeters: return "cm";
+        case UnitVal::Meters: return "m";
+        default: return "";
+    }
 }
 
-Component::Component(const json& val, const id id) : m_id{id} {
-    this->m_id = s_id_count;
-    s_id_count += 1;
-
+Component::Component(const json& val) {
+    this->m_id = fnv1a(val["id"].get<std::string_view>());
     val["name"].get_to(this->m_name);
 }
 
 constexpr Length Point::distance(const Point &other) const {
-    const LengthUnit units = this->x.m_unit;
+    const LengthUnit units = this->x.unit();
     return Length(
         units,
         std::sqrt(
-            std::pow(this->x.m_len - other.x.conv(units), 2) +
-            std::pow(this->y.m_len - other.y.conv(units), 2)
+            std::pow(this->x.raw_val() - other.x.raw_to(units), 2) +
+            std::pow(this->y.raw_val() - other.y.raw_to(units), 2)
         )
     );
 }
