@@ -15,8 +15,7 @@
 #include <concepts>
 
 #include <unit.hpp>
-
-using json = nlohmann::json;
+#include <ser.hpp>
 
 namespace model {
 
@@ -34,20 +33,22 @@ struct id {
      */
     constexpr id(const std::string_view str);
 
-    json to_json() const;
+    std::string to_string() const;
 
     /**
      * @brief Create a new ID from the FNV-1A hash of the given NULL-terminated
      * string
      */
     constexpr id(std::uint8_t const * str);
-
+    
     inline constexpr id(const id& other) : m_n{other.m_n} {}
     inline constexpr auto operator <=>(const id& other) const = default;
 
 private:
     std::uint64_t m_n;
 };
+
+static_assert(ser::StringSerializable<id>);
 
 /**
  * @brief A 2D point on the workspace plane
@@ -78,6 +79,7 @@ public:
     Length y;
 };
 
+static_assert(ser::JsonSerializable<Point>);
 
 /**
  * @brief Description of a component's footprint on the 
@@ -109,6 +111,7 @@ private:
     std::vector<Point> m_pts;
 };
 
+static_assert(ser::JsonSerializable<Footprint>);
 
 /**
  * @brief A component in the board design with required parameters like
@@ -140,6 +143,8 @@ private:
 
     friend class BoardGraph;
 };
+
+static_assert(ser::JsonSerializable<Component>);
 
 /** 
  * @brief A structure storing component types with methods to lazy load

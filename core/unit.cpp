@@ -12,7 +12,7 @@ static bool equal_ignore_case(const std::string_view a, const std::string_view b
 
 namespace model {
 
-LengthUnit::LengthUnit(const std::string_view original_unit_str) {
+LengthUnit::LengthUnit(const std::string_view original_unit_str) : m_u{UnitVal::Meters} {
     if(original_unit_str.empty()) {
         throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
     }
@@ -44,15 +44,15 @@ LengthUnit::LengthUnit(const std::string_view original_unit_str) {
             metric("milli", UnitVal::Millimeters); 
         } break;
         case 'i': {
-            if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'n' ||
-                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "inch"))
+            if((unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'n') ||
+                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 4), "inch"))
             ) {
                 this->m_u = UnitVal::Inches;
             }
         } break;
         case 'f': {
-            if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 't' ||
-                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 5), "feet"))
+            if((unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 't') ||
+                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 4), "feet"))
             ) {
                 this->m_u = UnitVal::Feet;
             }

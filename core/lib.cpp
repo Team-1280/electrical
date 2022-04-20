@@ -33,6 +33,10 @@ constexpr id::id(const std::string_view str) {
     }
 }
 
+std::string id::to_string() const {
+    return std::to_string(this->m_n);
+}
+
 Footprint::Footprint(const json& val) : m_pts{} {
     for(const json& v : val) {
         this->m_pts.push_back(Point(v));
@@ -53,13 +57,9 @@ Component::Component(const json& val) {
     this->m_fp = val["footprint"];
 }
 
-json id::to_json() const {
-    return this->m_n;
-}
-
 json Component::to_json() const {
     return json::object({
-        {"id", this->m_id.to_json()},
+        {"id", this->m_id},
         {"name", this->m_name},
         {"footprint", this->m_fp.to_json()}
     });

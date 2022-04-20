@@ -1,3 +1,4 @@
 /build/**
+!build/buildopts.h.in
 /.cache
 /compile_commands.json

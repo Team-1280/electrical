@@ -12,6 +12,8 @@
 #include <functional>
 #include <iomanip>
 
+#include <buildopts.h>
+
 namespace logger {
 
 /**
@@ -66,17 +68,15 @@ private:
     std::stringstream ss;
 };
 
+template<LogLevel LVL> class DummyBuf final {
+public:
+    template<typename T>
+    inline constexpr DummyBuf& operator<<(const T&) { return *this; }
+};
+
 template<> constexpr const char* const LogBuf<LogLevel::Error>::LVL_STR = "[ERROR]";
 template<> constexpr const char* const LogBuf<LogLevel::Warn>::LVL_STR = "[WARN]";
 template<> constexpr const char * const LogBuf<LogLevel::Trace>::LVL_STR = "[TRACE]";
-
-#ifdef DISABLE_TRACE
-template<> class LogBuf<LogLevel::Trace> final {
-    template<typename T> inline constexpr LogBuf& operator<<(T&& msg) { return *this; }
-    inline LogBuf& operator<<(std::ostream& (*manip)(std::ostream&)) { return *this; }
-    ~LogBuf() {}
-};
-#endif
 
 }
 
@@ -85,7 +85,13 @@ template<> class LogBuf<LogLevel::Trace> final {
  * @brief Get a thread-safe log buffer that will write messages to the global
  * output stream after all other write calls finish
  */ 
-template<LogLevel lvl> constexpr inline _detail::LogBuf<lvl> log() { return _detail::LogBuf<lvl>{}; }
+template<LogLevel lvl> constexpr inline _detail::LogBuf<lvl> log() { 
+    if constexpr(lvl == LogLevel::Trace && !BuildOpts::should_log_trace()) {
+        return _detail::DummyBuf<lvl>{};
+    } else {
+        return _detail::LogBuf<lvl>{}; 
+    }
+}
 
 inline auto trace() { return _detail::LogBuf<LogLevel::Trace>{}; }
 inline auto warn() { return _detail::LogBuf<LogLevel::Warn>{}; }

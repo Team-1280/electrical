@@ -1,0 +1,23 @@
+#pragma once
+
+#include <string_view>
+#include <type_traits>
+
+struct BuildOpts {
+    static constexpr const std::string_view build_type_str = "@CMAKE_BUILD_TYPE@";
+    /**
+     * @brief An enum describing the current build type set by CMake
+     */
+    enum class BuildType {
+        Debug,
+        RelWithDebInfo,
+        Release,
+        MinSizeRel
+    };
+
+    static consteval const bool should_log_trace() {
+        return build_type == BuildType::RelWithDebInfo || build_type == BuildType::Debug;
+    }
+
+    static constexpr const BuildType build_type = BuildType::@CMAKE_BUILD_TYPE@;
+};

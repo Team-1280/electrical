@@ -2,7 +2,6 @@ set(
     SRC
     "lib.cpp"
     "unit.cpp"
-    "ser.cpp"
     "util/log.cpp"
 )
 
@@ -14,6 +13,7 @@ set(
 set(CMAKE_CXX_STANDARD 20)
 
 add_library(${NAME} ${SRC})
+
 target_include_directories(${NAME} PUBLIC ./)
 target_link_libraries(${NAME} PUBLIC nlohmann_json::nlohmann_json)
 

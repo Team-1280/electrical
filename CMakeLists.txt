@@ -19,6 +19,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann-json)
 
+if("${CMAKE_BUILD_TYPE}" STREQUAL "${CMAKE_DEFAULT_BUILD_TYPE}")
+    message("No build type given, building in debug mode")
+    set(CMAKE_BUILD_TYPE "Debug")
+else()
+    #string(TOLOWER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE)
+endif()
+configure_file("build/buildopts.h.in" "generated/buildopts.h")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
+
 add_subdirectory(core)
 
 if(FRONTEND STREQUAL  "cli")
