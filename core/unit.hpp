@@ -6,8 +6,6 @@
 #include <array>
 #include <string>
 
-#include <ser.hpp>
-
 namespace model {
 
 /**
@@ -31,9 +29,11 @@ concept QuantityVal = requires(V v) {
     {v * std::declval<float>()} -> std::convertible_to<V>;
 };
 
-static_assert(QuantityVal<float>);
-static_assert(QuantityVal<double>);
-static_assert(QuantityVal<int>);
+template<typename T>
+concept SerializableToString = requires(T v) {
+    std::constructible_from<const std::string_view>;
+    {v.to_string()} -> std::convertible_to<std::string>;
+};
 
 template<Unit U, QuantityVal V>
 struct Quantity {
@@ -49,10 +49,7 @@ public:
      * @return A new measurement with the passed unit
      */
     constexpr inline Quantity<U, V> to(U unit) const {
-        return Quantity(
-            unit, 
-            std::round(this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit] * 100.f) / 100.f
-        );
+        return Quantity(unit, this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit]);
     }
     
     /**
@@ -121,7 +118,7 @@ public:
      * @throws std::exception If string deserialization fails
      */
     Quantity(const std::string_view str) 
-    requires ser::StringSerializable<U> && std::convertible_to<double, V> {
+    requires SerializableToString<U> && std::convertible_to<double, V> {
         size_t num_end = 0;
         double v = 0.;
         auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), v);
@@ -137,13 +134,14 @@ public:
      * @return The string representation of this quantity
      */
     std::string to_string() const 
-    requires ser::StringSerializable<U> && std::convertible_to<V, double> {
+    requires SerializableToString<U> && std::convertible_to<V, double> {
         return std::to_string(double(this->m_val)) + this->m_unit.to_string();
     }
 private:
     U m_unit;
     V m_val;
 };
+
 
 /**
  * @brief An enumeration of all length units 
@@ -184,9 +182,6 @@ public:
 private:
     UnitVal m_u;
 };
-
-static_assert(Unit<LengthUnit>);
-static_assert(ser::StringSerializable<LengthUnit>);
 
 using Length = Quantity<LengthUnit, float>;
 

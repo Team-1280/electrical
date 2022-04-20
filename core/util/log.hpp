@@ -71,7 +71,7 @@ private:
 template<LogLevel LVL> class DummyBuf final {
 public:
     template<typename T>
-    inline constexpr DummyBuf& operator<<(const T&) { return *this; }
+    inline consteval DummyBuf& operator<<(const T&) { return *this; }
 };
 
 template<> constexpr const char* const LogBuf<LogLevel::Error>::LVL_STR = "[ERROR]";
@@ -85,7 +85,9 @@ template<> constexpr const char * const LogBuf<LogLevel::Trace>::LVL_STR = "[TRA
  * @brief Get a thread-safe log buffer that will write messages to the global
  * output stream after all other write calls finish
  */ 
-template<LogLevel lvl> constexpr inline _detail::LogBuf<lvl> log() { 
+template<LogLevel lvl>
+[[nodiscard("Log buffer must be used to write log messages")]] 
+ constexpr inline _detail::LogBuf<lvl> log() { 
     if constexpr(lvl == LogLevel::Trace && !BuildOpts::should_log_trace()) {
         return _detail::DummyBuf<lvl>{};
     } else {
@@ -93,8 +95,8 @@ template<LogLevel lvl> constexpr inline _detail::LogBuf<lvl> log() {
     }
 }
 
-inline auto trace() { return _detail::LogBuf<LogLevel::Trace>{}; }
-inline auto warn() { return _detail::LogBuf<LogLevel::Warn>{}; }
-inline auto error() { return _detail::LogBuf<LogLevel::Error>{}; }
+inline auto trace() { return log<LogLevel::Trace>(); }
+inline auto warn() { return log<LogLevel::Warn>(); }
+inline auto error() { return log<LogLevel::Error>(); }
 
 }
