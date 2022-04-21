@@ -8,6 +8,7 @@
 #include <type_traits>
 
 #include "ser.hpp"
+#include "util/log.hpp"
 
 namespace model {
 
@@ -160,7 +161,7 @@ public:
         if(ec != std::errc()) {
             throw std::invalid_argument("Bad quantity string \"" + std::string(str) + '\"');
         }
-        U::from_string(self.m_unit, std::string_view(ptr));
+        U::from_string(self.m_unit, std::string_view(ptr, str.length() - (ptr - str.data())));
     }
    
     /**

@@ -27,33 +27,9 @@ namespace model {
  */
 class BoardGraph {
 public:
-    /** A reference to a component in this graph */
-    struct NodeRef {
-        NodeRef() = delete;
-        constexpr inline size_t idx() const { return this->m_idx; }
-    private:
-        NodeRef(const size_t gen, const size_t idx) : m_gen{gen}, m_idx{idx} {}
-
-        const size_t m_gen;
-        const size_t m_idx;
-        friend class BoardGraph;
-    };
     
-    /** 
-     * @brief Add a component to this graph
-     * @return A reference to the added node in this graph
-     */
-    const NodeRef add(Component&& comp);
-
 private:
-    struct Node {
-        size_t count;
-    };
-    
-    /**
-     * @brief An arena containing all nodes with their counts
-     */
-    std::vector<Node> m_nodes;
+    ComponentStore m_store;
 };
 
 }

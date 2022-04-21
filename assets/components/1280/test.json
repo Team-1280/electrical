@@ -5,5 +5,11 @@
         ["100cm", "10 inches"],
         ["10ft", "5mm"],
         ["4m", "61cm"]
+    ],
+    "conns": [
+        {
+            "pos": ["100cm", "10 inches"],
+            "name": "PWM0"
+        }
     ]
 }

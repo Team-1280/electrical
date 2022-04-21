@@ -10,17 +10,35 @@
 namespace model {
 
 /**
+ * @brief A structure defining a single connection point on a component
+ */
+struct ConnectionPort {
+public:
+    /** Get a string view into this connection port's name */
+    constexpr inline const std::string_view name() const { return this->m_name; }
+    /** Get a C-style NULL-terminated name string */
+    constexpr inline const char * const c_str() const { return this->m_name.data(); }
+private:
+    /** Location on the component's footprint that this connection port is located */
+    Point m_pt;
+    /** 
+     * Name of the port, shared with the parent Component
+     * Guranteed to be NULL-terminated
+     */
+    std::string_view m_name;
+
+    friend class ComponentStore;
+    friend class Component;
+    ConnectionPort() : m_pt{}, m_name{} {}
+};
+
+
+/**
  * @brief A component in the board design with required parameters like
  * footprint
  */ 
 class Component {
 public:
-    /**
-     * @brief Deserialize a component from a JSON value, throwing an
-     * exception if the passed JSON is invalid
-     */
-    static void from_json(Component& self, const json& jsonval); 
-        
     /** Convert this component to a JSON value */
     json to_json() const;
     
@@ -29,12 +47,14 @@ public:
         m_fp{std::move(other.m_fp)} {}
 
 
-    Component() = default;
+    Component() : m_name{}, m_id{}, m_conns{}, m_fp{} {};
 private:
     //! @brief User-facing name of the component type, shared with the ComponentStore
     std::string_view m_name;
     //! @brief ID string of this component, shared with the ComponentStore
     std::string_view m_id;
+    //! @brief Connection points for this component
+    std::unordered_map<std::string, ConnectionPort> m_conns;
     //! @brief Shape of the component in the workspace 
     Footprint m_fp;
     
@@ -42,7 +62,6 @@ private:
     friend class BoardGraph;
 };
 
-static_assert(ser::JsonSerializable<Component>);
 
 using ComponentRef = std::shared_ptr<Component>;
 
@@ -88,11 +107,12 @@ private:
         
         StoreEntry() = default;
 
-        StoreEntry(const json& j);
+        static void from_json(StoreEntry& self, const json& j);
         json to_json() const;
-
+        
         ~StoreEntry() = default;
     };
+    static_assert(ser::JsonSerializable<StoreEntry>);
 
     using store_type = std::unordered_map<std::string, StoreEntry>;
 

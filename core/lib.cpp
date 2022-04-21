@@ -1,4 +1,6 @@
+#include "util/log.hpp"
 #include <cmath>
+#include <iostream>
 #include <lib.hpp>
 #include <stdexcept>
 
@@ -32,22 +34,11 @@ json Footprint::to_json() const {
     return arr;
 }
 
-void Component::from_json(Component& self, const json& val) {
-    //this->m_id = std::string_view{val["id"].get<std::string>()};
-    val["name"].get_to(self.m_name);
-    self.m_fp = val["footprint"];
-}
-
-json Component::to_json() const {
-    return json::object({
-        {"name", this->m_name},
-        {"footprint", this->m_fp.to_json()}
-    });
-}
 
 void Point::from_json(Point& self, const json& val) {
-    val[0].get_to<Length>(self.x);
-    val[1].get_to<Length>(self.y);
+    std::cout << val << self.to_json() << std::endl;
+    val[0].get<Length>();
+    //self.y = val[1].get<Length>();
 }
 
 json Point::to_json() const {
