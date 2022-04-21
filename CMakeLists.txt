@@ -25,6 +25,11 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann-json)
 
+FetchContent_Declare(
+    fmt URL https://github.com/fmtlib/fmt/archive/refs/tags/8.1.1.tar.gz
+)
+FetchContent_MakeAvailable(fmt)
+
 if("${CMAKE_BUILD_TYPE}" STREQUAL "${CMAKE_DEFAULT_BUILD_TYPE}")
     message("No build type given, building in debug mode")
     set(CMAKE_BUILD_TYPE "Debug")

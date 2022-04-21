@@ -5,12 +5,16 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <mutex>
 #include <sstream>
 #include <string_view>
 #include <functional>
 #include <iomanip>
+#include <concepts>
+#include <fmt/format.h>
+#include <fmt/os.h>
 
 #include <buildopts.h>
 
@@ -34,49 +38,17 @@ enum class LogLevel: uint8_t {
 
 namespace _detail {
 
-extern std::unique_ptr<std::ostream> log_stream;
+extern std::optional<fmt::ostream> log_stream;
 extern std::mutex log_lock;
 
-/**
- * @brief A stream that stores written data
- * and writes it to the global log file in a thread-safe way upon destruction
- */
-template<LogLevel LVL> class LogBuf final {
-    static const char * const LVL_STR;
-public:
-    LogBuf() = default;
-    LogBuf(const LogBuf&) = delete;
-    LogBuf& operator=(const LogBuf&) = delete;
-    LogBuf& operator=(LogBuf&&) = delete;
-    LogBuf(LogBuf&& other) : ss(std::move(other.ss)) {}
-
-    template<typename T> inline LogBuf& operator<<(const T& msg) {
-        ss << msg;
-        return *this;
-    }
-
-    inline LogBuf& operator<<(std::ostream& (*manip)(std::ostream&)) {
-	    manip(ss);
-	    return *this;
-    }
-
-    ~LogBuf() {
-        std::lock_guard<std::mutex> lock{log_lock};
-        (*log_stream) << LVL_STR << ": " << ss.rdbuf() << std::endl;
-    }
-private:
-    std::stringstream ss;
+template<LogLevel LVL>
+struct lvl_data {
+    static const char * const LVL_STR; 
 };
 
-template<LogLevel LVL> class DummyBuf final {
-public:
-    template<typename T>
-    inline consteval DummyBuf& operator<<(const T&) { return *this; }
-};
-
-template<> constexpr const char* const LogBuf<LogLevel::Error>::LVL_STR = "[ERROR]";
-template<> constexpr const char* const LogBuf<LogLevel::Warn>::LVL_STR = "[WARN]";
-template<> constexpr const char * const LogBuf<LogLevel::Trace>::LVL_STR = "[TRACE]";
+template<> constexpr const char* const lvl_data<LogLevel::Error>::LVL_STR = "[ERROR] ";
+template<> constexpr const char* const lvl_data<LogLevel::Warn>::LVL_STR = "[WARN] ";
+template<> constexpr const char * const lvl_data<LogLevel::Trace>::LVL_STR = "[TRACE] ";
 
 }
 
@@ -85,18 +57,21 @@ template<> constexpr const char * const LogBuf<LogLevel::Trace>::LVL_STR = "[TRA
  * @brief Get a thread-safe log buffer that will write messages to the global
  * output stream after all other write calls finish
  */ 
-template<LogLevel lvl>
-[[nodiscard("Log buffer must be used to write log messages")]] 
- constexpr inline _detail::LogBuf<lvl> log() { 
-    if constexpr(lvl == LogLevel::Trace && !BuildOpts::should_log_trace()) {
-        return _detail::DummyBuf<lvl>{};
-    } else {
-        return _detail::LogBuf<lvl>{}; 
+template<LogLevel lvl, typename... Args>
+inline void log(fmt::format_string<Args...> fmt, Args&&... args) {
+    if constexpr(lvl != LogLevel::Trace || BuildOpts::should_log_trace()) {
+        if(!_detail::log_stream.has_value()) return;
+        std::lock_guard lock{_detail::log_lock};
+        _detail::log_stream->print(_detail::lvl_data<lvl>::LVL_STR);
+        _detail::log_stream->print(fmt, std::forward(args)...);
     }
 }
 
-inline auto trace() { return log<LogLevel::Trace>(); }
-inline auto warn() { return log<LogLevel::Warn>(); }
-inline auto error() { return log<LogLevel::Error>(); }
+template<typename... Args>
+inline void trace(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Trace>(fmt, std::forward(args)...); }
+template<typename... Args>
+inline void warn(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Trace>(fmt, std::forward(args)...); }
+template<typename... Args>
+inline auto error(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Trace>(fmt, std::forward(args)...); }
 
 }
