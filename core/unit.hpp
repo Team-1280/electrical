@@ -167,7 +167,7 @@ public:
      * @throws std::invalid_argument if the passed unit string does not match any expected 
      * units
      */
-    LengthUnit(const std::string_view unit_str);
+    static void from_string(LengthUnit& self, const std::string_view unit_str);
     static constexpr std::array<float, NUM> CONV_FACTORS = {
         1000.,
         100.,

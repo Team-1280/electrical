@@ -19,7 +19,7 @@ public:
      * @brief Deserialize a component from a JSON value, throwing an
      * exception if the passed JSON is invalid
      */
-    Component(const json& jsonval); 
+    static void from_json(Component& self, const json& jsonval); 
         
     /** Convert this component to a JSON value */
     json to_json() const;
@@ -31,8 +31,6 @@ public:
 
     Component() = default;
 private:
-
-
     //! @brief User-facing name of the component type, shared with the ComponentStore
     std::string_view m_name;
     //! @brief ID string of this component, shared with the ComponentStore
@@ -57,9 +55,9 @@ public:
     ComponentStore();
     
     /**
-     * @brief Create a new component store from a cached JSON file
+     * @brief Load this component storage from a JSON cache file
      */
-    ComponentStore(const json& j);
+    static void from_json(ComponentStore& self, const json& j);
     
     /** @brief Convert this component store into a cache file */
     json to_json() const;
@@ -71,7 +69,7 @@ public:
     std::optional<ComponentRef> find(const std::string& id);
 
 private:    
-    static void from_json(ComponentStore& self, const json& j);
+
     static const std::filesystem::path COMPONENT_DIR;
     static const std::filesystem::path CACHEFILE_PATH;
     

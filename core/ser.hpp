@@ -12,12 +12,14 @@ namespace ser {
 
 /** 
  * @brief Concept specifying that a type can be converted to / from a
- * JSON value. A move assignment operator is recommended for the implementing type
+ * JSON value. A move assignment operator is recommended for the implementing type.
+ * Note that a static from_json method is preferred over a constructor to avoid unneeded copies
+ * when interfacing with nlohmann-json
  */
 template<typename T>
 concept JsonSerializable = requires(const T v) {
     {v.to_json()} -> std::convertible_to<json>;
-    std::constructible_from<const json&>;
+    {T::from_json(std::declval<T&>(), std::declval<const json&>())};
 };
 
 /**
@@ -28,7 +30,7 @@ concept JsonSerializable = requires(const T v) {
 template<typename T>
 concept StringSerializable = requires(const T v) {
     {v.to_string()} -> std::convertible_to<std::string>;
-    std::constructible_from<const std::string_view>;
+    {T::from_string(std::declval<T&>(), std::declval<const std::string_view>())};
 };
 
 }
@@ -42,7 +44,7 @@ struct adl_serializer<T> {
     }
 
     static inline void from_json(const json& j, T& v) {
-        v = T(j);
+        T::from_json(v, j);
     }
 };
 
@@ -54,7 +56,7 @@ struct adl_serializer<T> {
     }
 
     static inline void from_json(const json& j, T& v) {
-        v = T(std::string_view(j.get<std::string>()));
+        T::from_string(v, std::string_view(j.get<std::string>()));
     } 
 };
 

@@ -16,7 +16,7 @@ public:
     /** 
      * @brief Deserialize a point from a JSON value
      */
-    Point(const json& val);
+    static void from_json(Point& self, const json& val);
     /** Convert this point into a JSON value */
     json to_json() const;
 
@@ -46,7 +46,7 @@ public:
     Footprint() = default;
     
     /** Create a new footprint from the JSON array */
-    Footprint(const json& json);
+    static void from_json(Footprint& self, const json& json);
         
     /** Convert this footprint to a JSON array */
     json to_json() const;

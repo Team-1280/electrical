@@ -12,7 +12,8 @@ static bool equal_ignore_case(const std::string_view a, const std::string_view b
 
 namespace model {
 
-LengthUnit::LengthUnit(const std::string_view original_unit_str) : m_u{UnitVal::Meters} {
+void LengthUnit::from_string(LengthUnit& self, const std::string_view original_unit_str) {
+    self.m_u = LengthUnit::Meters;
     if(original_unit_str.empty()) {
         throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
     }
@@ -21,12 +22,12 @@ LengthUnit::LengthUnit(const std::string_view original_unit_str) : m_u{UnitVal::
         
     static const auto metric = [&](const char * const prefix, UnitVal unit) {
         if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'm') {
-            this->m_u = unit;
+            self.m_u = unit;
         } else if(unit_str.length() >= 6 && equal_ignore_case(unit_str.substr(0, 4), prefix)) {
             if((unit_str.length() == 6 && std::tolower(unit_str.at(5)) == 'm') ||
                 (unit_str.length() >= 10 && equal_ignore_case(unit_str.substr(5, 5), "meter"))
             ) {
-                this->m_u = unit;
+                self.m_u = unit;
             }
         } else {
             throw std::invalid_argument("LengthUnit#LengthUnit called with invalid string \"" + std::string(unit_str) + '\"');
@@ -38,7 +39,7 @@ LengthUnit::LengthUnit(const std::string_view original_unit_str) : m_u{UnitVal::
         case 'c': metric("centi", UnitVal::Centimeters); break;
         case 'm': {
             if(unit_str.length() == 1 || (unit_str.length() >= 6 && equal_ignore_case(unit_str, "meter"))) {
-                this->m_u = UnitVal::Meters;
+                self.m_u = UnitVal::Meters;
                 break;
             }
             metric("milli", UnitVal::Millimeters); 
@@ -47,14 +48,14 @@ LengthUnit::LengthUnit(const std::string_view original_unit_str) : m_u{UnitVal::
             if((unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'n') ||
                 (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 4), "inch"))
             ) {
-                this->m_u = UnitVal::Inches;
+                self.m_u = UnitVal::Inches;
             }
         } break;
         case 'f': {
             if((unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 't') ||
                 (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 4), "feet"))
             ) {
-                this->m_u = UnitVal::Feet;
+                self.m_u = UnitVal::Feet;
             }
         } break;
         default: throw std::invalid_argument("LengthUnit#LengthUnit(string) called with invalid string \"" + std::string(unit_str) + '\"');
