@@ -1,5 +1,6 @@
 #pragma once
 #include "nlohmann/json.hpp"
+#include <exception>
 #include <concepts>
 
 using json = nlohmann::json;
@@ -56,7 +57,7 @@ struct adl_serializer<T> {
     }
 
     static inline void from_json(const json& j, T& v) {
-        T::from_string(v, std::string_view(j.get<std::string>()));
+        T::from_string(v, std::string_view{j.get<std::string>()});
     } 
 };
 

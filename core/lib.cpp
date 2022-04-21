@@ -18,28 +18,9 @@ inline constexpr std::uint64_t fnv1a(const std::string_view s) {
     return hash;
 }
 
-constexpr id::id(std::uint8_t const * str) {
-    this->m_n = FNV_OFFSET;
-    while(*str != 0) {
-        this->m_n = (this->m_n * FNV_PRIME) ^ *str;
-        str += 1;
-    }
-}
-
-constexpr id::id(const std::string_view str) {
-    this->m_n = FNV_OFFSET;
-    for(std::uint8_t c : str) {
-        this->m_n = (this->m_n * FNV_PRIME) ^ c;
-    }
-}
-
-std::string id::to_string() const {
-    return std::to_string(this->m_n);
-}
-
-Footprint::Footprint(const json& val) : m_pts{} {
+void Footprint::from_json(Footprint& self, const json& val) {
     for(const json& v : val) {
-        this->m_pts.push_back(Point(v));
+        self.m_pts.push_back(v.get<Point>());
     }
 }
 
@@ -51,10 +32,10 @@ json Footprint::to_json() const {
     return arr;
 }
 
-Component::Component(const json& val) {
+void Component::from_json(Component& self, const json& val) {
     //this->m_id = std::string_view{val["id"].get<std::string>()};
-    val["name"].get_to(this->m_name);
-    this->m_fp = val["footprint"];
+    val["name"].get_to(self.m_name);
+    self.m_fp = val["footprint"];
 }
 
 json Component::to_json() const {
@@ -64,11 +45,9 @@ json Component::to_json() const {
     });
 }
 
-Point::Point(const json& val) :
-    x{std::string_view{val[0].get<std::string>()}},
-    y{std::string_view(val[1].get<std::string>())}
-    {
-
+void Point::from_json(Point& self, const json& val) {
+    val[0].get_to<Length>(self.x);
+    val[1].get_to<Length>(self.y);
 }
 
 json Point::to_json() const {

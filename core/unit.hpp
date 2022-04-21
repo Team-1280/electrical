@@ -5,6 +5,9 @@
 #include <stdexcept>
 #include <array>
 #include <string>
+#include <type_traits>
+
+#include "ser.hpp"
 
 namespace model {
 
@@ -14,6 +17,7 @@ namespace model {
  */
 template<typename T>
 concept Unit = requires {
+    {T::DEFAULT} -> std::convertible_to<T>;
     std::convertible_to<T, size_t>;
     {T::NUM} -> std::convertible_to<size_t>;
     {T::CONV_FACTORS} -> std::convertible_to<std::array<float, T::NUM>>;
@@ -29,12 +33,6 @@ concept QuantityVal = requires(V v) {
     {v * std::declval<float>()} -> std::convertible_to<V>;
 };
 
-template<typename T>
-concept SerializableToString = requires(T v) {
-    std::constructible_from<const std::string_view>;
-    {v.to_string()} -> std::convertible_to<std::string>;
-};
-
 template<Unit U, QuantityVal V>
 struct Quantity {
 public:
@@ -43,6 +41,42 @@ public:
      */
     constexpr Quantity(U unit, V val) : m_unit{unit}, m_val{val} {}
     
+    constexpr Quantity() requires(std::default_initializable<V>) : m_unit(U::DEFAULT), m_val{} {}
+    
+    /** Copy construct this quantity from another quantity */
+    constexpr Quantity(const Quantity& other) requires requires {
+        std::copy_constructible<U>;
+        std::copy_constructible<V>;
+    } : m_unit{other.m_unit}, m_val{other.m_val} {}
+    
+    /** Move construct this quantity */
+    constexpr Quantity(Quantity&& other) requires(std::is_move_assignable_v<U> && std::is_move_assignable_v<V>) 
+        : m_unit{std::move(other.m_unit)}, m_val{std::move(other.m_val)} {}
+
+    /**
+     * @brief Copy-construct this quantity from another quantity 
+     */
+    constexpr Quantity& operator=(const Quantity& other) requires requires {
+        std::is_copy_assignable_v<U>;
+        std::is_copy_assignable_v<V>;
+    }{
+        this->m_val = other.m_val;
+        this->m_unit = other.m_unit;
+        return *this;
+    }
+    
+    /**
+     * @brief Assign the rvalue refernce to another quantity to this quantity
+     */
+    constexpr Quantity& operator=(Quantity&& other) requires requires {
+        std::is_move_assignable_v<U>;
+        std::is_move_assignable_v<V>;
+    } {
+        this->m_unit = std::move(other.m_unit);
+        this->m_val = std::move(other.m_val);
+        return *this;
+    }
+
     /**
      * @brief Convert this quantity to one of a different unit
      * @param unit The unit to convert to
@@ -117,16 +151,16 @@ public:
      * @param str The string to deserialize a value from
      * @throws std::exception If string deserialization fails
      */
-    Quantity(const std::string_view str) 
-    requires SerializableToString<U> && std::convertible_to<double, V> {
+    static void from_string(Quantity<U, V>& self, const std::string_view str) 
+    requires ser::StringSerializable<U> && std::convertible_to<double, V> {
         size_t num_end = 0;
         double v = 0.;
         auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), v);
-        this->m_val = v;
+        self.m_val = v;
         if(ec != std::errc()) {
             throw std::invalid_argument("Bad quantity string \"" + std::string(str) + '\"');
         }
-        this->m_unit = U(std::string_view(ptr));
+        U::from_string(self.m_unit, std::string_view(ptr));
     }
    
     /**
@@ -134,7 +168,7 @@ public:
      * @return The string representation of this quantity
      */
     std::string to_string() const 
-    requires SerializableToString<U> && std::convertible_to<V, double> {
+    requires ser::StringSerializable<U> && std::convertible_to<V, double> {
         return std::to_string(double(this->m_val)) + this->m_unit.to_string();
     }
 private:
@@ -178,6 +212,8 @@ public:
     
     /** Convert this unit to a string */
     std::string to_string() const noexcept;
+
+    static constexpr const UnitVal DEFAULT = UnitVal::Meters;
 private:
     UnitVal m_u;
 };

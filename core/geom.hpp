@@ -12,7 +12,8 @@ struct Point {
 public:
     /** Create a new point from x and y coordinate */
     constexpr Point(const Length x, const Length y) : x{x}, y{y} {}
-        
+    Point() = default; 
+
     /** 
      * @brief Deserialize a point from a JSON value
      */

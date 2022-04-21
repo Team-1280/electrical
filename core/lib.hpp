@@ -18,38 +18,8 @@
 #include <ser.hpp>
 #include <component.hpp>
 
+
 namespace model {
-
-/**
- * @brief A unique identifier for a component type, internally containing
- * the hash of a string
- */
-struct id {
-    inline constexpr id() : m_n{0} {}
-    /** Create a new identifier from a raw number */
-    inline constexpr id(const std::uint64_t n) : m_n{n} {}
-    
-    /**
-     * @brief Create a new ID from the FNV-1A hash of a string
-     */
-    constexpr id(const std::string_view str);
-
-    std::string to_string() const;
-
-    /**
-     * @brief Create a new ID from the FNV-1A hash of the given NULL-terminated
-     * string
-     */
-    constexpr id(std::uint8_t const * str);
-    
-    inline constexpr id(const id& other) : m_n{other.m_n} {}
-    inline constexpr auto operator <=>(const id& other) const = default;
-
-private:
-    std::uint64_t m_n;
-};
-
-static_assert(ser::StringSerializable<id>);
 
 /**  
  * @brief A graph data structures in which the
@@ -78,7 +48,6 @@ public:
 private:
     struct Node {
         size_t count;
-        id comp_id;
     };
     
     /**
