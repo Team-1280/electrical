@@ -16,6 +16,7 @@
 
 #include <unit.hpp>
 #include <ser.hpp>
+#include <component.hpp>
 
 namespace model {
 
@@ -49,110 +50,6 @@ private:
 };
 
 static_assert(ser::StringSerializable<id>);
-
-/**
- * @brief A 2D point on the workspace plane
- */
-struct Point {
-public:
-    /** Create a new point from x and y coordinate */
-    constexpr Point(const Length x, const Length y) : x{x}, y{y} {}
-        
-    /** 
-     * @brief Deserialize a point from a JSON value
-     */
-    Point(const json& val);
-    /** Convert this point into a JSON value */
-    json to_json() const;
-
-    constexpr bool operator==(const Point& other) const {
-        return other.x == this->x && other.y == this->y;
-    }
-    
-    /**
-     * @brief Get the distance between two points, returning a distance in the units
-     * of this's x coordinate
-     */
-    constexpr Length distance(const Point& other) const;
-
-    Length x;
-    Length y;
-};
-
-static_assert(ser::JsonSerializable<Point>);
-
-/**
- * @brief Description of a component's footprint on the 
- * workspace
- */
-class Footprint {
-public:
-
-    Footprint() = default;
-    
-    /** Create a new footprint from the JSON array */
-    Footprint(const json& json);
-        
-    /** Convert this footprint to a JSON array */
-    json to_json() const;
-
-    /**
-     * @brief Create a new footprint from a list of connected points
-     */
-    Footprint(const std::vector<Point>& pts) : m_pts{pts} {}
-    Footprint(std::vector<Point>&& pts) : m_pts{std::move(pts)} {}
-    
-    constexpr operator std::vector<Point>&() {
-        return this->m_pts;
-    }
-
-private:
-    /** A vector of points that each connect to the prior one*/
-    std::vector<Point> m_pts;
-};
-
-static_assert(ser::JsonSerializable<Footprint>);
-
-/**
- * @brief A component in the board design with required parameters like
- * footprint
- */ 
-class Component {
-public:
-    /**
-     * @brief Deserialize a component from a JSON value, throwing an
-     * exception if the passed JSON is invalid
-     */
-    Component(const json& jsonval); 
-        
-    /** Convert this component to a JSON value */
-    json to_json() const;
-    
-    Component(Component&& other) : 
-        m_id{other.m_id},
-        m_name{std::move(other.m_name)},
-        m_fp{std::move(other.m_fp)} {}
-
-private:
-    //! @brief Unique identifier of this component type used to reference it in the model
-    id m_id;
-    //! @brief User-facing name of the component type
-    std::string m_name;
-    //! @brief Shape of the component in the workspace 
-    Footprint m_fp;
-
-    friend class BoardGraph;
-};
-
-static_assert(ser::JsonSerializable<Component>);
-
-/** 
- * @brief A structure storing component types with methods to lazy load
- */
-class ComponentStore {
-
-};
-
 
 /**  
  * @brief A graph data structures in which the

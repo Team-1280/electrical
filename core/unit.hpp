@@ -142,7 +142,6 @@ private:
     V m_val;
 };
 
-
 /**
  * @brief An enumeration of all length units 
  */

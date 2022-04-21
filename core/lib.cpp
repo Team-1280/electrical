@@ -52,14 +52,13 @@ json Footprint::to_json() const {
 }
 
 Component::Component(const json& val) {
-    this->m_id = std::string_view{val["id"].get<std::string>()};
+    //this->m_id = std::string_view{val["id"].get<std::string>()};
     val["name"].get_to(this->m_name);
     this->m_fp = val["footprint"];
 }
 
 json Component::to_json() const {
     return json::object({
-        {"id", this->m_id},
         {"name", this->m_name},
         {"footprint", this->m_fp.to_json()}
     });
