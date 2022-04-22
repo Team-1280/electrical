@@ -49,12 +49,10 @@ std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
         json_val["footprint"].get_to<Footprint>(ref->m_fp);
         for(const json& conn : json_val["conns"]) {
             std::string name = conn["name"].get<std::string>();
-            ref->m_conns.insert(
-                std::make_pair<std::string, ConnectionPort>(std::string{name}, ConnectionPort{})
-            );
-            auto& [k, v] = *ref->m_conns.find(name);
-            conn["pos"].get_to<Point>(v.m_pt);
-            v.m_name = std::string_view(k); //Share the key string with the Connectionport to avoid allocating twice
+            auto [item, _] = ref->m_conns.emplace(name, ConnectionPort{});
+            //auto& [k, v] = *ref->m_conns.find(name);
+            conn["pos"].get_to<Point>(item->second.m_pt);
+            item->second.m_name = std::string_view{item->first}; //Share the key string with the Connectionport to avoid allocating twice
         }
     } catch(json::exception& e) {
         logger::error("Failed to load component from {}: {}", stored->second.path, e.what());
@@ -85,7 +83,7 @@ void ComponentStore::from_json(ComponentStore& self, const json& j) {
         if(self.m_store.contains(id)) {
             logger::warn("Component store contains two cached entries with ID {}", id);
         }
-        self.m_store[id] = ComponentStore::StoreEntry{val};
+        self.m_store.emplace(id, val);
     }
 }
 
