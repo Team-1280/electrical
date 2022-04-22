@@ -54,6 +54,7 @@ inline void log(fmt::string_view fmt, fmt::format_args args) {
         fmt::print(_detail::log_stream.get(), _detail::lvl_data<lvl>::LVL_STR);
         fmt::vprint(_detail::log_stream.get(), fmt, args);
         fmt::print(_detail::log_stream.get(), "\n");
+        std::fflush(_detail::log_stream.get());
     }
 }
 

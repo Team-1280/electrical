@@ -2,3 +2,4 @@
 !build/buildopts.h.in
 /.cache
 /compile_commands.json
+/log.txt
