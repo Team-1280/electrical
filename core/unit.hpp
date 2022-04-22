@@ -158,7 +158,6 @@ public:
         double v = 0.;
         auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), v);
         self.m_val = v;
-        logger::error("{}", fmt::ptr(ptr));
         if(ec != std::errc()) {
             throw std::invalid_argument("Bad quantity string \"" + std::string(str) + '\"');
         }

@@ -13,7 +13,6 @@ static bool equal_ignore_case(const std::string_view a, const std::string_view b
 namespace model {
 
 void LengthUnit::from_string(LengthUnit& self, std::string_view unit_str) {
-    logger::trace("{}", fmt::ptr(unit_str.data()));
     self.m_u = LengthUnit::Meters;
 
     while(!unit_str.empty()) {

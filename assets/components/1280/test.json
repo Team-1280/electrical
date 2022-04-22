@@ -8,7 +8,7 @@
     ],
     "conns": [
         {
-            "pos": ["100 mm", "10 inches"],
+            "pos": ["100 cm", "10 inches"],
             "name": "PWM0"
         }
     ]

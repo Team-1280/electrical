@@ -2,6 +2,7 @@ set(
     SRC
     "lib.cpp"
     "unit.cpp"
+    "geom.cpp"
     "util/log.cpp"
     "component.cpp"
 )

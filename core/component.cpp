@@ -46,7 +46,6 @@ std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
         file >> json_val;
         ref->m_id = std::string_view{stored->first};
         ref->m_name = std::string_view{stored->second.name};
-        new (&ref->m_conns) std::unordered_map<std::string, ConnectionPort>();
         json_val["footprint"].get_to<Footprint>(ref->m_fp);
         for(const json& conn : json_val["conns"]) {
             std::string name = conn["name"].get<std::string>();
@@ -54,8 +53,7 @@ std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
                 std::make_pair<std::string, ConnectionPort>(std::string{name}, ConnectionPort{})
             );
             auto& [k, v] = *ref->m_conns.find(name);
-            Point::from_json(v.m_pt, conn["pos"]);
-            //v.m_pt = conn["pos"].get<Point>();
+            conn["pos"].get_to<Point>(v.m_pt);
             v.m_name = std::string_view(k); //Share the key string with the Connectionport to avoid allocating twice
         }
     } catch(json::exception& e) {
