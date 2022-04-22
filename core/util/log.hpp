@@ -1,20 +1,10 @@
 #pragma once
 
-#include <chrono>
-#include <ctime>
-#include <iostream>
-#include <fstream>
 #include <memory>
 #include <optional>
-#include <ostream>
 #include <mutex>
-#include <sstream>
-#include <string_view>
-#include <functional>
-#include <iomanip>
-#include <concepts>
 #include <fmt/format.h>
-#include <fmt/os.h>
+#include <cstdlib>
 
 #include <buildopts.h>
 
@@ -38,7 +28,7 @@ enum class LogLevel: uint8_t {
 
 namespace _detail {
 
-extern std::optional<fmt::ostream> log_stream;
+extern std::unique_ptr<std::FILE> log_stream;
 extern std::mutex log_lock;
 
 template<LogLevel LVL>
@@ -57,21 +47,21 @@ template<> constexpr const char * const lvl_data<LogLevel::Trace>::LVL_STR = "[T
  * @brief Get a thread-safe log buffer that will write messages to the global
  * output stream after all other write calls finish
  */ 
-template<LogLevel lvl, typename... Args>
-inline void log(fmt::format_string<Args...> fmt, Args&&... args) {
-    if constexpr(lvl != LogLevel::Trace || BuildOpts::should_log_trace()) {
-        if(!_detail::log_stream.has_value()) return;
+template<LogLevel lvl>
+inline void log(fmt::string_view fmt, fmt::format_args args) {
+    if (lvl != LogLevel::Trace || BuildOpts::should_log_trace()) {
         std::lock_guard lock{_detail::log_lock};
-        _detail::log_stream->print(_detail::lvl_data<lvl>::LVL_STR);
-        _detail::log_stream->print(fmt, std::forward(args)...);
+        fmt::print(_detail::log_stream.get(), _detail::lvl_data<lvl>::LVL_STR);
+        fmt::vprint(_detail::log_stream.get(), fmt, args);
+        fmt::print(_detail::log_stream.get(), "\n");
     }
 }
 
 template<typename... Args>
-inline void trace(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Trace>(fmt, std::forward(args)...); }
+inline void trace(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Trace>(fmt, fmt::make_format_args(args...)); }
 template<typename... Args>
-inline void warn(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Trace>(fmt, std::forward(args)...); }
+inline void warn(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Warn>(fmt, fmt::make_format_args(args...)); }
 template<typename... Args>
-inline auto error(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Trace>(fmt, std::forward(args)...); }
+inline void error(fmt::format_string<Args...> fmt, Args&&... args) { log<LogLevel::Error>(fmt, fmt::make_format_args(args...)); }
 
 }

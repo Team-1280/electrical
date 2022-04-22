@@ -1,0 +1,9 @@
+{
+    "id": "1280.test",
+    "name": "Test",
+    "footprint": [
+        ["100cm", "10 inches"],
+        ["10ft", "5mm"],
+        ["4m", "61cm"]
+    ]
+}

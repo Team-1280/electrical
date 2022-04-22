@@ -11,24 +11,13 @@ if(MSVC)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Disable GCC extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(BUILD_TYPES Release RelWithDebInfo MinSizeRel Debug)
-
-include(FetchContent)
-
-FetchContent_Declare(
-    nlohmann-json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
-)
-FetchContent_MakeAvailable(nlohmann-json)
-
-FetchContent_Declare(
-    fmt URL https://github.com/fmtlib/fmt/archive/refs/tags/8.1.1.tar.gz
-)
-FetchContent_MakeAvailable(fmt)
 
 if("${CMAKE_BUILD_TYPE}" STREQUAL "${CMAKE_DEFAULT_BUILD_TYPE}")
     message("No build type given, building in debug mode")
@@ -38,6 +27,20 @@ elseif(NOT "${CMAKE_BUILD_TYPE}" IN_LIST BUILD_TYPES)
 endif()
 configure_file("build/buildopts.h.in" "generated/buildopts.h")
 include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
+
+include(FetchContent)
+
+FetchContent_Declare(
+    nlohmann-json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
+)
+FetchContent_MakeAvailable(nlohmann-json)
+
+FetchContent_Declare(
+    fmt 
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(fmt)
 
 add_subdirectory(core)
 

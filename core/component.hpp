@@ -9,8 +9,6 @@
 
 namespace model {
 
-class ComponentId;
-
 /**
  * @brief A component in the board design with required parameters like
  * footprint
@@ -30,31 +28,23 @@ public:
         m_name{other.m_name},
         m_fp{std::move(other.m_fp)} {}
 
+
+    Component() = default;
 private:
-    //! @brief User-facing name of the component type
-    const char * const m_name;
+
+
+    //! @brief User-facing name of the component type, shared with the ComponentStore
+    std::string_view m_name;
+    //! @brief ID string of this component, shared with the ComponentStore
+    std::string_view m_id;
     //! @brief Shape of the component in the workspace 
     Footprint m_fp;
-
+    
+    friend class ComponentStore;
     friend class BoardGraph;
 };
 
 static_assert(ser::JsonSerializable<Component>);
-
-/**
- * @brief A unique identifier for a component that allows faster comparisons
- * due to string interning
- */
-struct ComponentId {
-public:
-   constexpr bool operator==(const ComponentId& other) const {
-        return this->m_str == other.m_str;
-    } 
-private:
-    friend class ComponentStore;
-    constexpr ComponentId(const std::string& str) : m_str{str.c_str()} {}
-    const char * const m_str;
-};
 
 using ComponentRef = std::shared_ptr<Component>;
 
@@ -67,11 +57,21 @@ public:
     ComponentStore();
     
     /**
+     * @brief Create a new component store from a cached JSON file
+     */
+    ComponentStore(const json& j);
+    
+    /** @brief Convert this component store into a cache file */
+    json to_json() const;
+    
+    /**
      * @brief Get a stored component type or load it from the cachefile
      */
-    std::optional<ComponentRef> find(const std::string& id);    
+    [[nodiscard("If a component reference is not stored, it will be deallocated immediately")]] 
+    std::optional<ComponentRef> find(const std::string& id);
 
 private:    
+    static void from_json(ComponentStore& self, const json& j);
     static const std::filesystem::path COMPONENT_DIR;
     static const std::filesystem::path CACHEFILE_PATH;
     
@@ -84,9 +84,15 @@ private:
         /** A pointer that is invalidated if the component type is no longer used */
         std::weak_ptr<Component> loaded;
         /** The name of the component type, shared with the Component instance */
-        const std::string name;
+        std::string name;
         /** Path to load the component from */
-        const std::string path;
+        std::string path;
+        
+        StoreEntry() = default;
+
+        StoreEntry(const json& j);
+        json to_json() const;
+
         ~StoreEntry() = default;
     };
 
@@ -99,6 +105,11 @@ private:
      * will become invalid and cause UB
      */
     store_type m_store;
+    
+    /** Load a component from a JSON file at the given path, returning a shared pointer to it */
+    ComponentRef load(const std::string& path);
 };
+
+static_assert(ser::JsonSerializable<ComponentStore>);
 
 }

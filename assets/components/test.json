@@ -1,8 +1,0 @@
-{
-    "id": "1280.test",
-    "name": "test",
-    "footprint": [
-        ["12 inches", "12in"],
-        ["1m", "3in"]
-    ]
-}
