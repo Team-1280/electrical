@@ -16,6 +16,8 @@ namespace model {
  */
 class ComponentNode {
 public:
+    ComponentNode() : m_ty{}, m_name{}, m_pos{} {}
+
 
 private:
     /** What kind of component this is, shared with other components */
@@ -24,8 +26,6 @@ private:
     std::string_view m_name;
     /** Offset in the workspace from center */
     Point m_pos;
-
-    ComponentNode() : m_ty{}, m_name{}, m_pos{} {}
 
     friend class BoardGraph;
 };

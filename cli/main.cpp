@@ -2,11 +2,14 @@
 #include <lib.hpp>
 #include <util/log.hpp>
 #include <iostream>
+#include <fstream>
 
 int main(int argc, const char* argv[]) {
     logger::init("./log.txt");
     
-    model::ComponentStore s{};
-    std::cout << (*s.find("1280.test"))->to_json() << std::endl;
+    json board_json;
+    std::ifstream{"./assets/boards/test.json"} >> board_json;
+    model::BoardGraph board = board_json.get<model::BoardGraph>();
+    std::cout << board.to_json() << std::endl;
     return 0;
 }

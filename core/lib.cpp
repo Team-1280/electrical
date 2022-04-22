@@ -10,8 +10,11 @@ std::optional<ComponentNodeRef> BoardGraph::get_node(const std::string& name) {
 }
 
 void BoardGraph::from_json(BoardGraph &self, const json &j) {
-    for(const auto& [k, v] : j["nodes"].items()) {
-        auto [elem, ins] = self.m_nodes.emplace(k, ComponentNodeRef{});
+    for(auto const& [k, v] : j["nodes"].items()) {
+        auto [elem, ins] = self.m_nodes.emplace(
+            k,
+            std::make_shared<ComponentNode>()
+        );
         if(!ins) {
             logger::warn("Failed to insert node {} by name into board graph", k);
         }
@@ -33,8 +36,10 @@ json BoardGraph::to_json() const {
     json::object_t obj{};
     obj["nodes"] = json::object({});
     for(const auto& [k, v] : this->m_nodes) {
-        obj["nodes"][k].emplace("pos", v->m_pos);
-        obj["nodes"][k].emplace("type", v->m_ty->m_name);
+        json::object_t node{};
+        node.emplace("pos", v->m_pos);
+        node.emplace("type", v->m_ty->m_id);
+        obj["nodes"].emplace(k, node);
     }
 
     return obj;

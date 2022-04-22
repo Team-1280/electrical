@@ -1,0 +1,8 @@
+{
+    "nodes": {
+        "RoboRIO": {
+            "type": "1280.test",
+            "pos": ["100.3 cm", "14 in"]
+        }
+    }
+}
