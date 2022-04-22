@@ -3,6 +3,8 @@
 #include <exception>
 #include <concepts>
 
+#include "util/log.hpp"
+
 using json = nlohmann::json;
 
 /** 
@@ -19,6 +21,7 @@ namespace ser {
  */
 template<typename T>
 concept JsonSerializable = requires(const T v) {
+    std::is_default_constructible_v<T>;
     {v.to_json()} -> std::convertible_to<json>;
     {T::from_json(std::declval<T&>(), std::declval<const json&>())};
 };
@@ -31,7 +34,7 @@ concept JsonSerializable = requires(const T v) {
 template<typename T>
 concept StringSerializable = requires(const T v) {
     {v.to_string()} -> std::convertible_to<std::string>;
-    {T::from_string(std::declval<T&>(), std::declval<const std::string_view>())};
+    {T::from_string(std::declval<T&>(), std::declval<std::string_view>())};
 };
 
 }
@@ -57,7 +60,8 @@ struct adl_serializer<T> {
     }
 
     static inline void from_json(const json& j, T& v) {
-        T::from_string(v, std::string_view{j.get<std::string>()});
+        std::string s = j.get<std::string>();
+        T::from_string(v, s);
     } 
 };
 

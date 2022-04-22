@@ -27,7 +27,6 @@ json Component::to_json() const {
     return obj;
 }
 
-
 std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
     auto stored = this->m_store.find(id);
     if(stored == this->m_store.end()) {
@@ -55,17 +54,17 @@ std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
                 std::make_pair<std::string, ConnectionPort>(std::string{name}, ConnectionPort{})
             );
             auto& [k, v] = *ref->m_conns.find(name);
-            //conn["pos"].get_to<Point>(v.m_pt);
+            Point::from_json(v.m_pt, conn["pos"]);
+            //v.m_pt = conn["pos"].get<Point>();
             v.m_name = std::string_view(k); //Share the key string with the Connectionport to avoid allocating twice
         }
     } catch(json::exception& e) {
-        logger::error("Failed to load component from {}: {}", stored->second.path, e.id, e.what());
+        logger::error("Failed to load component from {}: {}", stored->second.path, e.what());
         return std::optional<ComponentRef>{};
     } catch(std::exception& e) {
         logger::error("Failed to load component from {}: {}", stored->second.path, e.what());
         return std::optional<ComponentRef>{};
     }
-    
     logger::trace("Loaded component {}", id);
     stored->second.loaded = std::weak_ptr{ref};
     return ref;

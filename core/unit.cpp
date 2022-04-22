@@ -12,15 +12,23 @@ static bool equal_ignore_case(const std::string_view a, const std::string_view b
 
 namespace model {
 
-void LengthUnit::from_string(LengthUnit& self, const std::string_view original_unit_str) {
+void LengthUnit::from_string(LengthUnit& self, std::string_view unit_str) {
+    logger::trace("{}", fmt::ptr(unit_str.data()));
     self.m_u = LengthUnit::Meters;
-    if(original_unit_str.empty()) {
-        throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
+
+    while(!unit_str.empty()) {
+        if(std::isspace(unit_str[0])) {
+            unit_str.remove_prefix(1);
+        } else {
+            break;
+        }
     }
 
-    const std::string_view unit_str = original_unit_str.substr(original_unit_str.find_first_not_of(' '));
-        
-    static const auto metric = [&](const char * const prefix, UnitVal unit) {
+    if(unit_str.empty()) {
+        throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
+    }
+    
+    const auto metric = [&self, &unit_str](const char * const prefix, UnitVal unit) {
         if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'm') {
             self.m_u = unit;
         } else if(unit_str.length() >= 6 && equal_ignore_case(unit_str.substr(0, 4), prefix)) {
@@ -30,9 +38,10 @@ void LengthUnit::from_string(LengthUnit& self, const std::string_view original_u
                 self.m_u = unit;
             }
         } else {
-            throw std::invalid_argument("LengthUnit#LengthUnit called with invalid string \"" + std::string(unit_str) + '\"');
+            throw std::invalid_argument(fmt::format("LengthUnit#LengthUnit called with invalid string \"{}\"", unit_str));
         }
     };
+
 
     char first = std::tolower(unit_str.at(0));
     switch(first) {
@@ -58,7 +67,7 @@ void LengthUnit::from_string(LengthUnit& self, const std::string_view original_u
                 self.m_u = UnitVal::Feet;
             }
         } break;
-        default: throw std::invalid_argument("LengthUnit#LengthUnit(string) called with invalid string \"" + std::string(unit_str) + '\"');
+        default: throw std::invalid_argument(fmt::format("LengthUnit#LengthUnit(string) called with invalid string \"{}\"", unit_str));
     }
 }
 

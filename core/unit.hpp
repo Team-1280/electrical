@@ -152,16 +152,17 @@ public:
      * @param str The string to deserialize a value from
      * @throws std::exception If string deserialization fails
      */
-    static void from_string(Quantity<U, V>& self, const std::string_view str) 
+    static void from_string(Quantity<U, V>& self, std::string_view str) 
     requires ser::StringSerializable<U> && std::convertible_to<double, V> {
         size_t num_end = 0;
         double v = 0.;
         auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), v);
         self.m_val = v;
+        logger::error("{}", fmt::ptr(ptr));
         if(ec != std::errc()) {
             throw std::invalid_argument("Bad quantity string \"" + std::string(str) + '\"');
         }
-        U::from_string(self.m_unit, std::string_view(ptr, str.length() - (ptr - str.data())));
+        U::from_string(self.m_unit, str.substr(ptr - str.data()));
     }
    
     /**
@@ -220,5 +221,6 @@ private:
 };
 
 using Length = Quantity<LengthUnit, float>;
+static_assert(ser::StringSerializable<Length>);
 
 }

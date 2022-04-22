@@ -37,8 +37,8 @@ json Footprint::to_json() const {
 
 void Point::from_json(Point& self, const json& val) {
     std::cout << val << self.to_json() << std::endl;
-    val[0].get<Length>();
-    //self.y = val[1].get<Length>();
+    val[0].get_to<Length>(self.x);
+    val[1].get_to<Length>(self.y);
 }
 
 json Point::to_json() const {
