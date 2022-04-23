@@ -1,8 +1,27 @@
 {
+<<<<<<< Updated upstream
     "nodes": {
         "RoboRIO": {
             "type": "1280.test",
             "pos": ["100.3 cm", "14 in"]
+=======
+    "nodes": [
+        {
+            "id": 0,
+            "name": "RoboRIO",
+            "type": "1280.test",
+            "conns": {
+                "pwm0": [1, "pwm0"]
+            },
+            "pos": ["100.3 cm", "14 in"]
+        },
+        {
+            "id": 1,
+            "name": "Motor Controller",
+            "type": "1280.test",
+            "conns": {},
+            "pos": ["51.1 in", "1ft"]
+>>>>>>> Stashed changes
         }
     }
 }

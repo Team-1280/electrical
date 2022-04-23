@@ -64,10 +64,7 @@ std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
         ref->m_id = std::string_view{stored->first};
         ref->m_name = std::string_view{stored->second.name};
         json_val["footprint"].get_to<Footprint>(ref->m_fp);
-        json_val["conns"].get_to<std::vector<ConnectionPort>>(ref->m_ports);
-    } catch(json::exception& e) {
-        logger::error("Failed to load component from {}: {}", stored->second.path, e.what());
-        return std::optional<ComponentRef>{};
+        json_val["ports"].get_to<std::vector<ConnectionPort>>(ref->m_ports);
     } catch(std::exception& e) {
         logger::error("Failed to load component from {}: {}", stored->second.path, e.what());
         return std::optional<ComponentRef>{};
@@ -166,6 +163,7 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
         //Skip nodes that we errored out on before
         if(!self.m_nodes.contains(id)) continue;
 
+<<<<<<< Updated upstream
         for(auto const& conn : v["conns"]) {
             std::size_t componentnode_id = conn[0].get<std::size_t>();
             std::string port_id = conn[1].get<std::string>();
@@ -181,18 +179,69 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
             }
 
             self.m_nodes[id]->m_conns.push_back(PortRef{WeakComponentNodeRef{conn_node->second}, *conn_port_idx});
+=======
+        for(auto const& [from_port_id, conn] : v["conns"].items()) {
+            try {
+                std::size_t from_id = conn[0].get<std::size_t>();
+                std::string to_port_id = conn[1].get<std::string>();
+
+                const auto to = self.m_nodes.find(from_id);
+                if(to == self.m_nodes.end()) {
+                    logger::error("Component node {} connects to non-existent node {}, port {}", id, from_id, to_port_id);
+                    continue;
+                }
+                std::optional<std::size_t> from_port_idx = from->m_ty->get_port_idx(from_port_id);
+                if(!from_port_idx.has_value()) {
+                    logger::error(
+                        "Component node {} has a connection from port {} that doesn't exist in component type {}",
+                        from->name(),
+                        from_port_id,
+                        from->type()->name()
+                    );
+                    continue;
+                }
+
+                std::optional<std::size_t> to_port_idx = to->second->m_ty->get_port_idx(to_port_id);
+                if(!to_port_idx.has_value()) {
+                    logger::error(
+                        "Component node {} connects to non-existent port {} in component type {}",
+                        from->name(),
+                        to_port_id,
+                        to->second->m_ty->name()
+                    );
+                    continue;
+                }
+
+                from->m_conns[*from_port_idx] = PortRef{WeakComponentNodeRef{to->second}, *to_port_idx};
+                to->second->m_conns[*to_port_idx] = PortRef{WeakComponentNodeRef{from}, *from_port_idx};
+            } catch(std::exception& e) {
+                logger::error("Failed to deserialize connection from port {} for component {}[{}]: {}", from_port_id, from->id(), from->name(), e.what());
+                continue;
+            }
+>>>>>>> Stashed changes
         }
     }
 }
 
 json BoardGraph::to_json() const {
     json::object_t obj{};
-    obj["nodes"] = json::object({});
+    obj["nodes"] = json::array({});
     for(const auto& [k, v] : this->m_nodes) {
         json::object_t node{};
         node.emplace("pos", v->m_pos);
         node.emplace("type", v->m_ty->m_id);
+<<<<<<< Updated upstream
         obj["nodes"].emplace(k, node);
+=======
+        node.emplace("name", v->name());
+        node.emplace("conns", json::object({}));
+        for(std::size_t port_idx = 0; port_idx < v->m_conns.size(); ++port_idx) {
+            if(v->m_conns[port_idx].has_value()) {
+                node["conns"].emplace(v->type()->get_port(port_idx).name(), v->m_conns[port_idx]->to_json());
+            }
+        }
+        obj["nodes"].push_back(node);
+>>>>>>> Stashed changes
     }
 
     return obj;
