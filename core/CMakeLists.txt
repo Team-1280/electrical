@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(${NAME} ${SRC})
 
-target_compile_options(${TARGET_NAME} PRIVATE
+target_compile_options(${NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
 )
