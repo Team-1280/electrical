@@ -15,7 +15,7 @@ struct BuildOpts {
         MinSizeRel
     };
 
-    static consteval const bool should_log_trace() {
+    static consteval bool should_log_trace() {
         return build_type == BuildType::RelWithDebInfo || build_type == BuildType::Debug;
     }
 
