@@ -34,6 +34,9 @@ concept QuantityVal = requires(V v) {
     {v * std::declval<float>()} -> std::convertible_to<V>;
 };
 
+/**
+ * @brief A generic quantity type with unit and value type
+ */
 template<Unit U, QuantityVal V>
 struct Quantity {
 public:

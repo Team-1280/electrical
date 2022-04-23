@@ -50,7 +50,6 @@ std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
         for(const json& conn : json_val["conns"]) {
             std::string name = conn["name"].get<std::string>();
             auto [item, _] = ref->m_conns.emplace(name, ConnectionPort{});
-            //auto& [k, v] = *ref->m_conns.find(name);
             conn["pos"].get_to<Point>(item->second.m_pt);
             item->second.m_name = std::string_view{item->first}; //Share the key string with the Connectionport to avoid allocating twice
         }
@@ -92,6 +91,59 @@ ComponentStore::ComponentStore() {
     json j;
     cache >> j;
     from_json(*this, j);
+}
+
+constexpr const std::uint64_t FNV_PRIME = 1099511628211ULL;
+constexpr const std::uint64_t FNV_OFFSET = 14695981039346656037ULL;
+
+constexpr std::uint64_t fnv1a(const std::string_view str) {
+    std::uint64_t hash = FNV_OFFSET;
+    for(const std::uint8_t c : str) {
+        hash = (hash ^ c) * FNV_PRIME;
+    }
+
+    return hash;
+}
+
+std::optional<ComponentNodeRef> BoardGraph::get_node(const std::string& name) {
+    auto elem = this->m_nodes.find(name);
+    return (elem != this->m_nodes.end()) ? elem->second : std::optional<ComponentNodeRef>{};
+}
+
+void BoardGraph::from_json(BoardGraph &self, const json &j) {
+    for(auto const& [k, v] : j["nodes"].items()) {
+        auto [elem, ins] = self.m_nodes.emplace(
+            k,
+            std::make_shared<ComponentNode>()
+        );
+        if(!ins) {
+            logger::warn("Failed to insert node {} by name into board graph", k);
+        }
+        
+        elem->second->m_name = std::string_view{elem->first};
+        v["pos"].get_to<Point>(elem->second->m_pos);
+        std::string comp_ty_id = v["type"].get<std::string>();
+        std::optional<ComponentRef> component_ty = self.m_store.find(comp_ty_id);
+        if(!component_ty) {
+            logger::error("Component node '{}' refers to component {} that was not found", k, comp_ty_id);
+            self.m_nodes.erase(k);
+            continue;
+        }
+        elem->second->m_ty = *component_ty;
+    }
+}
+
+json BoardGraph::to_json() const {
+    json::object_t obj{};
+    obj["nodes"] = json::object({});
+    for(const auto& [k, v] : this->m_nodes) {
+        json::object_t node{};
+        node.emplace("pos", v->m_pos);
+        node.emplace("type", v->m_ty->m_id);
+        obj["nodes"].emplace(k, node);
+    }
+
+    return obj;
 }
 
 }

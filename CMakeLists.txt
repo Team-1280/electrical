@@ -42,12 +42,24 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
+FetchContent_Declare(
+    fltk
+    GIT_REPOSITORY https://github.com/fltk/fltk.git
+    GIT_TAG master
+)
+FetchContent_MakeAvailable(fltk)
+
 add_subdirectory(core)
 
+set(FRONTEND_TYPES cli gui)
+if(NOT "${FRONTEND}" IN_LIST FRONTEND_TYPES)
+    message("No frontend given, building gui")
+    set(FRONTEND "gui")
+endif()
 if(FRONTEND STREQUAL  "cli")
     add_subdirectory(cli)
 elseif(FRONTEND STREQUAL "gui")
-    message("gui frontend not yet implemented")
+    add_subdirectory(gui)
 else()
 
 endif()
