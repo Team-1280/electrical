@@ -13,23 +13,35 @@ namespace model {
  */
 struct ConnectionPort {
 public:
-    /** Get a string view into this connection port's name */
-    constexpr inline const std::string_view name() const { return this->m_name; }
-    /** Get a C-style NULL-terminated name string */
-    constexpr inline const char * const c_str() const { return this->m_name.data(); }
+    /** Get this connection port's name */
+    constexpr inline const std::string& name() const { return this->m_name; }
+    /** Get this connection port's ID */
+    constexpr inline const std::string& id() const { return this->m_id; }
+
+    inline ConnectionPort(ConnectionPort&& other) : m_pt{std::move(other.m_pt)}, m_name{std::move(other.m_name)}, m_id{std::move(other.m_id)} {}
+    inline ConnectionPort& operator=(ConnectionPort&& other) {
+        this->m_pt = std::move(other.m_pt);
+        this->m_name = std::move(other.m_name);
+        this->m_id = std::move(other.m_id);
+        return *this;
+    }
+
+    static void from_json(ConnectionPort& self, const json& j);
+    json to_json() const;
+    ConnectionPort() : m_pt{}, m_name{}, m_id{} {}
 private:
     /** Location on the component's footprint that this connection port is located */
     Point m_pt;
-    /** 
-     * Name of the port, shared with the parent Component
-     * Guranteed to be NULL-terminated
-     */
-    std::string_view m_name;
+    /** Name of the port */
+    std::string m_name;
+    /** Internal ID of this connection port */
+    std::string m_id;
 
     friend class ComponentStore;
     friend class Component;
-    ConnectionPort() : m_pt{}, m_name{} {}
 };
+
+static_assert(ser::JsonSerializable<ConnectionPort>);
 
 /**
  * @brief A component in the board design with required parameters like
@@ -43,23 +55,30 @@ public:
     Component(Component&& other) : 
         m_name{other.m_name},
         m_fp{std::move(other.m_fp)} {}
-    Component() : m_name{}, m_id{}, m_conns{}, m_fp{} {};
-
-
+    Component() : m_name{}, m_id{}, m_ports{}, m_fp{} {};
+    
+    /** Get the name of this component */
+    inline constexpr const std::string_view name() const { return this->m_name; }
+    
+    /** Get the connection port at the specified index */
+    inline ConnectionPort const& get_port(const std::size_t idx) const { return this->m_ports[idx]; }
+    /** Get a port by name, O(n) lookup time */
+    std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view name) const;
+    /** Get a port index by name */
+    std::optional<std::size_t> get_port_idx(const std::string_view name) const;
 private:
-    //! @brief User-facing name of the component type, shared with the ComponentStore
+    /* @brief User-facing name of the component type, shared with the ComponentStore */
     std::string_view m_name;
-    //! @brief ID string of this component, shared with the ComponentStore
+    /* @brief ID string of this component, shared with the ComponentStore */
     std::string_view m_id;
-    //! @brief Connection points for this component
-    std::unordered_map<std::string, ConnectionPort> m_conns;
-    //! @brief Shape of the component in the workspace 
+    /* Connection points for this component, vector used instead of */
+    std::vector<ConnectionPort> m_ports;
+    /* @brief Shape of the component in the workspace */ 
     Footprint m_fp;
     
     friend class ComponentStore;
     friend class BoardGraph;
 };
-
 
 using ComponentRef = std::shared_ptr<Component>;
 
@@ -139,17 +158,22 @@ using ComponentNodeRef = std::shared_ptr<ComponentNode>;
 using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
 
 /**
- * @brief A hash map utilizing perfect hashing to map a constant set
- * of strings to values
+ * @brief A weak reference to a component with additional internal port
+ * number data
  */
-struct PortMap {
+struct PortRef {
 public:
+    /** Construct a port reference from a placed component reference and index of the port */
+    inline PortRef(WeakComponentNodeRef ref, std::size_t idx) : m_idx{idx}, m_ref{ref} {}
+    
+    /** Serialize this port reference into an ID locator string */
+    json to_json() const;
 
 private:
-    std::vector<WeakComponentNodeRef> m_slots;
-    std::uint64_t m_multiplier;
-    
-    PortMap() : m_slots{}, m_multiplier{} {}
+    /** Reference to the placed component that this connection goes to */
+    WeakComponentNodeRef m_ref;
+    /** Index of the port in the m_conns vector */
+    std::size_t m_idx;
 };
 
 /**
@@ -158,19 +182,34 @@ private:
  */
 class ComponentNode {
 public:
-    ComponentNode() : m_ty{}, m_name{}, m_pos{} {}
+    ComponentNode() : m_ty{}, m_name{}, m_pos{}, m_conns{} {}
+    
+    /** Get the name of this component node */
+    inline constexpr const std::string& name() const { return this->m_name; }
+    inline constexpr const std::size_t id() const { return this->m_id; }
+    
+    /** Fetch the underlying component type of this node */
+    inline ComponentRef type() const { return this->m_ty; }
 
 private:
     /** What kind of component this is, shared with other components */
     ComponentRef m_ty;
-    /** User-assigned name of the placed part, shared with the board graph */
-    std::string_view m_name;
+    /** 
+     * The internal ID of this component node, it is not a string because it
+     * is never presented to the user and is stable between runs of the program
+     */
+    std::size_t m_id;
+    /** User-assigned name of the placed part */
+    std::string m_name;
     /** Offset in the workspace from center */
     Point m_pos;
+    /** A vector sized the same as the component type's m_ports field */
+    std::vector<std::optional<PortRef>> m_conns;
+    
+    ComponentNode(const std::size_t id) : m_id{id}, m_ty{}, m_name{}, m_pos{}, m_conns{} {}
 
     friend class BoardGraph;
 };
-
 
 /**  
  * @brief A graph data structures in which the
@@ -178,9 +217,6 @@ private:
  */
 class BoardGraph {
 public:
-    /** Get a component node by name from this graph */
-    std::optional<ComponentNodeRef> get_node(const std::string& s);
-    
     /** Deserialize a board graph from a JSON value */
     static void from_json(BoardGraph& self, const json& j);
     /** Serialize this board graph to a JSON value */
@@ -194,11 +230,13 @@ public:
         return *this;
     }
 private:
-    using compmap_type = std::unordered_map<std::string, ComponentNodeRef>;
-    /** A map of user-assigned node names to placed components */
+    using compmap_type = std::map<std::size_t, ComponentNodeRef>;
+    /** A sparse array of internal IDs to placed components */
     compmap_type m_nodes;
     /** Collection of all loaded component types */
     ComponentStore m_store;
+    /** ID counter for component IDs */
+    std::size_t m_id_count = 0;
 };
 
 

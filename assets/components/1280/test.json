@@ -8,6 +8,7 @@
     ],
     "conns": [
         {
+            "id": "pwm0",
             "pos": ["100 cm", "10 inches"],
             "name": "PWM0"
         }
