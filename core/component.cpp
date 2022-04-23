@@ -29,7 +29,7 @@ json Component::to_json() const {
         {"name", this->m_name},
         {"id", this->m_id},
         {"footprint", this->m_fp},
-        {"conns", this->m_ports}
+        {"ports", this->m_ports}
     };
 }
 
@@ -162,24 +162,7 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
         std::size_t id = v["id"].get<std::size_t>();
         //Skip nodes that we errored out on before
         if(!self.m_nodes.contains(id)) continue;
-
-<<<<<<< Updated upstream
-        for(auto const& conn : v["conns"]) {
-            std::size_t componentnode_id = conn[0].get<std::size_t>();
-            std::string port_id = conn[1].get<std::string>();
-
-            const auto conn_node = self.m_nodes.find(componentnode_id);
-            if(conn_node == self.m_nodes.end()) {
-                logger::error("Component node {} connects to non-existent node {}, port {}", id, componentnode_id, port_id);
-                continue;
-            }
-            std::optional<std::size_t> conn_port_idx = conn_node->second->m_ty->get_port_idx(port_id);
-            if(!conn_port_idx.has_value()) {
-                logger::error("Component node {} connects to non-existent port {} in component type {}", id, port_id, conn_node->second->m_ty->name());
-            }
-
-            self.m_nodes[id]->m_conns.push_back(PortRef{WeakComponentNodeRef{conn_node->second}, *conn_port_idx});
-=======
+        ComponentNodeRef from = self.m_nodes[id];
         for(auto const& [from_port_id, conn] : v["conns"].items()) {
             try {
                 std::size_t from_id = conn[0].get<std::size_t>();
@@ -218,7 +201,6 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
                 logger::error("Failed to deserialize connection from port {} for component {}[{}]: {}", from_port_id, from->id(), from->name(), e.what());
                 continue;
             }
->>>>>>> Stashed changes
         }
     }
 }
@@ -230,9 +212,6 @@ json BoardGraph::to_json() const {
         json::object_t node{};
         node.emplace("pos", v->m_pos);
         node.emplace("type", v->m_ty->m_id);
-<<<<<<< Updated upstream
-        obj["nodes"].emplace(k, node);
-=======
         node.emplace("name", v->name());
         node.emplace("conns", json::object({}));
         for(std::size_t port_idx = 0; port_idx < v->m_conns.size(); ++port_idx) {
@@ -241,7 +220,6 @@ json BoardGraph::to_json() const {
             }
         }
         obj["nodes"].push_back(node);
->>>>>>> Stashed changes
     }
 
     return obj;

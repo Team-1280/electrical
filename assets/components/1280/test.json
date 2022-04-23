@@ -6,7 +6,7 @@
         ["10ft", "5mm"],
         ["4m", "61cm"]
     ],
-    "conns": [
+    "ports": [
         {
             "id": "pwm0",
             "pos": ["100 cm", "10 inches"],

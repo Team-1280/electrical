@@ -9,7 +9,7 @@ set(
 
 set(
     NAME
-"e1280-core"
+    "e1280-core"
 )
 
 set(CMAKE_CXX_STANDARD 20)

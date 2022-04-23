@@ -157,7 +157,6 @@ public:
      */
     static void from_string(Quantity<U, V>& self, std::string_view str) 
     requires ser::StringSerializable<U> && std::convertible_to<double, V> {
-        size_t num_end = 0;
         double v = 0.;
         auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), v);
         self.m_val = v;
@@ -198,7 +197,10 @@ public:
     constexpr LengthUnit() : m_u{UnitVal::Meters} {}
     constexpr LengthUnit(const LengthUnit& other) : m_u{other.m_u} {}
     constexpr inline operator size_t() const { return static_cast<size_t>(this->m_u); }
-    
+    constexpr inline LengthUnit& operator=(const LengthUnit& other) {
+        this->m_u = other.m_u;
+        return *this;
+    } 
     
     /**
      * @brief Convert a unit string into a corresponding length unit value

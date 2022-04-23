@@ -20,7 +20,7 @@ public:
 
     inline ConnectionPort(ConnectionPort&& other) : m_pt{std::move(other.m_pt)}, m_name{std::move(other.m_name)}, m_id{std::move(other.m_id)} {}
     inline ConnectionPort& operator=(ConnectionPort&& other) {
-        this->m_pt = std::move(other.m_pt);
+        this->m_pt = other.m_pt;
         this->m_name = std::move(other.m_name);
         this->m_id = std::move(other.m_id);
         return *this;
@@ -164,7 +164,7 @@ using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
 struct PortRef {
 public:
     /** Construct a port reference from a placed component reference and index of the port */
-    inline PortRef(WeakComponentNodeRef ref, std::size_t idx) : m_idx{idx}, m_ref{ref} {}
+    inline PortRef(WeakComponentNodeRef ref, std::size_t idx) : m_ref{ref}, m_idx{idx} {}
     
     /** Serialize this port reference into an ID locator string */
     json to_json() const;
@@ -186,10 +186,12 @@ public:
     
     /** Get the name of this component node */
     inline constexpr const std::string& name() const { return this->m_name; }
-    inline constexpr const std::size_t id() const { return this->m_id; }
+    inline constexpr std::size_t id() const { return this->m_id; }
     
     /** Fetch the underlying component type of this node */
     inline ComponentRef type() const { return this->m_ty; }
+    
+    ComponentNode(const std::size_t id) : m_ty{}, m_id{id}, m_name{}, m_pos{}, m_conns{} {}
 
 private:
     /** What kind of component this is, shared with other components */
@@ -206,7 +208,6 @@ private:
     /** A vector sized the same as the component type's m_ports field */
     std::vector<std::optional<PortRef>> m_conns;
     
-    ComponentNode(const std::size_t id) : m_id{id}, m_ty{}, m_name{}, m_pos{}, m_conns{} {}
 
     friend class BoardGraph;
 };

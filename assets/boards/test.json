@@ -1,10 +1,4 @@
 {
-<<<<<<< Updated upstream
-    "nodes": {
-        "RoboRIO": {
-            "type": "1280.test",
-            "pos": ["100.3 cm", "14 in"]
-=======
     "nodes": [
         {
             "id": 0,
@@ -21,7 +15,6 @@
             "type": "1280.test",
             "conns": {},
             "pos": ["51.1 in", "1ft"]
->>>>>>> Stashed changes
         }
-    }
+    ]
 }
