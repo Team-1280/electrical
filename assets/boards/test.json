@@ -1,20 +1,22 @@
 {
     "nodes": [
         {
-            "id": 0,
+            "id": 1,
             "name": "RoboRIO",
             "type": "1280.test",
-            "conns": {
-                "pwm0": [1, "pwm0"]
-            },
             "pos": ["100.3 cm", "14 in"]
         },
         {
-            "id": 1,
+            "id": 2,
             "name": "Motor Controller",
             "type": "1280.test",
-            "conns": {},
             "pos": ["51.1 in", "1ft"]
         }
+    ],
+    "edges": [
+        [
+            {"node": 1, "port": "pwm0"},
+            {"node": 2, "port": "pwm0"}
+        ]
     ]
 }

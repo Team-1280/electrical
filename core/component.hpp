@@ -5,6 +5,7 @@
 
 #include <ser.hpp>
 #include <geom.hpp>
+#include "util/hash.hpp"
 
 namespace model {
 
@@ -71,8 +72,12 @@ private:
     std::string_view m_name;
     /* @brief ID string of this component, shared with the ComponentStore */
     std::string_view m_id;
-    /* Map of IDs to connection points for this component */
-    std::unordered_map<std::string, ConnectionPort> m_ports;
+    /* 
+     * Map of IDs to connection points for this component 
+     * Note: The WireEdge class contains pointers into this map, meaning that
+     * after construction elements MUST not be removed
+     */
+    std::unordered_map<std::string, ConnectionPort, StringHasher> m_ports;
     /* @brief Shape of the component in the workspace */ 
     Footprint m_fp;
     
@@ -131,7 +136,7 @@ private:
     };
     static_assert(ser::JsonSerializable<StoreEntry>);
 
-    using store_type = std::unordered_map<std::string, StoreEntry>;
+    using store_type = std::unordered_map<std::string, StoreEntry, StringHasher>;
 
     /** 
      * @brief ID to cache entry map used to speed up ID comparisons and allow lazy loading, eager freeing of memory 
@@ -146,77 +151,5 @@ private:
 };
 
 static_assert(ser::JsonSerializable<ComponentStore>);
-
-class ComponentNode;
-
-/**
- * @brief A shared reference to a ComponentNode, this reference must
- * NOT outlive the BoardGraph that creates it as the ComponentNode shares data with 
- * the BoardGraph that will become invalidated when the BoardGraph is destructed
- */
-using ComponentNodeRef = std::shared_ptr<ComponentNode>;
-using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
-
-/**
- * @brief A component that has been placed in a BoardGraph with
- * a component type reference and user-entered data
- */
-class ComponentNode {
-public:
-    ComponentNode() : m_ty{}, m_name{}, m_pos{} {}
-    
-    /** Get the name of this component node */
-    inline constexpr const std::string& name() const { return this->m_name; }
-    inline constexpr std::size_t id() const { return this->m_id; }
-    
-    /** Fetch the underlying component type of this node */
-    inline ComponentRef type() const { return this->m_ty; }
-    
-    ComponentNode(const std::size_t id) : m_ty{}, m_id{id}, m_name{}, m_pos{} {}
-
-private:
-    /** What kind of component this is, shared with other components */
-    ComponentRef m_ty;
-    /** 
-     * The internal ID of this component node, it is not a string because it
-     * is never presented to the user and is stable between runs of the program
-     */
-    std::size_t m_id;
-    /** User-assigned name of the placed part */
-    std::string m_name;
-    /** Offset in the workspace from center */
-    Point m_pos;
-
-    friend class BoardGraph;
-};
-
-/**  
- * @brief A graph data structures in which the
- * nodes are `Component`s and the edges are wires
- */
-class BoardGraph {
-public:
-    /** Deserialize a board graph from a JSON value */
-    static void from_json(BoardGraph& self, const json& j);
-    /** Serialize this board graph to a JSON value */
-    json to_json() const;
-
-    BoardGraph() : m_nodes{}, m_store{} {}    
-    inline BoardGraph(BoardGraph&& other) : m_nodes{std::move(other.m_nodes)}, m_store{std::move(other.m_store)} {}
-    inline BoardGraph& operator=(BoardGraph&& other) {
-        this->m_nodes = std::move(other.m_nodes);
-        this->m_store = std::move(other.m_store);
-        return *this;
-    }
-private:
-    using compmap_type = std::map<std::size_t, ComponentNodeRef>;
-    /** A sparse array of internal IDs to placed components */
-    compmap_type m_nodes;
-    /** Collection of all loaded component types */
-    ComponentStore m_store;
-    /** ID counter for component IDs */
-    std::size_t m_id_count = 0;
-};
-
 
 }
