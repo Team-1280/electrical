@@ -10,12 +10,6 @@ namespace model {
 const std::filesystem::path ComponentStore::CACHEFILE_PATH = "./assets/components/cache.json";
 const std::filesystem::path ComponentStore::COMPONENT_DIR = "./assets/components/";
 
-void ConnectionPort::from_json(ConnectionPort &self, const json &j) {
-    j["name"].get_to<std::string>(self.m_name);
-    j["id"].get_to<std::string>(self.m_id);
-    j["pos"].get_to<Point>(self.m_pt);
-}
-
 json ConnectionPort::to_json() const {
     return {
         {"name", this->m_name},
@@ -31,17 +25,6 @@ json Component::to_json() const {
         {"footprint", this->m_fp},
         {"ports", this->m_ports}
     };
-}
-
-json PortRef::to_json() const {
-    if(this->m_ref.expired()) {
-        logger::warn("Attempting to serialize port reference to a component that doesn't exist");
-        return {};
-    } 
-    ComponentNodeRef locked = this->m_ref.lock();
-    return json::array({
-        locked->id(), locked->type()->get_port(this->m_idx).name()
-    });
 }
 
 std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
@@ -64,7 +47,17 @@ std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
         ref->m_id = std::string_view{stored->first};
         ref->m_name = std::string_view{stored->second.name};
         json_val["footprint"].get_to<Footprint>(ref->m_fp);
-        json_val["ports"].get_to<std::vector<ConnectionPort>>(ref->m_ports);
+        for(const auto& [port_id, port] : json_val["ports"].items()) {
+            auto [elem, inserted] = ref->m_ports.emplace(port_id, ConnectionPort{});
+            if(!inserted) {
+                logger::warn("Component {} has multiple definitions for port {}", ref->m_id, port_id);
+                continue;
+            }
+            
+            elem->second.m_id = std::string_view{elem->first};
+            port["name"].get_to<std::string>(elem->second.m_name);
+            port["pos"].get_to<Point>(elem->second.m_pt);
+        }
     } catch(std::exception& e) {
         logger::error("Failed to load component from {}: {}", stored->second.path, e.what());
         return std::optional<ComponentRef>{};
@@ -102,19 +95,10 @@ ComponentStore::ComponentStore() {
     from_json(*this, j);
 }
 
-std::optional<std::size_t> Component::get_port_idx(const std::string_view id) const {
-    for(std::size_t i = 0; i < this->m_ports.size(); ++i) {
-        if(this->m_ports[i].id() == id) {
-            return i;
-        }
-    }
-    return std::optional<std::size_t>{};
-}
-
-std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string_view id) const {
-    std::optional<std::size_t> idx = this->get_port_idx(id);
-    if(idx.has_value()) {
-        return std::cref(this->m_ports[*idx]);
+std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string& id) const {
+    const auto& port = this->m_ports.find(id);
+    if(port != this->m_ports.end()) {
+        return std::cref(port->second);
     } else {
         return std::optional<std::reference_wrapper<const ConnectionPort>>{};
     }
@@ -153,55 +137,6 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
             continue;
         }
         elem->second->m_ty = *component_ty;
-        elem->second->m_conns.resize((*component_ty)->m_ports.size());
-    }
-    
-    //Resolve component node connections now that we have loaded all component nodes
-    //by name
-    for(auto const& [k, v] : j["nodes"].items()) {
-        std::size_t id = v["id"].get<std::size_t>();
-        //Skip nodes that we errored out on before
-        if(!self.m_nodes.contains(id)) continue;
-        ComponentNodeRef from = self.m_nodes[id];
-        for(auto const& [from_port_id, conn] : v["conns"].items()) {
-            try {
-                std::size_t from_id = conn[0].get<std::size_t>();
-                std::string to_port_id = conn[1].get<std::string>();
-
-                const auto to = self.m_nodes.find(from_id);
-                if(to == self.m_nodes.end()) {
-                    logger::error("Component node {} connects to non-existent node {}, port {}", id, from_id, to_port_id);
-                    continue;
-                }
-                std::optional<std::size_t> from_port_idx = from->m_ty->get_port_idx(from_port_id);
-                if(!from_port_idx.has_value()) {
-                    logger::error(
-                        "Component node {} has a connection from port {} that doesn't exist in component type {}",
-                        from->name(),
-                        from_port_id,
-                        from->type()->name()
-                    );
-                    continue;
-                }
-
-                std::optional<std::size_t> to_port_idx = to->second->m_ty->get_port_idx(to_port_id);
-                if(!to_port_idx.has_value()) {
-                    logger::error(
-                        "Component node {} connects to non-existent port {} in component type {}",
-                        from->name(),
-                        to_port_id,
-                        to->second->m_ty->name()
-                    );
-                    continue;
-                }
-
-                from->m_conns[*from_port_idx] = PortRef{WeakComponentNodeRef{to->second}, *to_port_idx};
-                to->second->m_conns[*to_port_idx] = PortRef{WeakComponentNodeRef{from}, *from_port_idx};
-            } catch(std::exception& e) {
-                logger::error("Failed to deserialize connection from port {} for component {}[{}]: {}", from_port_id, from->id(), from->name(), e.what());
-                continue;
-            }
-        }
     }
 }
 
@@ -213,12 +148,6 @@ json BoardGraph::to_json() const {
         node.emplace("pos", v->m_pos);
         node.emplace("type", v->m_ty->m_id);
         node.emplace("name", v->name());
-        node.emplace("conns", json::object({}));
-        for(std::size_t port_idx = 0; port_idx < v->m_conns.size(); ++port_idx) {
-            if(v->m_conns[port_idx].has_value()) {
-                node["conns"].emplace(v->type()->get_port(port_idx).name(), v->m_conns[port_idx]->to_json());
-            }
-        }
         obj["nodes"].push_back(node);
     }
 

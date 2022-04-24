@@ -7,8 +7,7 @@
         ["4m", "61cm"]
     ],
     "ports": [
-        {
-            "id": "pwm0",
+        "pwm0": {
             "pos": ["100 cm", "10 inches"],
             "name": "PWM0"
         }

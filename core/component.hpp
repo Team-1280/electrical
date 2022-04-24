@@ -16,7 +16,7 @@ public:
     /** Get this connection port's name */
     constexpr inline const std::string& name() const { return this->m_name; }
     /** Get this connection port's ID */
-    constexpr inline const std::string& id() const { return this->m_id; }
+    constexpr inline const std::string_view id() const { return this->m_id; }
 
     inline ConnectionPort(ConnectionPort&& other) : m_pt{std::move(other.m_pt)}, m_name{std::move(other.m_name)}, m_id{std::move(other.m_id)} {}
     inline ConnectionPort& operator=(ConnectionPort&& other) {
@@ -34,8 +34,8 @@ private:
     Point m_pt;
     /** Name of the port */
     std::string m_name;
-    /** Internal ID of this connection port */
-    std::string m_id;
+    /** Internal ID of this connection port, shared with the parent Component and guranteed to be NULL terminated */
+    std::string_view m_id;
 
     friend class ComponentStore;
     friend class Component;
@@ -54,16 +54,16 @@ public:
     
     Component(Component&& other) : 
         m_name{other.m_name},
+        m_id{other.m_id},
+        m_ports{std::move(other.m_ports)},
         m_fp{std::move(other.m_fp)} {}
     Component() : m_name{}, m_id{}, m_ports{}, m_fp{} {};
     
     /** Get the name of this component */
     inline constexpr const std::string_view name() const { return this->m_name; }
     
-    /** Get the connection port at the specified index */
-    inline ConnectionPort const& get_port(const std::size_t idx) const { return this->m_ports[idx]; }
     /** Get a port by name, O(n) lookup time */
-    std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view name) const;
+    std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string& id) const;
     /** Get a port index by name */
     std::optional<std::size_t> get_port_idx(const std::string_view name) const;
 private:
@@ -71,8 +71,8 @@ private:
     std::string_view m_name;
     /* @brief ID string of this component, shared with the ComponentStore */
     std::string_view m_id;
-    /* Connection points for this component, vector used instead of */
-    std::vector<ConnectionPort> m_ports;
+    /* Map of IDs to connection points for this component */
+    std::unordered_map<std::string, ConnectionPort> m_ports;
     /* @brief Shape of the component in the workspace */ 
     Footprint m_fp;
     
@@ -158,31 +158,12 @@ using ComponentNodeRef = std::shared_ptr<ComponentNode>;
 using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
 
 /**
- * @brief A weak reference to a component with additional internal port
- * number data
- */
-struct PortRef {
-public:
-    /** Construct a port reference from a placed component reference and index of the port */
-    inline PortRef(WeakComponentNodeRef ref, std::size_t idx) : m_ref{ref}, m_idx{idx} {}
-    
-    /** Serialize this port reference into an ID locator string */
-    json to_json() const;
-
-private:
-    /** Reference to the placed component that this connection goes to */
-    WeakComponentNodeRef m_ref;
-    /** Index of the port in the m_conns vector */
-    std::size_t m_idx;
-};
-
-/**
  * @brief A component that has been placed in a BoardGraph with
  * a component type reference and user-entered data
  */
 class ComponentNode {
 public:
-    ComponentNode() : m_ty{}, m_name{}, m_pos{}, m_conns{} {}
+    ComponentNode() : m_ty{}, m_name{}, m_pos{} {}
     
     /** Get the name of this component node */
     inline constexpr const std::string& name() const { return this->m_name; }
@@ -191,7 +172,7 @@ public:
     /** Fetch the underlying component type of this node */
     inline ComponentRef type() const { return this->m_ty; }
     
-    ComponentNode(const std::size_t id) : m_ty{}, m_id{id}, m_name{}, m_pos{}, m_conns{} {}
+    ComponentNode(const std::size_t id) : m_ty{}, m_id{id}, m_name{}, m_pos{} {}
 
 private:
     /** What kind of component this is, shared with other components */
@@ -205,9 +186,6 @@ private:
     std::string m_name;
     /** Offset in the workspace from center */
     Point m_pos;
-    /** A vector sized the same as the component type's m_ports field */
-    std::vector<std::optional<PortRef>> m_conns;
-    
 
     friend class BoardGraph;
 };
