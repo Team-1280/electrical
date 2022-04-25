@@ -65,7 +65,7 @@ std::shared_ptr<Component> ComponentSerializer::load(
         
         port_json["name"].get_to(elem->second.m_name);
         port_json["pos"].get_to(elem->second.m_pt);
-        elem->second.m_name = std::string_view{elem->first};
+        elem->second.m_id = std::string_view{elem->first};
     }
 
     return component;
