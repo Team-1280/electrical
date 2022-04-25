@@ -18,6 +18,8 @@
 template<typename T>
 struct GenericStoreEntry {
 public:
+    /** \brief A pointer that is invalidated if the value is no longer used */
+    std::weak_ptr<T> loaded;
     /** \brief The name of the component type, shared with the Component instance */
     std::string name;
     /** \brief Path to load the component from */
@@ -41,10 +43,6 @@ public:
     inline GenericStoreEntry(const std::filesystem::path& p) : loaded{}, name{}, path{p} {};
     ~GenericStoreEntry() = default;
 
-private:
-    /** \brief A pointer that is invalidated if the value is no longer used */
-    std::weak_ptr<T> loaded;
-    template<typename TT, typename S> friend class GenericStore;
 };
 
 
