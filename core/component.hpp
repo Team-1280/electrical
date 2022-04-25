@@ -54,9 +54,6 @@ static_assert(ser::JsonSerializable<ConnectionPort>);
  */ 
 class Component {
 public:
-    /** Convert this component to a JSON value */
-    json to_json() const;
-    
     Component(Component&& other) : 
         m_name{other.m_name},
         m_id{other.m_id},

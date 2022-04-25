@@ -41,24 +41,24 @@ template<Unit U, QuantityVal V>
 struct Quantity {
 public:
     /**
-     * Construct a new quantity value from unit and value
+     * \brief Construct a new quantity value from unit and value
      */
     constexpr Quantity(U unit, V val) : m_unit{unit}, m_val{val} {}
     
     constexpr Quantity() requires(std::default_initializable<V>) : m_unit(U::DEFAULT), m_val{} {}
     
-    /** Copy construct this quantity from another quantity */
+    /** \brief Copy construct this quantity from another quantity */
     constexpr Quantity(const Quantity& other) requires requires {
         std::copy_constructible<U>;
         std::copy_constructible<V>;
     } : m_unit{other.m_unit}, m_val{other.m_val} {}
     
-    /** Move construct this quantity */
+    /** \brief Move construct this quantity */
     constexpr Quantity(Quantity&& other) requires(std::is_move_assignable_v<U> && std::is_move_assignable_v<V>) 
         : m_unit{std::move(other.m_unit)}, m_val{std::move(other.m_val)} {}
 
     /**
-     * Copy-construct this quantity from another quantity 
+     * \brief Copy-construct this quantity from another quantity 
      */
     constexpr Quantity& operator=(const Quantity& other) requires requires {
         std::is_copy_assignable_v<U>;
@@ -70,7 +70,7 @@ public:
     }
     
     /**
-     * Assign the rvalue refernce to another quantity to this quantity
+     * \brief Assign the rvalue refernce to another quantity to this quantity
      */
     constexpr Quantity& operator=(Quantity&& other) requires requires {
         std::is_move_assignable_v<U>;
@@ -91,7 +91,7 @@ public:
     }
     
     /**
-     * Change the unit of this quantity in place, converting the stored value
+     * \brief Change the unit of this quantity in place, converting the stored value
      */
     constexpr inline void conv(const U unit) {
         this->m_val = this->raw_to(unit);
@@ -107,47 +107,48 @@ public:
         return this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit];
     }
     
-    /** Get the underlying raw value of this quantity */
+    /** \brief Get the underlying raw value of this quantity */
     constexpr inline V raw_val() const {
         return this->m_val;
     }
     
-    /** Get the units for this quantity */
+    /** \brief Get the units for this quantity */
     constexpr inline U unit() const {
         return this->m_unit;
     }
     
-    /** Add two quantities, returning a quantity with the same units as the left-hand side operand */
+    /** \brief Add two quantities, returning a quantity with the same units as the left-hand side operand */
     constexpr inline Quantity<U, V> operator+(const Quantity<U, V>& other) const requires requires {
         {std::declval<V>() + std::declval<V>()} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val + other.raw_to(this->m_unit));
     }
-    /** Subtract two quantities, returning a new quantity with the same units as the left-hand side operand */
+    /** \brief Subtract two quantities, returning a new quantity with the same units as the left-hand side operand */
     constexpr inline Quantity<U, V> operator-(const Quantity<U, V>& other) const requires requires {
         {std::declval<V>() - std::declval<V>()} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val - other.raw_to(this->m_unit));
     }
-    /** Divide two quantities, returning a new quantity with the same units as the left-hand side operand */
+    /** \brief Divide two quantities, returning a new quantity with the same units as the left-hand side operand */
     constexpr inline Quantity<U, V> operator/(const Quantity<U, V>& other) const requires requires {
         {std::declval<V>() / std::declval<V>()} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val / other.raw_to(this->m_unit));
     }
-    /** Multiplt two quantities, returning a new quantity with the same units as the left-hand side operand*/
+    /** \brief Multiply two quantities, returning a new quantity with the same units as the left-hand side operand*/
     constexpr inline Quantity<U, V> operator*(const Quantity<U, V>& other) const requires requires {
         {std::declval<V>() * std::declval<V>()} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val * other.raw_to(this->m_unit));
     }
     
-    /** Compare two quantities */
+    /** \brief Compare two quantities */
     constexpr inline auto operator<=>(const Quantity<U, V>& other) const requires requires {
         std::declval<V>() <=> std::declval<V>();
     } {
         return this->m_val <=> other.raw_to(this->m_unit);
     }
+    /** \brief Check if two Quanties are the equal */
     constexpr inline bool operator==(const Quantity<U, V>& other) const = default;
 
     /**
@@ -205,8 +206,8 @@ public:
     } 
     
     /**
-     * @brief Convert a unit string into a corresponding length unit value
-     * @throws std::invalid_argument if the passed unit string does not match any expected 
+     * \brief Convert a unit string into a corresponding length unit value
+     * \throws std::invalid_argument if the passed unit string does not match any expected 
      * units
      */
     static void from_string(LengthUnit& self, const std::string_view unit_str);
@@ -218,7 +219,7 @@ public:
         3.281
     };
     
-    /** Convert this unit to a string */
+    /** \brief Convert this unit to a string */
     std::string to_string() const noexcept;
 
     static constexpr const UnitVal DEFAULT = UnitVal::Meters;

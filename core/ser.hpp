@@ -8,7 +8,7 @@
 using json = nlohmann::json;
 
 /** 
- * Serialization / deserialization concepts and 
+ * \brief Serialization / deserialization concepts and 
  * methods
  */
 namespace ser {

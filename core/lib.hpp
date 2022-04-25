@@ -26,7 +26,7 @@ using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
 class WireEdge {
 public:     
     /** 
-     * A single connection point for a wire
+     * A \brief single connection point for a wire
      */
     struct Connection {
     public:
@@ -34,12 +34,12 @@ public:
         inline Connection(WeakComponentNodeRef component, ConnectionPort const * port) :
             m_component{component}, m_port{port} {}
     
-        /** Serialize this connection point to JSON */
+        /** \brief Serialize this connection point to JSON */
         json to_json() const;
     private:
-        /** Node in the graph that this edge connects to */
+        /** \brief Node in the graph that this edge connects to */
         WeakComponentNodeRef m_component;
-        /** Pointer to a connection port on the component node's type */
+        /** \brief Pointer to a connection port on the component node's type */
         ConnectionPort const * m_port;
         
         Connection() : m_component{}, m_port{} {}
@@ -47,10 +47,10 @@ public:
         friend class BoardGraph;
     };
     
-    /** Serialize this wire to JSON */
+    /** \brief Serialize this wire to JSON */
     json to_json() const;
 private:
-    /** Components that this wire connects between*/
+    /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
     
     WireEdge() : m_conns{} {};
@@ -68,28 +68,28 @@ class ComponentNode {
 public:
     ComponentNode() : m_ty{}, m_name{}, m_pos{} {}
     
-    /** Get the name of this component node */
+    /** \brief Get the name of this component node */
     inline constexpr const std::string& name() const { return this->m_name; }
     inline constexpr std::size_t id() const { return this->m_id; }
     
-    /** Fetch the underlying component type of this node */
+    /** \brief Fetch the underlying component type of this node */
     inline ComponentRef type() const { return this->m_ty; }
     
     ComponentNode(const std::size_t id) : m_ty{}, m_id{id}, m_name{}, m_pos{} {}
 
 private:
-    /** What kind of component this is, shared with other components */
+    /** \brief What kind of component this is, shared with other components */
     ComponentRef m_ty;
     /** 
-     * The internal ID of this component node, it is not a string because it
+     * \brief The internal ID of this component node, it is not a string because it
      * is never presented to the user and is stable between runs of the program
      */
     std::size_t m_id;
-    /** User-assigned name of the placed part */
+    /** \brief User-assigned name of the placed part */
     std::string m_name;
-    /** Offset in the workspace from center */
+    /** \brief Offset in the workspace from center */
     Point m_pos;
-    /** All graph edges connecting this component node to others */
+    /** \brief All graph edges connecting this component node to others */
     std::vector<WireEdgeRef> m_wires;
 
     friend class BoardGraph;
@@ -101,12 +101,12 @@ private:
  */
 class BoardGraph {
 public:
-    /** ID number used for nonexistent components when serializing */
+    /** \brief ID number used for nonexistent components when serializing */
     static constexpr const std::size_t NULL_ID = 0;
 
-    /** Deserialize a board graph from a JSON value */
+    /** \brief Deserialize a board graph from a JSON value */
     static void from_json(BoardGraph& self, const json& j);
-    /** Serialize this board graph to a JSON value */
+    /** \brief Serialize this board graph to a JSON value */
     json to_json() const;
 
     BoardGraph() : m_nodes{}, m_store{} {}    
@@ -118,11 +118,11 @@ public:
     }
 private:
     using compmap_type = std::map<std::size_t, ComponentNodeRef>;
-    /** A sparse array of internal IDs to placed components */
+    /** \brief A sparse array of internal IDs to placed components */
     compmap_type m_nodes;
-    /** Collection of all loaded component types */
+    /** \brief Collection of all loaded component types */
     ComponentStore m_store;
-    /** ID counter for component IDs */
+    /** \brief ID counter for component IDs */
     std::size_t m_id_count = 1;
 };
 

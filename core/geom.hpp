@@ -48,14 +48,14 @@ public:
 
     Footprint() : m_pts{} {};
     
-    /** Create a new footprint from the JSON array */
+    /** \brief Create a new footprint from the JSON array */
     static void from_json(Footprint& self, const json& json);
         
-    /** Convert this footprint to a JSON array */
+    /** \brief Convert this footprint to a JSON array */
     json to_json() const;
 
     /**
-     * Create a new footprint from a list of connected points
+     * \brief Create a new footprint from a list of connected points
      */
     Footprint(const std::vector<Point>& pts) : m_pts{pts} {}
     Footprint(std::vector<Point>&& pts) : m_pts{std::move(pts)} {}
@@ -65,7 +65,7 @@ public:
     }
 
 private:
-    /** A vector of points that each connect to the prior one*/
+    /** \brief A vector of points that each connect to the prior one*/
     std::vector<Point> m_pts;
 };
 

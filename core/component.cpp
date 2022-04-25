@@ -17,15 +17,6 @@ json ConnectionPort::to_json() const {
     };
 }
 
-json Component::to_json() const {
-    return {
-        {"name", this->m_name},
-        {"id", this->m_id},
-        {"footprint", this->m_fp},
-        {"ports", this->m_ports}
-    };
-}
-
 json ComponentSerializer::save(std::shared_ptr<Component> component, [[maybe_unused]] ComponentSerializer::Store& store) {
     json::object_t obj{};
     obj.emplace("id", component->m_id);

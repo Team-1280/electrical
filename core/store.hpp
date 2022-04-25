@@ -18,14 +18,12 @@
 template<typename T>
 struct GenericStoreEntry {
 public:
-    /** A pointer that is invalidated if the value is no longer used */
-    std::weak_ptr<T> loaded;
-    /** The name of the component type, shared with the Component instance */
+    /** \brief The name of the component type, shared with the Component instance */
     std::string name;
-    /** Path to load the component from */
+    /** \brief Path to load the component from */
     std::filesystem::path path;
         
-    /** Conver this cached entry to a JSON value */
+    /** \brief Convert this cached entry to a JSON value */
     inline json to_json() const {
         return {
             {"name", this->name},
@@ -33,7 +31,7 @@ public:
         };
     }
     
-    /** Convert this cache entry from a JSON value */
+    /** \brief Convert this cache entry from a JSON value */
     static inline void from_json(GenericStoreEntry<T>& self, const json& j) {
         self.name = j["name"].get<std::string>();
         self.path = j["path"].get<std::filesystem::path>();
@@ -42,7 +40,13 @@ public:
     GenericStoreEntry() = default;
     inline GenericStoreEntry(const std::filesystem::path& p) : loaded{}, name{}, path{p} {};
     ~GenericStoreEntry() = default;
+
+private:
+    /** \brief A pointer that is invalidated if the value is no longer used */
+    std::weak_ptr<T> loaded;
+    template<typename TT, typename S> friend class GenericStore;
 };
+
 
 template<typename T, typename S>
 class GenericStore { };
@@ -70,10 +74,10 @@ concept GenericStoreSerializer = requires {
 
 namespace _detail {
 
-/** Helper struct enabling an optimization when strings are used as the Id type of a GenericStore */
+/** \brief Helper struct enabling an optimization when strings are used as the Id type of a GenericStore */
 template<typename Id, typename T>
 struct map_type_helper { using MapType = std::unordered_map<Id, GenericStoreEntry<T>>;};
-/** Helper specialization enabling std::string_view's to be passed as IDs instead of string references */
+/** \brief Helper specialization enabling std::string_view's to be passed as IDs instead of string references */
 template<typename T>
 struct map_type_helper<std::string, T> { using MapType = std::unordered_map<std::string, GenericStoreEntry<T>, StringHasher, std::equal_to<>>; };
 
@@ -93,7 +97,7 @@ public:
     using MapType = typename _detail::map_type_helper<typename Serializer::IdType, T>::MapType;    
 
     /** 
-     * @brief Construct a new store, loading entries from a cache file.
+     * \brief Construct a new store, loading entries from a cache file.
      * If the cache file doesn't exist / is invalid then a new one will be generated (this may take some time)
      */
     GenericStore() {
@@ -112,18 +116,18 @@ public:
         }
     }
    
-    /** Move construct this generic store from another rvalue reference */
+    /** \brief Move construct this generic store from another rvalue reference */
     GenericStore(GenericStore<T, Serializer>&& other) : m_store{std::move(other.m_store)} {}
-    /** Move the assigned store into this one by assignment */
+    /** \brief  Move the assigned store into this one by assignment */
     inline GenericStore& operator=(GenericStore<T, Serializer>&& other) {
         this->m_store = std::move(other.m_store);
         return *this;
     }
 
     /** 
-     * @brief Generate a cache file at the given path, also repopulating 
+     * \brief Generate a cache file at the given path, also repopulating 
      * the internal ID to resource map using the new data 
-     * @return true If the cache file was generated successfully
+     * \return true If the cache file was generated successfully
      */
     bool generate_cachefile(const std::filesystem::path& cachefile_path) {
         this->m_store.clear();
@@ -171,8 +175,8 @@ public:
     }
     
     /**
-     * @brief Attempt to retrieve a value by ID, and if it is not loaded return a default initialized reference
-     * @return A reference to a default constructed value if the store *contains* an entry for the given ID but is has not
+     * \brief Attempt to retrieve a value by ID, and if it is not loaded return a default initialized reference
+     * \return A reference to a default constructed value if the store *contains* an entry for the given ID but is has not
      * yet been loaded, or if the component has been loaded. Returns an empty reference if there exists no entry for the 
      * ID
      */
@@ -194,9 +198,9 @@ public:
     }
 
     /**
-     * @brief Attempt to get a value of type T by ID from this store, may cause a deserialization
+     * \brief Attempt to get a value of type T by ID from this store, may cause a deserialization
      * of the value
-     * @return A reference to the value stored / loaded, or an empty optional if the 
+     * \return A reference to the value stored / loaded, or an empty optional if the 
      * deserialization fails or no entry exists with the given name
      */
     template<typename Id>
@@ -232,7 +236,7 @@ public:
         }
     }
 private:
-    /** A map of all known IDs to store entries that may contain loaded values */
+    /** \brief A map of all known IDs to store entries that may contain loaded values */
     MapType m_store;
 };
 
