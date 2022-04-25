@@ -131,17 +131,28 @@ class GenericStore { };
  */
 template<typename T, typename Contained>
 concept GenericStoreSerializer = requires {
+    typename T::IdType;
+    {std::unordered_map<typename T::IdType, std::string>{}};
     {T::RESOURCE_DIR} -> std::convertible_to<const std::filesystem::path>;
-    {T::load_id(std::declval<const json&>())} -> std::convertible_to<std::string>;
+    {T::load_id(std::declval<const json&>())} -> std::convertible_to<typename T::IdType>;
     {T::load_name(std::declval<const json&>())} -> std::convertible_to<std::string>;
     {T::load(
         std::declval<const json&>(), 
         std::declval<GenericStore<Contained, T>&>(),
-        std::declval<const std::string&>(),
+        std::declval<const typename T::IdType&>(),
         std::declval<GenericStoreEntry<Contained>&>()
     )} -> std::same_as<std::shared_ptr<Contained>>;
     {T::save(std::declval<std::shared_ptr<Contained>>(), std::declval<GenericStore<Contained, T>&>())} -> std::convertible_to<json>;
 };
+
+namespace _detail {
+/** Helper struct enabling an optimization when strings are used as the Id type of a GenericStore */
+template<typename Id, typename T>
+struct map_type_helper { using MapType = std::unordered_map<Id, GenericStoreEntry<T>>;};
+/** Helper specialization enabling std::string_view's to be passed as IDs instead of string references */
+template<typename T>
+struct map_type_helper<std::string, T> { using MapType = std::unordered_map<std::string, GenericStoreEntry<T>, StringHasher, std::equal_to<>>; };
+}
 
 /**
  * @brief A generic resource manager that lazily loads values of type T.
@@ -154,7 +165,8 @@ public:
     using Ref = std::shared_ptr<T>;
     using WeakRef = std::weak_ptr<T>;
     using OptionalRef = std::optional<std::shared_ptr<T>>;
-    
+    using MapType = typename _detail::map_type_helper<typename Serializer::IdType, T>::MapType;    
+
     /** 
      * @brief Construct a new store, loading entries from a cache file.
      * If the cache file doesn't exist / is invalid then a new one will be generated (this may take some time)
@@ -174,7 +186,15 @@ public:
             this->generate_cachefile(cachefile_path);
         }
     }
-    
+   
+    /** Move construct this generic store from another rvalue reference */
+    GenericStore(GenericStore<T, Serializer>&& other) : m_store{std::move(other.m_store)} {}
+    /** Move the assigned store into this one by assignment */
+    inline GenericStore& operator=(GenericStore<T, Serializer>&& other) {
+        this->m_store = std::move(other.m_store);
+        return *this;
+    }
+
     /** 
      * @brief Generate a cache file at the given path, also repopulating 
      * the internal ID to resource map using the new data 
@@ -225,15 +245,41 @@ public:
         return true;
     }
     
-    /** Get a value of type T by ID from this store */
-    inline OptionalRef get(const std::string& id) { return this->get(std::string_view{id}); }
+    /**
+     * @brief Attempt to retrieve a value by ID, and if it is not loaded return a default initialized reference
+     * @return A reference to a default constructed value if the store *contains* an entry for the given ID but is has not
+     * yet been loaded, or if the component has been loaded. Returns an empty reference if there exists no entry for the 
+     * ID
+     */
+    template<typename Id>
+    requires requires(const Id& id, MapType map) {
+        map.find(id);  
+    } 
+    inline OptionalRef get_or_default(const typename Serializer::IdType& id) requires(std::is_default_constructible_v<T>) {
+       auto stored = this->m_store.find(id);
+        if(stored == this->m_store.end()) {
+            return OptionalRef{};
+        } else if(!stored->second.loaded.expired()) {
+            return stored->second.loaded.lock();
+        } else {
+            Ref defaultRef = std::make_shared<T>();
+            stored->second.loaded = WeakRef{defaultRef};
+            return defaultRef;
+        }
+    }
+
     /**
      * @brief Attempt to get a value of type T by ID from this store, may cause a deserialization
      * of the value
      * @return A reference to the value stored / loaded, or an empty optional if the 
      * deserialization fails or no entry exists with the given name
      */
-    [[nodiscard("An unused shared reference will immediately be deallocated")]] OptionalRef get(const std::string_view id) {
+    template<typename Id>
+    requires requires(const Id& id, MapType map) {
+        map.find(id);
+    }
+    [[nodiscard("An unused shared reference will immediately be deallocated")]]
+    OptionalRef get(const Id& id) {
         auto stored = this->m_store.find(id); 
         if(stored != this->m_store.end() && !stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
@@ -261,7 +307,6 @@ public:
         }
     }
 private:
-    using MapType = std::unordered_map<std::string, GenericStoreEntry<T>, StringHasher, std::equal_to<>>;
     /** A map of all known IDs to store entries that may contain loaded values */
     MapType m_store;
 };
@@ -273,6 +318,7 @@ private:
  */
 class ComponentSerializer {
 public:
+    using IdType = std::string;
     static const std::filesystem::path RESOURCE_DIR;
     using Store = GenericStore<Component, ComponentSerializer>;
 
