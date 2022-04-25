@@ -3,7 +3,7 @@
 #include <string>
 
 /** 
- * @brief Custom hasher class needed because C++ unordered_maps
+ * \brief Custom hasher class needed because C++ unordered_maps
  * don't support heterogeneous lookup by default
  */
 struct StringHasher {

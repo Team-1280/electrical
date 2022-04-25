@@ -11,13 +11,13 @@
 namespace logger {
 
 /**
- * @brief Initialize the global logger by creating a log file at fname
- * @param fname Path to the log file
+ * \brief Initialize the global logger by creating a log file at fname
+ * \param fname Path to the log file
  */
 void init(const char * const fname);
 
 /**
- * @brief Level of a recorded log message, used to 
+ * \brief Level of a recorded log message, used to 
  *
  */
 enum class LogLevel: uint8_t {
@@ -44,7 +44,7 @@ template<> constexpr const char * const lvl_data<LogLevel::Trace>::LVL_STR = "[T
 
 
 /**
- * @brief Get a thread-safe log buffer that will write messages to the global
+ * \brief Get a thread-safe log buffer that will write messages to the global
  * output stream after all other write calls finish
  */ 
 template<LogLevel lvl>

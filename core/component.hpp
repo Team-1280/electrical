@@ -12,7 +12,8 @@
 namespace model {
 
 /**
- * @brief A structure defining a single connection point on a component
+ * \brief A structure defining a single connection point on a component
+ * \implements ser::JsonSerializable
  */
 struct ConnectionPort {
 public:
@@ -47,8 +48,9 @@ private:
 static_assert(ser::JsonSerializable<ConnectionPort>);
 
 /**
- * @brief A component in the board design with required parameters like
+ * \brief A component in the board design with required parameters like
  * footprint
+ * \sa ComponentSerializer
  */ 
 class Component {
 public:
@@ -70,9 +72,9 @@ public:
     /** Get a port index by name */
     std::optional<std::size_t> get_port_idx(const std::string_view name) const;
 private:
-    /* @brief User-facing name of the component type, shared with the ComponentStore */
+    /* User-facing name of the component type, shared with the ComponentStore */
     std::string_view m_name;
-    /* @brief ID string of this component, shared with the ComponentStore */
+    /* ID string of this component, shared with the ComponentStore */
     std::string_view m_id;
     /* 
      * Map of IDs to connection points for this component 
@@ -80,7 +82,7 @@ private:
      * after construction elements MUST not be removed
      */
     std::unordered_map<std::string, ConnectionPort, StringHasher, std::equal_to<>> m_ports;
-    /* @brief Shape of the component in the workspace */ 
+    /* Shape of the component in the workspace */ 
     Footprint m_fp;
     
     friend class ComponentSerializer;
@@ -89,8 +91,10 @@ private:
 
 
 /**
- * Class with static methods to serialize components to and from JSON
+ * \brief Class with static methods to serialize components to and from JSON
  * values in a GenericStore
+ * \sa GenericStore
+ * \implements GenericStoreSerializer
  */
 class ComponentSerializer {
 public:

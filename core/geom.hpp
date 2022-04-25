@@ -6,7 +6,8 @@
 namespace model {
 
 /**
- * @brief A 2D point on the workspace plane
+ * \brief A 2D point on the workspace plane
+ * \implements ser::FromJson
  */
 struct Point {
 public:
@@ -15,7 +16,7 @@ public:
     Point() : x{}, y{} {}; 
 
     /** 
-     * @brief Deserialize a point from a JSON value
+     * Deserialize a point from a JSON value
      */
     static void from_json(Point& self, const json& val);
     /** Convert this point into a JSON value */
@@ -26,7 +27,7 @@ public:
     }
     
     /**
-     * @brief Get the distance between two points, returning a distance in the units
+     * \brief Get the distance between two points, returning a distance in the units
      * of this's x coordinate
      */
     constexpr Length distance(const Point& other) const;
@@ -38,8 +39,9 @@ public:
 static_assert(ser::JsonSerializable<Point>);
 
 /**
- * @brief Description of a component's footprint on the 
+ * \brief Description of a component's footprint on the 
  * workspace
+ * \implements ser::JsonSerializable
  */
 class Footprint {
 public:
@@ -53,7 +55,7 @@ public:
     json to_json() const;
 
     /**
-     * @brief Create a new footprint from a list of connected points
+     * Create a new footprint from a list of connected points
      */
     Footprint(const std::vector<Point>& pts) : m_pts{pts} {}
     Footprint(std::vector<Point>&& pts) : m_pts{std::move(pts)} {}

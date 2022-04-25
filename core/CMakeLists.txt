@@ -19,10 +19,10 @@ add_library(${NAME} ${SRC})
 option(BUILD_CORE_DOCS "Build doxygen documentation for the core library" OFF)
 find_package(Doxygen)
 if(DOXYGEN_FOUND AND BUILD_CORE_DOCS) 
-    configure_file(${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    configure_file(${CMAKE_BINARY_DIR}/Doxyfile.in ${CMAKE_BINARY_DIR}/Doxyfile @ONLY)
     add_custom_target(build_core_docs ALL
         COMMAND ${DOXYGEN_EXECUTABLE}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         COMMENT "Generating core library docs"
         VERBATIM
     )

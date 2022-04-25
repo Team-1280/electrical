@@ -13,8 +13,8 @@
 namespace model {
 
 /**
- * @brief Concept specifying the requirements for a unit type used
- * with the @ref Quantity type 
+ * \brief Concept specifying the requirements for a unit type used
+ * with the Quantity type 
  */
 template<typename T>
 concept Unit = requires {
@@ -25,8 +25,8 @@ concept Unit = requires {
 };
 
 /**
- * @brief Concept defining requirements for types that can be used as a
- * @ref Quantity value
+ * \brief Concept defining requirements for types that can be used as a
+ * Quantity value
  */
 template<typename V>
 concept QuantityVal = requires(V v) {
@@ -35,13 +35,13 @@ concept QuantityVal = requires(V v) {
 };
 
 /**
- * @brief A generic quantity type with unit and value type
+ * \brief A generic quantity type with unit and value type
  */
 template<Unit U, QuantityVal V>
 struct Quantity {
 public:
     /**
-     * @brief Construct a new quantity value from unit and value
+     * Construct a new quantity value from unit and value
      */
     constexpr Quantity(U unit, V val) : m_unit{unit}, m_val{val} {}
     
@@ -58,7 +58,7 @@ public:
         : m_unit{std::move(other.m_unit)}, m_val{std::move(other.m_val)} {}
 
     /**
-     * @brief Copy-construct this quantity from another quantity 
+     * Copy-construct this quantity from another quantity 
      */
     constexpr Quantity& operator=(const Quantity& other) requires requires {
         std::is_copy_assignable_v<U>;
@@ -70,7 +70,7 @@ public:
     }
     
     /**
-     * @brief Assign the rvalue refernce to another quantity to this quantity
+     * Assign the rvalue refernce to another quantity to this quantity
      */
     constexpr Quantity& operator=(Quantity&& other) requires requires {
         std::is_move_assignable_v<U>;
@@ -82,16 +82,16 @@ public:
     }
 
     /**
-     * @brief Convert this quantity to one of a different unit
-     * @param unit The unit to convert to
-     * @return A new measurement with the passed unit
+     * \brief Convert this quantity to one of a different unit
+     * \param unit The unit to convert to
+     * \return A new measurement with the passed unit
      */
     constexpr inline Quantity<U, V> to(U unit) const {
         return Quantity(unit, this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit]);
     }
     
     /**
-     * @brief Change the unit of this quantity in place, converting the stored value
+     * Change the unit of this quantity in place, converting the stored value
      */
     constexpr inline void conv(const U unit) {
         this->m_val = this->raw_to(unit);
@@ -99,9 +99,9 @@ public:
     }
     
     /**
-     * @brief Convert this measurement into the given units
-     * @param unit The units to convert to
-     * @return A raw value in the passed units
+     * \brief Convert this measurement into the given units
+     * \param unit The units to convert to
+     * \return A raw value in the passed units
      */
     constexpr inline V raw_to(const U unit) const {
         return this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit];
@@ -151,9 +151,9 @@ public:
     constexpr inline bool operator==(const Quantity<U, V>& other) const = default;
 
     /**
-     * @brief Deserialize a quantity from a string
-     * @param str The string to deserialize a value from
-     * @throws std::exception If string deserialization fails
+     * \brief Deserialize a quantity from a string
+     * \param str The string to deserialize a value from
+     * \throws std::exception If string deserialization fails
      */
     static void from_string(Quantity<U, V>& self, std::string_view str) 
     requires ser::StringSerializable<U> && std::convertible_to<double, V> {
@@ -167,8 +167,8 @@ public:
     }
    
     /**
-     * @brief Convert this quantity to a string that can be deserialized again
-     * @return The string representation of this quantity
+     * \brief Convert this quantity to a string that can be deserialized again
+     * \return The string representation of this quantity
      */
     std::string to_string() const 
     requires ser::StringSerializable<U> && std::convertible_to<V, double> {
@@ -180,7 +180,9 @@ private:
 };
 
 /**
- * @brief An enumeration of all length units 
+ * \brief An enumeration of all length units 
+ * \implements ser::StringSerializable
+ * \implements Unit
  */
 class LengthUnit {
 public:

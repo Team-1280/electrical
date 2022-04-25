@@ -10,9 +10,10 @@
 #include "util/hash.hpp"
 
 /**
- * @brief Contains the name and file path to load a 
+ * \brief Contains the name and file path to load a 
  * value from a JSON file, plus an optional weak reference to an
  * allocated component if it has been loaded
+ * \sa GenericStore
  */
 template<typename T>
 struct GenericStoreEntry {
@@ -47,8 +48,9 @@ template<typename T, typename S>
 class GenericStore { };
 
 /**
- * @brief Concept specifying a type that provides methods to serialize and 
+ * \brief Concept specifying a type that provides methods to serialize and 
  * deserialize values of type T into a GenericStore
+ * \sa GenericStore
  */
 template<typename T, typename Contained>
 concept GenericStoreSerializer = requires {
@@ -78,7 +80,7 @@ struct map_type_helper<std::string, T> { using MapType = std::unordered_map<std:
 }
 
 /**
- * @brief A generic resource manager that lazily loads values of type T.
+ * \brief A generic resource manager that lazily loads values of type T.
  * Initialized by a cached value that maps IDs to names and file paths of lazily loaded
  * resources
  */

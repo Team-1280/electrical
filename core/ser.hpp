@@ -14,7 +14,7 @@ using json = nlohmann::json;
 namespace ser {
 
 /** 
- * @brief Concept specifying that a type can be converted to / from a
+ * \brief Concept specifying that a type can be converted to / from a
  * JSON value. A move assignment operator is recommended for the implementing type.
  * Note that a static from_json method is preferred over a constructor to avoid unneeded copies
  * when interfacing with nlohmann-json
@@ -27,9 +27,9 @@ concept JsonSerializable = requires(const T v) {
 };
 
 /**
- * @brief Concept specifying that a type can be converted to / from a string.
+ * \brief Concept specifying that a type can be converted to / from a string.
  * Note that if this is implemented and JsonSerializable is not, JsonSerializable will be implemented
- * using from / to string. Also note that a move assignment operator is recommended
+ * using from / to string. Also note that a move assignment operator is recommended.
  */
 template<typename T>
 concept StringSerializable = requires(const T v) {

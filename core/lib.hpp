@@ -20,13 +20,13 @@ using ComponentNodeRef = std::shared_ptr<ComponentNode>;
 using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
 
 /**
- * @brief An edge in the board graph representing a single wire connection between two
+ * \brief An edge in the board graph representing a single wire connection between two
  * ports on a component
  */
 class WireEdge {
 public:     
     /** 
-     * @brief A single connection point for a wire
+     * A single connection point for a wire
      */
     struct Connection {
     public:
@@ -61,7 +61,7 @@ using WireEdgeRef = std::shared_ptr<WireEdge>;
 using WireEdgeWeakRef = std::weak_ptr<WireEdge>;
 
 /**
- * @brief A component that has been placed in a BoardGraph with
+ * \brief A component that has been placed in a BoardGraph with
  * a component type reference and user-entered data
  */
 class ComponentNode {
@@ -96,7 +96,7 @@ private:
 };
 
 /**  
- * @brief A graph data structures in which the
+ * \brief A graph data structures in which the
  * nodes are `Component`s and the edges are wires
  */
 class BoardGraph {
