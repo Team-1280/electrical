@@ -1,5 +1,6 @@
 /build/**
 !build/buildopts.h.in
+!build/Doxyfile.in
 /.cache
 /compile_commands.json
 /log.txt

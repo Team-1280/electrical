@@ -16,6 +16,20 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(${NAME} ${SRC})
 
+option(BUILD_CORE_DOCS "Build doxygen documentation for the core library" OFF)
+find_package(Doxygen)
+if(DOXYGEN_FOUND AND BUILD_CORE_DOCS) 
+    configure_file(${CMAKE_CURRENT_BINARY_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+    add_custom_target(build_core_docs ALL
+        COMMAND ${DOXYGEN_EXECUTABLE}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Generating core library docs"
+        VERBATIM
+    )
+elseif(BUILD_CORE_DOCS)
+    message("Install doxygen to build documentation")
+endif()
+
 target_compile_options(${NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
