@@ -7,8 +7,7 @@
 
 namespace model {
 
-const std::filesystem::path ComponentStore::CACHEFILE_PATH = "./assets/components/cache.json";
-const std::filesystem::path ComponentStore::COMPONENT_DIR = "./assets/components/";
+const std::filesystem::path ComponentSerializer::RESOURCE_DIR = "./assets/components/";
 
 json ConnectionPort::to_json() const {
     return {
@@ -27,73 +26,51 @@ json Component::to_json() const {
     };
 }
 
-std::optional<ComponentRef> ComponentStore::find(const std::string& id) {
-    auto stored = this->m_store.find(id);
-    if(stored == this->m_store.end()) {
-        logger::warn("Component referenced by ID {} not found", id);
-        return std::optional<ComponentRef>{};
+json ComponentSerializer::save(std::shared_ptr<Component> component, [[maybe_unused]] ComponentSerializer::Store& store) {
+    json::object_t obj{};
+    obj.emplace("id", component->m_id);
+    obj.emplace("name", component->m_name);
+    obj.emplace("footprint", component->m_fp);
+    obj.emplace("ports", json::object({}));
+    for(const auto& [port_id, port]: component->m_ports) {
+        obj["ports"].emplace(port_id, json::object({
+            {"name", port.m_name},
+            {"pos", port.m_pt}
+        }));
+    }
+    return obj;
+}
+
+std::string ComponentSerializer::load_id(const json& j) {
+    return j["id"];
+}
+
+std::string ComponentSerializer::load_name(const json& j) {
+    return j["name"];
+}
+
+std::shared_ptr<Component> ComponentSerializer::load(
+        const json& json_val,
+        [[maybe_unused]] ComponentSerializer::Store& store,
+        const std::string& idref,
+        GenericStoreEntry<Component>& entry
+    ) {
+    std::shared_ptr<Component> component = std::make_shared<Component>();
+
+    component->m_id = std::string_view{idref};
+    component->m_name = std::string_view{entry.name};
+    json_val["footprint"].get_to<Footprint>(component->m_fp);
+    for(const auto& [port_id, port_json] : json_val["ports"].items()) {
+        auto elem = component->m_ports.emplace(port_id, ConnectionPort{}).first;
+        
+        port_json["name"].get_to(elem->second.m_name);
+        port_json["pos"].get_to(elem->second.m_pt);
+        elem->second.m_name = std::string_view{elem->first};
     }
 
-
-    if(!stored->second.loaded.expired()) {
-        return std::shared_ptr{stored->second.loaded};
-    }
-
-    json json_val;
-    ComponentRef ref = std::make_shared<Component>();
-    try {
-        std::ifstream file{COMPONENT_DIR / stored->second.path};
-        file >> json_val;
-        ref->m_id = std::string_view{stored->first};
-        ref->m_name = std::string_view{stored->second.name};
-        json_val["footprint"].get_to<Footprint>(ref->m_fp);
-        for(const auto& [port_id, port] : json_val["ports"].items()) {
-            auto [elem, inserted] = ref->m_ports.emplace(port_id, ConnectionPort{});
-            if(!inserted) {
-                logger::warn("Component {} has multiple definitions for port {}", ref->m_id, port_id);
-                continue;
-            }
-            
-            elem->second.m_id = std::string_view{elem->first};
-            port["name"].get_to<std::string>(elem->second.m_name);
-            port["pos"].get_to<Point>(elem->second.m_pt);
-        }
-    } catch(std::exception& e) {
-        logger::error("Failed to load component from {}: {}", stored->second.path, e.what());
-        return std::optional<ComponentRef>{};
-    }
-    logger::trace("Loaded component {}", id);
-    stored->second.loaded = std::weak_ptr{ref};
-    return ref;
+    return component;
 }
 
-void ComponentStore::StoreEntry::from_json(ComponentStore::StoreEntry& self, const json& j) {
-    self.name = j["name"].get<std::string>();
-    self.path = j["path"].get<std::string>();
-}
-
-json ComponentStore::StoreEntry::to_json() const {
-    return {
-        {"name", this->name},
-        {"path", this->path}
-    };
-}
-
-void ComponentStore::from_json(ComponentStore& self, const json& j) {
-    for(const auto& [id, val] : j.items()) {
-        if(self.m_store.contains(id)) {
-            logger::warn("Component store contains two cached entries with ID {}", id);
-        }
-        self.m_store.emplace(id, val);
-    }
-}
-
-ComponentStore::ComponentStore() {
-    std::ifstream cache{CACHEFILE_PATH};
-    json j;
-    cache >> j;
-    from_json(*this, j);
-}
 
 std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string& id) const {
     const auto& port = this->m_ports.find(id);
