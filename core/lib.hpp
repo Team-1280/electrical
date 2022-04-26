@@ -52,7 +52,7 @@ public:
 private:
     /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
-    
+
     WireEdge() : m_conns{} {};
     friend class BoardGraph;
 };

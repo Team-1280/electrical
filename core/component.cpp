@@ -7,7 +7,7 @@
 
 namespace model {
 
-const std::filesystem::path ComponentSerializer::RESOURCE_DIR = "./assets/components/";
+const std::filesystem::path Component::RESOURCE_DIR = "./assets/components/";
 
 json ConnectionPort::to_json() const {
     return {
@@ -17,7 +17,7 @@ json ConnectionPort::to_json() const {
     };
 }
 
-json ComponentSerializer::save(std::shared_ptr<Component> component, [[maybe_unused]] ComponentSerializer::Store& store) {
+json Component::save(std::shared_ptr<Component> component, [[maybe_unused]] GenericResourceManagerBase& store) {
     json::object_t obj{};
     obj.emplace("id", component->m_id);
     obj.emplace("name", component->m_name);
@@ -32,17 +32,17 @@ json ComponentSerializer::save(std::shared_ptr<Component> component, [[maybe_unu
     return obj;
 }
 
-std::string ComponentSerializer::load_id(const json& j) {
+std::string Component::load_id(const json& j) {
     return j["id"];
 }
 
-std::string ComponentSerializer::load_name(const json& j) {
+std::string Component::load_name(const json& j) {
     return j["name"];
 }
 
-std::shared_ptr<Component> ComponentSerializer::load(
+std::shared_ptr<Component> Component::load(
         const json& json_val,
-        [[maybe_unused]] ComponentSerializer::Store& store,
+        [[maybe_unused]] GenericResourceManagerBase& store,
         const std::string& idref,
         GenericStoreEntry<Component>& entry
     ) {

@@ -42,13 +42,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
-FetchContent_Declare(
-    fltk
-    GIT_REPOSITORY https://github.com/fltk/fltk.git
-    GIT_TAG master
-)
-FetchContent_MakeAvailable(fltk)
-
 add_subdirectory(core)
 
 set(FRONTEND_TYPES cli gui)

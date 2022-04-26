@@ -10,11 +10,26 @@ namespace model {
 /** 
  * \brief Class modelling a single connector with information
  * needed to generate a BOM after modelling the board is complete
+ * \sa ConnectorSerializer
+ * \implements GenericStoreValue
  */
 class Connector {
 public:
-
+    using Serializer = class ConnectorSerializer;
     Connector() : m_id{} {}
+
+    
+    using IdType = std::string;
+    static const std::filesystem::path RESOURCE_DIR;
+    static inline IdType load_id(const json& j) { return j["id"].get<IdType>(); }
+    static inline std::string load_name(const json& j) { return j["name"].get<std::string>(); }
+    static std::shared_ptr<Connector> load(
+        const json&,
+        GenericResourceManagerBase&,
+        const IdType&,
+        GenericStoreEntry<Connector>&
+    );
+    static json save(std::shared_ptr<Connector>, GenericResourceManagerBase&);
 private:
     /** 
      * \brief User-created ID string of this connector, 
@@ -32,6 +47,8 @@ private:
     friend class ConnectorSerializer;
 };
 
+static_assert(GenericStoreValue<Connector>);
+
 /** 
  * \brief A GenericStoreSerializer implementation that can
  * deserialize Connector instances from JSON
@@ -39,23 +56,14 @@ private:
  */
 class ConnectorSerializer {
 public:
-    using Store = GenericStore<Connector, ConnectorSerializer>;
-    using IdType = std::string;
-    static const std::filesystem::path RESOURCE_DIR;
-    static inline IdType load_id(const json& j) { return j["id"].get<IdType>(); }
-    static inline std::string load_name(const json& j) { return j["name"].get<std::string>(); }
-    static std::shared_ptr<Connector> load(
-        const json&,
-        Store&,
-        const IdType&,
-        GenericStoreEntry<Connector>&
-    );
-    static json save(std::shared_ptr<Connector>, Store&);
+    template<typename... Ts>
+    using Store = GenericResourceManager<Connector, Ts, Ts...>;
+
 };
 
-static_assert(GenericStoreSerializer<ConnectorSerializer, Connector>);
+static_assert(GenericStoreSerializer<ConnectorSerializer, Connector, ...>);
 
-using ConnectorStore = GenericStore<Connector, ConnectorSerializer>;
+using ConnectorStore = GenericStore<Connector>;
 using ConnectorRef = ConnectorStore::Ref;
 using WeakConnectorRef = ConnectorStore::WeakRef;
 

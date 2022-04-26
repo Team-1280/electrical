@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <fstream>
+#include <tuple>
 
 #include "ser.hpp"
 #include "util/hash.hpp"
@@ -46,16 +47,21 @@ public:
 };
 
 
-template<typename T, typename S>
+template<typename T>
 class GenericStore { };
+template<typename... Resources>
+class GenericResourceManager {};
 
-/**
- * \brief Concept specifying a type that provides methods to serialize and 
- * deserialize values of type T into a GenericStore
- * \sa GenericStore
- */
-template<typename T, typename Contained>
-concept GenericStoreSerializer = requires {
+class GenericResourceManagerBase {
+public:
+    template<typename T, typename Id> 
+    inline consteval std::shared_ptr<T> get([[maybe_unused]] const Id& id) {
+        static_assert(sizeof(T) == 0, "This resource manager does not contain values of type T");
+    }
+};
+
+template<typename T>
+concept GenericStoreValue = requires {
     typename T::IdType;
     {std::unordered_map<typename T::IdType, std::string>{}};
     {T::RESOURCE_DIR} -> std::convertible_to<const std::filesystem::path>;
@@ -63,11 +69,11 @@ concept GenericStoreSerializer = requires {
     {T::load_name(std::declval<const json&>())} -> std::convertible_to<std::string>;
     {T::load(
         std::declval<const json&>(), 
-        std::declval<GenericStore<Contained, T>&>(),
+        std::declval<GenericResourceManagerBase&>(),
         std::declval<const typename T::IdType&>(),
-        std::declval<GenericStoreEntry<Contained>&>()
-    )} -> std::same_as<std::shared_ptr<Contained>>;
-    {T::save(std::declval<std::shared_ptr<Contained>>(), std::declval<GenericStore<Contained, T>&>())} -> std::convertible_to<json>;
+        std::declval<GenericStoreEntry<T>&>()
+    )} -> std::same_as<std::shared_ptr<T>>;
+    {T::save(std::declval<std::shared_ptr<T>>(), std::declval<GenericResourceManagerBase&>())} -> std::convertible_to<json>;
 };
 
 namespace _detail {
@@ -86,9 +92,10 @@ struct map_type_helper<std::string, T> { using MapType = std::unordered_map<std:
  * Initialized by a cached value that maps IDs to names and file paths of lazily loaded
  * resources
  */
-template<typename T, GenericStoreSerializer<T> Serializer>
-class GenericStore<T, Serializer> {
+template<GenericStoreValue T>
+class GenericStore<T> {
 public:
+    using Serializer = typename T::Serializer;
     using Ref = std::shared_ptr<T>;
     using WeakRef = std::weak_ptr<T>;
     using OptionalRef = std::optional<std::shared_ptr<T>>;
@@ -115,9 +122,9 @@ public:
     }
    
     /** \brief Move construct this generic store from another rvalue reference */
-    GenericStore(GenericStore<T, Serializer>&& other) : m_store{std::move(other.m_store)} {}
+    GenericStore(GenericStore<Serializer>&& other) : m_store{std::move(other.m_store)} {}
     /** \brief  Move the assigned store into this one by assignment */
-    inline GenericStore& operator=(GenericStore<T, Serializer>&& other) {
+    inline GenericStore& operator=(GenericStore<Serializer>&& other) {
         this->m_store = std::move(other.m_store);
         return *this;
     }
@@ -236,5 +243,27 @@ public:
 private:
     /** \brief A map of all known IDs to store entries that may contain loaded values */
     MapType m_store;
+};
+
+template<GenericStoreValue... Resources>
+class GenericResourceManager<Resources...> : public GenericResourceManagerBase {
+public:
+    template<typename T>
+    using Ref = typename GenericStore<T>::Ref;
+    template<typename T>
+    using WeakRef = typename GenericStore<T>::WeakRef;
+    template<typename T>
+    using OptionalRef = typename GenericStore<T>::OptionalRef;
+    
+    GenericResourceManager() : m_fields{} {}
+
+    template<typename T, typename Id>
+    requires requires(GenericStore<T> store, Id id, GenericResourceManager<Resources...> self){
+        {std::get<GenericStore<T>>(self.m_fields)};
+        {store.get(id)} -> std::same_as<OptionalRef<T>>;
+    }
+    inline OptionalRef<T> get(const Id& id) { return std::get<GenericStore<T>>(this->m_fields).get(id); }
+private:
+    std::tuple<GenericStore<Resources>...> m_fields;
 };
 

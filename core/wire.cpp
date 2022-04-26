@@ -2,9 +2,9 @@
 
 namespace model {
 
-std::shared_ptr<Connector> ConnectorSerializer::load(
+std::shared_ptr<Connector> Connector::load(
     const json& json_val,
-    Store& store,
+    GenericResourceManagerBase& store,
     const IdType& id,
     GenericStoreEntry<Connector>& entry
 ) {
@@ -15,7 +15,7 @@ std::shared_ptr<Connector> ConnectorSerializer::load(
     return connector;
 }
 
-json ConnectorSerializer::save(std::shared_ptr<Connector> connector, Store& store) {
+json Connector::save(std::shared_ptr<Connector> connector, GenericResourceManagerBase& store) {
     return {
         {"id", connector->m_id},
         {"name", connector->m_name}

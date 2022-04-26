@@ -51,6 +51,7 @@ static_assert(ser::JsonSerializable<ConnectionPort>);
  * \brief A component in the board design with required parameters like
  * footprint
  * \sa ComponentSerializer
+ * \implements GenericStoreValue
  */ 
 class Component {
 public:
@@ -68,6 +69,19 @@ public:
     std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string& id) const;
     /** Get a port index by name */
     std::optional<std::size_t> get_port_idx(const std::string_view name) const;
+
+    using IdType = std::string;
+    static const std::filesystem::path RESOURCE_DIR;
+
+    static json save(std::shared_ptr<Component>, GenericResourceManagerBase&);
+    static std::string load_id(const json&);
+    static std::string load_name(const json&);
+    static std::shared_ptr<Component> load(
+        const json&,
+        GenericResourceManagerBase&,
+        const std::string&,
+        GenericStoreEntry<Component>&
+    );
 private:
     /* User-facing name of the component type, shared with the ComponentStore */
     std::string_view m_name;
@@ -86,32 +100,6 @@ private:
     friend class BoardGraph;
 };
 
-
-/**
- * \brief Class with static methods to serialize components to and from JSON
- * values in a GenericStore
- * \sa GenericStore
- * \implements GenericStoreSerializer
- */
-class ComponentSerializer {
-public:
-    using IdType = std::string;
-    static const std::filesystem::path RESOURCE_DIR;
-    using Store = GenericStore<Component, ComponentSerializer>;
-
-    static json save(std::shared_ptr<Component>, Store&);
-    static std::string load_id(const json&);
-    static std::string load_name(const json&);
-    static std::shared_ptr<Component> load(
-        const json&,
-        Store&,
-        const std::string&,
-        GenericStoreEntry<Component>&
-    );
-};
-
-using ComponentStore = GenericStore<Component, ComponentSerializer>;
-using ComponentRef = ComponentStore::Ref;
-using weakComponentRef = ComponentStore::WeakRef;
+static_assert(GenericStoreValue<Component>);
 
 }
