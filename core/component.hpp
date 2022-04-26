@@ -13,7 +13,6 @@ namespace model {
 
 /**
  * \brief A structure defining a single connection point on a component
- * \implements ser::JsonSerializable
  */
 struct ConnectionPort {
 public:
@@ -30,8 +29,6 @@ public:
         return *this;
     }
 
-    static void from_json(ConnectionPort& self, const json& j);
-    json to_json() const;
     ConnectionPort() : m_pt{}, m_name{}, m_id{} {}
 private:
     /** Location on the component's footprint that this connection port is located */
@@ -41,11 +38,9 @@ private:
     /** Internal ID of this connection port, shared with the parent Component and guranteed to be NULL terminated */
     std::string_view m_id;
     
-    friend class ComponentSerializer;
+    friend struct Serializer<ConnectionPort>;
     friend class Component;
 };
-
-static_assert(ser::JsonSerializable<ConnectionPort>);
 
 /**
  * \brief A component in the board design with required parameters like
@@ -70,18 +65,6 @@ public:
     /** Get a port index by name */
     std::optional<std::size_t> get_port_idx(const std::string_view name) const;
 
-    using IdType = std::string;
-    static const std::filesystem::path RESOURCE_DIR;
-
-    static json save(std::shared_ptr<Component>, GenericResourceManagerBase&);
-    static std::string load_id(const json&);
-    static std::string load_name(const json&);
-    static std::shared_ptr<Component> load(
-        const json&,
-        GenericResourceManagerBase&,
-        const std::string&,
-        GenericStoreEntry<Component>&
-    );
 private:
     /* User-facing name of the component type, shared with the ComponentStore */
     std::string_view m_name;
@@ -96,10 +79,47 @@ private:
     /* Shape of the component in the workspace */ 
     Footprint m_fp;
     
-    friend class ComponentSerializer;
+    friend struct Serializer<Component>;
     friend class BoardGraph;
 };
 
-static_assert(GenericStoreValue<Component>);
 
 }
+
+template<>
+struct Serializer<model::Component> {
+    using Component = model::Component;
+    using IdType = std::string;
+    static const std::filesystem::path RESOURCE_DIR;
+    
+    template<GenericStoreValue... Resources>
+    static json save(std::shared_ptr<Component>, GenericResourceManager<Resources...>&);
+    static std::string load_id(const json&);
+    static std::string load_name(const json&);
+    template<GenericStoreValue... Resources>
+    static inline std::shared_ptr<Component> load(
+        const json& json_val,
+        GenericResourceManager<Resources...>&,
+        const std::string& idref,
+        GenericStoreEntry<Component>& entry
+    ) {
+        std::shared_ptr<Component> component = std::make_shared<Component>();
+
+        component->m_id = std::string_view{idref};
+        component->m_name = std::string_view{entry.name};
+        json_val["footprint"].get_to<model::Footprint>(component->m_fp);
+        for(const auto& [port_id, port_json] : json_val["ports"].items()) {
+            auto elem = component->m_ports.emplace(port_id, model::ConnectionPort{}).first;
+            
+            port_json["name"].get_to(elem->second.m_name);
+            port_json["pos"].get_to(elem->second.m_pt);
+            elem->second.m_id = std::string_view{elem->first};
+        }
+
+        return component;
+    }
+ 
+};
+
+static_assert(GenericStoreValue<model::Component>);
+

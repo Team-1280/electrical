@@ -15,21 +15,9 @@ namespace model {
  */
 class Connector {
 public:
-    using Serializer = class ConnectorSerializer;
     Connector() : m_id{} {}
 
     
-    using IdType = std::string;
-    static const std::filesystem::path RESOURCE_DIR;
-    static inline IdType load_id(const json& j) { return j["id"].get<IdType>(); }
-    static inline std::string load_name(const json& j) { return j["name"].get<std::string>(); }
-    static std::shared_ptr<Connector> load(
-        const json&,
-        GenericResourceManagerBase&,
-        const IdType&,
-        GenericStoreEntry<Connector>&
-    );
-    static json save(std::shared_ptr<Connector>, GenericResourceManagerBase&);
 private:
     /** 
      * \brief User-created ID string of this connector, 
@@ -44,27 +32,39 @@ private:
      */
     std::string_view m_name;
     
-    friend class ConnectorSerializer;
+    friend struct Serializer<Connector>;
 };
-
-static_assert(GenericStoreValue<Connector>);
-
-/** 
- * \brief A GenericStoreSerializer implementation that can
- * deserialize Connector instances from JSON
- * \implements GenericStoreSerializer
- */
-class ConnectorSerializer {
-public:
-    template<typename... Ts>
-    using Store = GenericResourceManager<Connector, Ts, Ts...>;
-
-};
-
-static_assert(GenericStoreSerializer<ConnectorSerializer, Connector, ...>);
-
-using ConnectorStore = GenericStore<Connector>;
-using ConnectorRef = ConnectorStore::Ref;
-using WeakConnectorRef = ConnectorStore::WeakRef;
 
 }
+
+template<>
+struct Serializer<model::Connector> {
+    using Connector = model::Connector;
+    using IdType = std::string;
+    static const std::filesystem::path RESOURCE_DIR;
+    static inline IdType load_id(const json& j) { return j["id"].get<IdType>(); }
+    static inline std::string load_name(const json& j) { return j["name"].get<std::string>(); }
+    template<GenericStoreValue... Resources>
+    static inline std::shared_ptr<Connector> load(
+        const json&,
+        GenericResourceManager<Resources...>&,
+        const IdType& idref,
+        GenericStoreEntry<Connector>& entry
+    ) {
+        std::shared_ptr<Connector> connector = std::make_shared<Connector>();
+        connector->m_id = std::string_view{idref};
+        connector->m_name = std::string_view{entry.name};
+        return connector;
+    }
+
+    template<GenericStoreValue... Resources>
+    static inline json save(std::shared_ptr<Connector> connector, GenericResourceManager<Resources...>&) {
+        return {
+            {"id", connector->m_id},
+            {"name", connector->m_name}
+        };
+    }
+};
+
+static_assert(GenericStoreValue<model::Connector>);
+

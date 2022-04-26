@@ -4,8 +4,12 @@
 
 #include "geom.hpp"
 #include "component.hpp"
+#include "wire.hpp"
 #include "ser.hpp"
+#include "store.hpp"
 #include "unit.hpp"
+
+using ResourceManager = GenericResourceManager<model::Component, model::Connector>;
 
 namespace model {
 
@@ -73,13 +77,13 @@ public:
     inline constexpr std::size_t id() const { return this->m_id; }
     
     /** \brief Fetch the underlying component type of this node */
-    inline ComponentRef type() const { return this->m_ty; }
+    inline ResourceManager::Ref<Component> type() const { return this->m_ty; }
     
     ComponentNode(const std::size_t id) : m_ty{}, m_id{id}, m_name{}, m_pos{} {}
 
 private:
     /** \brief What kind of component this is, shared with other components */
-    ComponentRef m_ty;
+    ResourceManager::Ref<Component> m_ty;
     /** 
      * \brief The internal ID of this component node, it is not a string because it
      * is never presented to the user and is stable between runs of the program
@@ -109,11 +113,11 @@ public:
     /** \brief Serialize this board graph to a JSON value */
     json to_json() const;
 
-    BoardGraph() : m_nodes{}, m_store{} {}    
-    inline BoardGraph(BoardGraph&& other) : m_nodes{std::move(other.m_nodes)}, m_store{std::move(other.m_store)} {}
+    BoardGraph() : m_nodes{}, m_res{} {}    
+    inline BoardGraph(BoardGraph&& other) : m_nodes{std::move(other.m_nodes)}, m_res{std::move(other.m_res)} {}
     inline BoardGraph& operator=(BoardGraph&& other) {
         this->m_nodes = std::move(other.m_nodes);
-        this->m_store = std::move(other.m_store);
+        this->m_res = std::move(other.m_res);
         return *this;
     }
 private:
@@ -121,7 +125,7 @@ private:
     /** \brief A sparse array of internal IDs to placed components */
     compmap_type m_nodes;
     /** \brief Collection of all loaded component types */
-    ComponentStore m_store;
+    ResourceManager m_res;
     /** \brief ID counter for component IDs */
     std::size_t m_id_count = 1;
 };
