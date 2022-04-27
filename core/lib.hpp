@@ -154,10 +154,19 @@ struct ResourceSerializer<model::ComponentNode> {
     }
 
     template<Resource... Resources>
-    static inline std::shared_ptr<ComponentNode> load(
-
+    static inline void load(
+        std::shared_ptr<ComponentNode> node,
+        const json& json_val,
+        GenericResourceManager<Resources...> res,
+        const IdType& id,
+        const ResourceManagerEntry& entry,
     ) {
-
+        node->m_name = std::string_view{entry.name};
+        node->m_id = std::string_view{id};
+        node->m_ty = res.try_get<model::Component>(json_val["id"].get<std::string>());
+        for(const auto& conn_json : json_val["conns"]) {
+            node->m_wires.push_back(res.try_get<WireEdge>(conn_json.get<std::string>));
+        }
     }
 };
 
@@ -168,19 +177,32 @@ struct ResourceSerializer<model::WireEdge> {
     static const std::filesystem::path RESOURCE_DIR;
 
     static inline IdType load_id(const json& json_val) { return json_val["id"].get<std::size_t>(); }
-    static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
+    static inline std::string load_name(const json& json_val) { return ""; }
     template<Resource... Resources>
     static inline json save(
         std::shared_ptr<WireEdge> wire,
         GenericResourceManager<Resource...>&
     ) {
         json::object_t obj{};
-        obj.emplace("name", wire->m_name);
         obj.emplace("id", wire->m_id);
-
+        obj.emplace("conns", json::array({}));
+        for(const auto& conn : wire->m_conns) {
+            if(conn.m_component.expired()) {
+                obj["conns"].push_back(nullptr);
+            }
+            std::shared_ptr<ComponentNode> component = conn.m_component.lock();
+            json::object_t conn_obj{};
+            conn_obj.emplace("node", component->id());
+            conn_obj.emplace("port", conn.m_port->id());
+            conn_obj.emplace("connector", conn->m_connector->id());
+            obj["conns"].push_back(conn_obj);
+        }
+    
         return obj;
     }
 
     template<Resources... Resources>
-    static inline void load();
+    static inline void load(
+
+    );
 }

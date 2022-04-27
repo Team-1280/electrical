@@ -104,6 +104,7 @@ concept Resource = requires() {
  * \brief A generic resource manager that lazily loads values of type T.
  * Initialized by a cached value that maps IDs to names and file paths of lazily loaded
  * resources
+ *
  * \sa Resource
  * \sa ResourceSerializer
  * \sa ResourceSerializerImpl
