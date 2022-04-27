@@ -30,4 +30,4 @@ constexpr std::uint64_t fnv1a(const std::string_view str) {
 
 }
 
-const std::filesystem::path ResourceSerializer<model::Component>::RESOURCE_DIR = "./assets/components/";
+const std::filesystem::path ResourceSerializer<model::Component>::RESOURCE_DIR = "components";

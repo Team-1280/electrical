@@ -1,6 +1,8 @@
 #include "lib.hpp"
 #include <unordered_set>
 
+const std::filesystem::path ResourceSerializer::RESOURCE_DIR = "./assets/boards/nodes";
+
 namespace model {
 
 json WireEdge::Connection::to_json() const {

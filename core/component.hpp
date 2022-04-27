@@ -112,14 +112,13 @@ struct ResourceSerializer<model::Component> {
     static inline std::string load_id(const json& json_val) { return json_val["id"].get<std::string>(); }
     static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
     template<typename... Resources>
-    static inline std::shared_ptr<Component> load(
+    static inline void load(
+        std::shared_ptr<Component> component,
         const json& json_val,
         GenericResourceManager<Resources...>&,
         const std::string& idref,
         ResourceManagerEntry<Component>& entry
     ) {
-        std::shared_ptr<Component> component = std::make_shared<Component>();
-
         component->m_id = std::string_view{idref};
         component->m_name = std::string_view{entry.name};
         json_val["footprint"].get_to<model::Footprint>(component->m_fp);
@@ -130,8 +129,6 @@ struct ResourceSerializer<model::Component> {
             port_json["pos"].get_to(elem->second.m_pt);
             elem->second.m_id = std::string_view{elem->first};
         }
-
-        return component;
     }
  
 };

@@ -79,11 +79,12 @@ concept ResourceSerializerImpl = requires {
     {T::load_id(std::declval<const json&>())} -> std::convertible_to<typename T::IdType>;
     {T::load_name(std::declval<const json&>())} -> std::convertible_to<std::string>;
     {T::load(
+        std::declval<std::shared_ptr<T>>(),
         std::declval<const json&>(), 
         std::declval<GenericResourceManager<Resources...>&>(),
         std::declval<const typename T::IdType&>(),
         std::declval<ResourceManagerEntry<T>&>()
-    )} -> std::same_as<std::shared_ptr<T>>;
+    )};
     {T::save(std::declval<std::shared_ptr<T>>(), std::declval<GenericResourceManager<Resources...>&>())} -> std::convertible_to<json>;
 };
 
@@ -260,13 +261,15 @@ public:
             std::ifstream json_file{to_load};
             json jsonval;
             json_file >> jsonval;
-            Ref loaded = ResourceSerializer<T>::load(
+            Ref<T> loaded = std::make_shared<T>{};
+            stored->second.loaded = WeakRef{loaded};
+            ResourceSerializer<T>::load(
+                loaded,
                 jsonval,
                 *this,
                 stored->first,
                 stored->second
             );
-            stored->second.loaded = WeakRef{loaded};
             return OptionalRef{loaded};
         } catch(std::exception& e) {
             logger::error("Failed to load value from {}: {}", to_load.c_str(), e.what());

@@ -16,14 +16,6 @@ namespace model {
 class ComponentNode;
 
 /**
- * @brief A shared reference to a ComponentNode, this reference must
- * NOT outlive the BoardGraph that creates it as the ComponentNode shares data with 
- * the BoardGraph that will become invalidated when the BoardGraph is destructed
- */
-using ComponentNodeRef = std::shared_ptr<ComponentNode>;
-using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
-
-/**
  * \brief An edge in the board graph representing a single wire connection between two
  * ports on a component
  * \sa Connector
@@ -37,14 +29,12 @@ public:
     struct Connection {
     public:
         /** Create a new connection point using a component and pointer to a connection port */
-        inline Connection(WeakComponentNodeRef component, ConnectionPort const * port) :
+        inline Connection(ResourceManager::WeakRef<ComponentNode> component, ConnectionPort const * port) :
             m_component{component}, m_port{port} {}
     
-        /** \brief Serialize this connection point to JSON */
-        json to_json() const;
     private:
         /** \brief Node in the graph that this edge connects to */
-        WeakComponentNodeRef m_component;
+        ResourceManager::WeakRef<ComponentNode> m_component;
         /** \brief Pointer to a connection port on the component node's type */
         ConnectionPort const * m_port;
         /** \brief A shared resource pointing to a user-defined connector on this connection point */
@@ -53,20 +43,21 @@ public:
         Connection() : m_component{}, m_port{} {}
         friend class WireEdge;
         friend class BoardGraph;
+        friend struct ResourceSerializer<WireEdge>;
     };
-    
-    /** \brief Serialize this wire to JSON */
-    json to_json() const;
+   
 private:
     /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
+    
+    /** \brief Internal ID number of this wire edge */
+    std::size_t m_id;
 
     WireEdge() : m_conns{} {};
-    friend class BoardGraph;
-};
 
-using WireEdgeRef = std::shared_ptr<WireEdge>;
-using WireEdgeWeakRef = std::weak_ptr<WireEdge>;
+    friend class BoardGraph;
+    friend struct ResourceSerializer<WireEdge>;
+};
 
 /**
  * \brief A component that has been placed in a BoardGraph with
@@ -98,9 +89,10 @@ private:
     /** \brief Offset in the workspace from center */
     Point m_pos;
     /** \brief All graph edges connecting this component node to others */
-    std::vector<WireEdgeRef> m_wires;
+    std::vector<ResourceManager::Ref<WireEdge>> m_wires;
 
     friend class BoardGraph;
+    friend struct ResourceSerializer<ComponentNode>;
 };
 
 /**  
@@ -134,4 +126,61 @@ private:
     std::size_t m_id_count = 1;
 };
 
+}
+
+template<>
+struct ResourceSerializer<model::ComponentNode> {
+    using ComponentNode = model::ComponentNode;
+    using IdType = std::size_t;
+    static const std::filesystem::path RESOURCE_DIR;
+
+    static inline IdType load_id(const json& json_val) { return json_val["id"].get<std::size_t>(); }
+    static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
+    template<Resource... Resources>
+    static inline json save(
+        std::shared_ptr<ComponentNode> component,
+        GenericResourceManager<Resources...>&
+    ) {
+        json::object_t obj{};
+        obj.emplace("name", component->m_name);
+        obj.emplace("id", component->m_id);
+        obj.emplace("type", component->m_ty->m_id);
+        obj.emplace("conns", json::array({}));
+        for(const auto& conn : component->m_wires) {
+            obj["conns"].push_back(conn.id());
+        }
+
+        return obj;
+    }
+
+    template<Resource... Resources>
+    static inline std::shared_ptr<ComponentNode> load(
+
+    ) {
+
+    }
+};
+
+template<>
+struct ResourceSerializer<model::WireEdge> {
+    using WireEdge = model::WireEdge;
+    using IdType = std::size_t;
+    static const std::filesystem::path RESOURCE_DIR;
+
+    static inline IdType load_id(const json& json_val) { return json_val["id"].get<std::size_t>(); }
+    static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
+    template<Resource... Resources>
+    static inline json save(
+        std::shared_ptr<WireEdge> wire,
+        GenericResourceManager<Resource...>&
+    ) {
+        json::object_t obj{};
+        obj.emplace("name", wire->m_name);
+        obj.emplace("id", wire->m_id);
+
+        return obj;
+    }
+
+    template<Resources... Resources>
+    static inline void load();
 }
