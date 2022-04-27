@@ -32,24 +32,24 @@ private:
      */
     std::string_view m_name;
     
-    friend struct Serializer<Connector>;
+    friend struct ResourceSerializer<Connector>;
 };
 
 }
 
 template<>
-struct Serializer<model::Connector> {
+struct ResourceSerializer<model::Connector> {
     using Connector = model::Connector;
     using IdType = std::string;
     static const std::filesystem::path RESOURCE_DIR;
     static inline IdType load_id(const json& j) { return j["id"].get<IdType>(); }
     static inline std::string load_name(const json& j) { return j["name"].get<std::string>(); }
-    template<GenericStoreValue... Resources>
+    template<Resource... Resources>
     static inline std::shared_ptr<Connector> load(
         const json&,
         GenericResourceManager<Resources...>&,
         const IdType& idref,
-        GenericStoreEntry<Connector>& entry
+        ResourceManagerEntry<Connector>& entry
     ) {
         std::shared_ptr<Connector> connector = std::make_shared<Connector>();
         connector->m_id = std::string_view{idref};
@@ -57,7 +57,7 @@ struct Serializer<model::Connector> {
         return connector;
     }
 
-    template<GenericStoreValue... Resources>
+    template<Resource... Resources>
     static inline json save(std::shared_ptr<Connector> connector, GenericResourceManager<Resources...>&) {
         return {
             {"id", connector->m_id},
@@ -66,5 +66,5 @@ struct Serializer<model::Connector> {
     }
 };
 
-static_assert(GenericStoreValue<model::Connector>);
+static_assert(Resource<model::Connector>);
 

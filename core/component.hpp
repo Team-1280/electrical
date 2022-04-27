@@ -40,7 +40,7 @@ private:
     /** Internal ID of this connection port, shared with the parent Component and guranteed to be NULL terminated */
     std::string_view m_id;
     
-    friend struct Serializer<Component>;
+    friend struct ResourceSerializer<Component>;
     friend class Component;
 };
 
@@ -81,7 +81,7 @@ private:
     /* Shape of the component in the workspace */ 
     Footprint m_fp;
     
-    friend struct Serializer<Component>;
+    friend struct ResourceSerializer<Component>;
     friend class BoardGraph;
 };
 
@@ -89,12 +89,12 @@ private:
 }
 
 template<>
-struct Serializer<model::Component> {
+struct ResourceSerializer<model::Component> {
     using Component = model::Component;
     using IdType = std::string;
     static const std::filesystem::path RESOURCE_DIR;
     
-    template<GenericStoreValue... Resources>
+    template<typename... Resources>
     static inline json save(std::shared_ptr<Component> component, GenericResourceManager<Resources...>&) {
         json::object_t obj{};
         obj.emplace("id", component->m_id);
@@ -112,12 +112,12 @@ struct Serializer<model::Component> {
     }
     static inline std::string load_id(const json& json_val) { return json_val["id"].get<std::string>(); }
     static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
-    template<GenericStoreValue... Resources>
+    template<typename... Resources>
     static inline std::shared_ptr<Component> load(
         const json& json_val,
         GenericResourceManager<Resources...>&,
         const std::string& idref,
-        GenericStoreEntry<Component>& entry
+        ResourceManagerEntry<Component>& entry
     ) {
         std::shared_ptr<Component> component = std::make_shared<Component>();
 
@@ -137,5 +137,6 @@ struct Serializer<model::Component> {
  
 };
 
-static_assert(GenericStoreValue<model::Component>);
+static_assert(Resource<model::Component>);
+
 
