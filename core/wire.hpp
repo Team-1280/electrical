@@ -16,8 +16,9 @@ namespace model {
 class Connector {
 public:
     Connector() : m_id{} {}
-
     
+    /** \brief Get the string ID of this connector type */
+    inline constexpr std::string_view id() const { return this->m_id; }
 private:
     /** 
      * \brief User-created ID string of this connector, 

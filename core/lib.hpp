@@ -26,11 +26,13 @@ using WeakComponentNodeRef = std::weak_ptr<ComponentNode>;
 /**
  * \brief An edge in the board graph representing a single wire connection between two
  * ports on a component
+ * \sa Connector
  */
 class WireEdge {
 public:     
     /** 
-     * A \brief single connection point for a wire
+     * A \brief single end of a wire, that may be free-floating (not connected to any component node)
+     * or connected to a specific port on a component node
      */
     struct Connection {
     public:
@@ -45,7 +47,9 @@ public:
         WeakComponentNodeRef m_component;
         /** \brief Pointer to a connection port on the component node's type */
         ConnectionPort const * m_port;
-        
+        /** \brief A shared resource pointing to a user-defined connector on this connection point */
+        ResourceManager::Ref<Connector> m_connector;
+
         Connection() : m_component{}, m_port{} {}
         friend class WireEdge;
         friend class BoardGraph;

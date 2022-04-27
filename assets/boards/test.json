@@ -15,8 +15,8 @@
     ],
     "edges": [
         [
-            {"node": 1, "port": "pwm0"},
-            {"node": 2, "port": "pwm0"}
+            {"node": 1, "port": "pwm0", "connector": "1280.test-conn"},
+            {"node": 2, "port": "pwm0", "connector": "1280.test-conn"}
         ]
     ]
 }

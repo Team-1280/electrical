@@ -15,13 +15,20 @@ json WireEdge::Connection::to_json() const {
             {
                 "port",
                 this->m_port->id()
+            },
+            {
+                "connector",
+                this->m_connector->id()
             }
         };
     }
 }
 
 json WireEdge::to_json() const {
-    return {this->m_conns[0].to_json(), this->m_conns[1].to_json()};
+    return {
+        this->m_conns[0].to_json(),
+        this->m_conns[1].to_json()
+    };
 }
 
 void BoardGraph::from_json(BoardGraph &self, const json &j) {
@@ -55,6 +62,7 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
             if(edge[i].is_null()) {
                 continue; 
             }
+
             std::size_t component_id = edge[i]["node"].get<std::size_t>();
             auto component = self.m_nodes.find(component_id);
             if(component == self.m_nodes.end()) {
@@ -71,6 +79,20 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
                     component->second->m_ty->m_id
                 );
                 continue;
+            }
+
+            std::string connector_id = edge[i]["connector"].get<std::string>();
+            ResourceManager::OptionalRef<Connector> connector = self.m_res.get<Connector>(connector_id);
+            if(!connector) {
+                logger::warn(
+                    "Connector type {} used by wire end connecting to {}, port {} does not exist",
+                    connector_id,
+                    component_id,
+                    port_id
+                );
+                continue;
+            } else {
+                wire->m_conns[i].m_connector = *connector;
             }
             wire->m_conns[i].m_component = component->second;
             wire->m_conns[i].m_port = &port->second;

@@ -85,7 +85,6 @@ private:
     friend class BoardGraph;
 };
 
-
 }
 
 template<>
