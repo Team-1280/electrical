@@ -6,7 +6,11 @@
 #include <unordered_map>
 #include <fstream>
 #include <tuple>
+#include <exception>
+#include <stdexcept>
 
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "ser.hpp"
 #include "util/hash.hpp"
 
@@ -98,6 +102,16 @@ template<typename T>
 concept Resource = requires() {
     typename ResourceSerializer<T>;
     sizeof(ResourceSerializer<T>) != 0;
+};
+
+/**
+ * \brief Exception thrown when accessing a resource with an invalid / nonexistent ID
+ *
+ * \sa GenericResourceManager::try_get
+ */
+struct InvalidResourceIdException : public std::runtime_error {
+public:
+    inline InvalidResourceIdException(std::string&& msg) : std::runtime_error{std::move(msg)} {}
 };
 
 /**
@@ -235,6 +249,45 @@ public:
             return defaultRef;
         }
     }
+    
+    /**
+     * \brief Attempt to retrieve a resource of type T by ID from this resource manager,
+     * throwing an exception if deserialization fails or the resource does not exist
+     *
+     * \throws InvalidResourceIdException if there exists no entry for the given ID
+     * \throws std::exception if deserialization fails
+     * \return A reference to the retrieved resource 
+     */
+    template<Resource T, typename Id>
+    requires requires(const Id& id, MapType<T> map) {
+        map.find(id);
+        ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
+    }
+    [[nodiscard("An unused shared reference will immediately be deallocated")]]
+    Ref<T> try_get(const Id& id) {
+        auto stored = std::get<MapType<T>>(this->m_stores).find(id); 
+        if(stored != std::get<MapType<T>>(this->m_stores).end() && !stored->second.loaded.expired()) {
+            return stored->second.loaded.lock();
+        } else if(stored == std::get<MapType<T>>(this->m_stores).end()) {
+            throw InvalidResourceIdException(fmt::format("Attempted to retrieve value by ID {} that does not exist", id));
+        }
+
+        std::filesystem::path to_load = stored->second.path;
+        std::ifstream json_file{to_load};
+        json jsonval;
+        json_file >> jsonval;
+        Ref<T> loaded = std::make_shared<T>();
+        stored->second.loaded = WeakRef{loaded};
+        ResourceSerializer<T>::load(
+            loaded,
+            jsonval,
+            *this,
+            stored->first,
+            stored->second
+        );
+        return loaded;
+    }
+
 
     /**
      * \brief Attempt to get a value of type T by ID from this store, may cause a deserialization
@@ -262,7 +315,7 @@ public:
             std::ifstream json_file{to_load};
             json jsonval;
             json_file >> jsonval;
-            Ref<T> loaded = std::make_shared<T>{};
+            Ref<T> loaded = std::make_shared<T>();
             stored->second.loaded = WeakRef{loaded};
             ResourceSerializer<T>::load(
                 loaded,
@@ -276,6 +329,7 @@ public:
             logger::error("Failed to load value from {}: {}", to_load.c_str(), e.what());
             return OptionalRef<T>{};
         }
+
     }
 private:
     template<Resource T>

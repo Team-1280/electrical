@@ -7,11 +7,8 @@
 
 int main(int argc, const char* argv[]) {
     logger::init("./log.txt");
-
-    json board_json;
-    std::ifstream{"./assets/boards/test.json"} >> board_json;
-    model::BoardGraph board = board_json.get<model::BoardGraph>();
+    model::BoardGraph board{};
     
-    std::cout << board.to_json() << std::endl;
+    //std::cout << board.to_json() << std::endl;
     return 0;
 }

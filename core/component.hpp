@@ -47,8 +47,8 @@ private:
 /**
  * \brief A component in the board design with required parameters like
  * footprint
- * \sa ComponentSerializer
- * \implements GenericStoreValue
+ *
+ * \implements Resource
  */ 
 class Component {
 public:
@@ -63,9 +63,9 @@ public:
     inline constexpr const std::string_view name() const { return this->m_name; }
     
     /** Get a port by name, O(n) lookup time */
-    std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string& id) const;
+    std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
     /** Get a port index by name */
-    std::optional<std::size_t> get_port_idx(const std::string_view name) const;
+    std::optional<const ConnectionPort* const> get_port_ptr(const std::string_view id) const;
 
 private:
     /* User-facing name of the component type, shared with the ComponentStore */

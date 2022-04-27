@@ -46,7 +46,7 @@ struct ResourceSerializer<model::Connector> {
     static inline IdType load_id(const json& j) { return j["id"].get<IdType>(); }
     static inline std::string load_name(const json& j) { return j["name"].get<std::string>(); }
     template<Resource... Resources>
-    static inline load(
+    static inline void load(
         std::shared_ptr<Connector> connector,
         const json&,
         GenericResourceManager<Resources...>&,

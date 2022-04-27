@@ -2,6 +2,7 @@
 #include "nlohmann/json.hpp"
 #include <exception>
 #include <concepts>
+#include <uuid.h>
 
 #include "util/log.hpp"
 
@@ -63,6 +64,17 @@ struct adl_serializer<T> {
         std::string s = j.get<std::string>();
         T::from_string(v, s);
     } 
+};
+
+template<>
+struct adl_serializer<uuids::uuid> {
+    static inline void to_json(json& j, const uuids::uuid& v) {
+        j = uuids::to_string(v);
+    }
+
+    static inline void from_json(const json& j, uuids::uuid& v) {
+        v.from_string(j.get<std::string>());
+    }
 };
 
 }
