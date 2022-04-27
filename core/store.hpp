@@ -108,10 +108,10 @@ public:
     template<typename T>
     using MapType = typename _detail::map_type_helper<typename Serializer<T>::IdType, T>::MapType;
 
-    static_assert(
+    /*static_assert(
         (GenericSerializer<Serializer<Values>, Values...> && ...),
         "GenericResourceManager instantiated with value types containing no viable Serializer specialization"
-    );
+    );*/
 
     /** 
      * \brief Construct a new store, loading entries from a cache file.
@@ -126,7 +126,7 @@ public:
 
     /** \brief  Move the assigned store into this one by assignment */
     inline SelfType& operator=(SelfType&& other) {
-        this->m_store = std::move(other.m_store);
+        this->m_stores = std::move(other.m_stores);
         return *this;
     }
 
@@ -141,7 +141,7 @@ public:
         GenericSerializer<Serializer<T>, Values...>;
     }
     bool generate_cachefile(const std::filesystem::path& cachefile_path) {
-        std::get<T>(this->m_stores).clear();
+        std::get<MapType<T>>(this->m_stores).clear();
         auto resource_items = std::filesystem::recursive_directory_iterator{Serializer<T>::RESOURCE_DIR};
         for(const auto& entry : resource_items) {
             if(entry.is_regular_file() && entry.path() != cachefile_path) {
@@ -149,7 +149,7 @@ public:
                     std::ifstream entry_file{entry.path()};
                     json entry_json;
                     entry_file >> entry_json;
-                    auto [elem, inserted] = std::get<T>(this->m_stores).emplace(Serializer<T>::load_id(entry_json), entry.path());
+                    auto [elem, inserted] = std::get<MapType<T>>(this->m_stores).emplace(Serializer<T>::load_id(entry_json), entry.path());
                     if(!inserted) {
                         logger::warn(
                             "Two elements with ID {} detected while populating cache file, using {} over {}",
@@ -174,7 +174,7 @@ public:
         try {
             std::ofstream cachefile{cachefile_path};
             json::object_t cache_json{};
-            for(const auto& [id, entry] : std::get<T>(this->m_stores)) {
+            for(const auto& [id, entry] : std::get<MapType<T>>(this->m_stores)) {
                 cache_json.emplace(id, entry);
             }
             cachefile << cache_json;
@@ -194,17 +194,18 @@ public:
     template<GenericStoreValue T, typename Id>
     requires requires(const Id& id, MapType<T> map) {
         map.find(id);
+        std::is_default_constructible_v<T>;
         GenericSerializer<Serializer<T>, Values...>;
     } 
-    inline OptionalRef<T> get_or_default(const typename Serializer<T>::IdType& id) requires(std::is_default_constructible_v<T>) {
-       auto stored = std::get<T>(this->m_stores).find(id);
-        if(stored == std::get<T>(this->m_stores).end()) {
-            return OptionalRef{};
+    inline OptionalRef<T> get_or_default(const typename Serializer<T>::IdType& id) {
+       auto stored = std::get<MapType<T>>(this->m_stores).find(id);
+        if(stored == std::get<MapType<T>>(this->m_stores).end()) {
+            return OptionalRef<T>{};
         } else if(!stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
         } else {
             Ref defaultRef = std::make_shared<T>();
-            stored->second.loaded = WeakRef{defaultRef};
+            stored->second.loaded = WeakRef<T>{defaultRef};
             return defaultRef;
         }
     }
@@ -222,12 +223,12 @@ public:
     }
     [[nodiscard("An unused shared reference will immediately be deallocated")]]
     OptionalRef<T> get(const Id& id) {
-        auto stored = std::get<T>(this->m_stores).find(id); 
-        if(stored != std::get<T>(this->m_stores).end() && !stored->second.loaded.expired()) {
+        auto stored = std::get<MapType<T>>(this->m_stores).find(id); 
+        if(stored != std::get<MapType<T>>(this->m_stores).end() && !stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
-        } else if(stored == std::get<T>(this->m_stores).end()) {
+        } else if(stored == std::get<MapType<T>>(this->m_stores).end()) {
             logger::warn("Attempted to retrieve value by ID {} that does not exist", id);
-            return OptionalRef{};
+            return OptionalRef<T>{};
         }
 
         std::filesystem::path to_load = stored->second.path;
@@ -243,9 +244,9 @@ public:
             );
             stored->second.loaded = WeakRef{loaded};
             return OptionalRef{loaded};
-        } catch(const std::exception& e) {
+        } catch(std::exception& e) {
             logger::error("Failed to load value from {}: {}", to_load.c_str(), e.what());
-            return OptionalRef{};
+            return OptionalRef<T>{};
         }
     }
 private:
@@ -258,16 +259,15 @@ private:
             cachefile >> cache_json;
 
             for(const auto& [id, entry_json] : cache_json.items()) {
-                std::get<T>(this->m_stores).emplace(id, entry_json.template get<GenericStoreEntry<T>>());
+                std::get<MapType<T>>(this->m_stores).emplace(id, entry_json.template get<GenericStoreEntry<T>>());
             }
-        } catch(const std::exception& e) {
+        } catch(std::exception& e) {
             logger::warn("Failed to load a cached resource file {}, generating one", cachefile_path.c_str());
             this->generate_cachefile<T>(cachefile_path);
         }
-    };
+    }
 
     /** \brief A map of all known IDs to store entries that may contain loaded values */
     std::tuple<MapType<Values>...> m_stores;
 };
-
 

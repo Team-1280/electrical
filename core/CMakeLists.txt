@@ -5,6 +5,7 @@ set(
     "geom.cpp"
     "util/log.cpp"
     "component.cpp"
+    "wire.cpp"
 )
 
 set(

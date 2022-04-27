@@ -11,6 +11,8 @@
 
 namespace model {
 
+class Component;
+
 /**
  * \brief A structure defining a single connection point on a component
  */
@@ -38,7 +40,7 @@ private:
     /** Internal ID of this connection port, shared with the parent Component and guranteed to be NULL terminated */
     std::string_view m_id;
     
-    friend struct Serializer<ConnectionPort>;
+    friend struct Serializer<Component>;
     friend class Component;
 };
 
@@ -93,9 +95,23 @@ struct Serializer<model::Component> {
     static const std::filesystem::path RESOURCE_DIR;
     
     template<GenericStoreValue... Resources>
-    static json save(std::shared_ptr<Component>, GenericResourceManager<Resources...>&);
-    static std::string load_id(const json&);
-    static std::string load_name(const json&);
+    static inline json save(std::shared_ptr<Component> component, GenericResourceManager<Resources...>&) {
+        json::object_t obj{};
+        obj.emplace("id", component->m_id);
+        obj.emplace("name", component->m_name);
+        obj.emplace("footprint", component->m_fp);
+        obj.emplace("ports", json::object({}));
+        for(const auto& [port_id, port] : component->m_ports) {
+            json::object_t port_json{};
+            port_json.emplace("name", port.m_name);
+            port_json.emplace("pos", port.m_pt);
+            obj.emplace(port_id, port_json);
+        }
+
+        return obj;
+    }
+    static inline std::string load_id(const json& json_val) { return json_val["id"].get<std::string>(); }
+    static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
     template<GenericStoreValue... Resources>
     static inline std::shared_ptr<Component> load(
         const json& json_val,

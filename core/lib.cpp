@@ -38,7 +38,7 @@ void BoardGraph::from_json(BoardGraph &self, const json &j) {
         val["name"].get_to<std::string>(elem->second->m_name);;
         val["pos"].get_to<Point>(elem->second->m_pos);
         std::string comp_ty_id = val["type"].get<std::string>();
-        ResourceManager::OptionalRef<Component> component_ty = self.m_res.get(std::string_view{comp_ty_id});
+        ResourceManager::OptionalRef<Component> component_ty = self.m_res.get<Component>(std::string_view{comp_ty_id});
         if(!component_ty) {
             logger::error("Component node '{}' refers to component {} that was not found", id, comp_ty_id);
             self.m_nodes.erase(id);
