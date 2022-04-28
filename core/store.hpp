@@ -19,6 +19,7 @@
 /**
  * \brief Structure that must be specialized for a type T in order for
  * T to fulfill the Resource concept
+ * \sa ResourceSerializerImpl
  */
 template<typename T>
 struct ResourceSerializer;
@@ -45,6 +46,35 @@ concept Resource = requires() {
 struct NoPreload {
     inline json to_json() const { return nullptr; }
     inline static void from_json(NoPreload&, const json&) {}
+};
+
+template<typename T, char... Name>
+struct SinglePreload {
+    /** \brief Compile-time string constant for the field name of the preloaded value */
+    static constexpr const char FIELD[sizeof...(Name) + 1] = { Name..., '\0'};
+    
+    static inline void from_json(SinglePreload<T, Name...> self, const json& j) {
+        j.at(FIELD).template get_to<T>(self.m_val);
+    }
+
+    inline json to_json() const {
+        return {
+            {FIELD, this->m_val}
+        };
+    };
+    
+    inline constexpr operator T const&() const { return this->m_val; }
+    inline constexpr operator T&() { return this->m_val; }
+    inline constexpr SinglePreload<T, Name...>& operator=(const T& other) requires(std::is_copy_constructible_v<T>) {
+        this->m_val = other;
+        return *this;
+    }
+    inline constexpr SinglePreload<T, Name...>& operator=(T&& other) requires(std::is_move_constructible_v<T>) {
+        this->m_val = std::move(other);
+        return *this;
+    }
+private:
+    T m_val;
 };
 
 /**
@@ -89,7 +119,7 @@ public:
 
 /**
  * \brief Concept that all template specializations of ResourceSerializer
- * must satisfy
+ * must satisfy in order to be usable with a ResourceManager
  * \sa ResourceSerializer
  */
 template<typename T, typename... Resources>
@@ -99,6 +129,7 @@ concept ResourceSerializerImpl = requires {
     {std::unordered_map<typename T::IdType, std::string>{}};
     {T::RESOURCE_DIR} -> std::convertible_to<const std::filesystem::path>;
     {T::load_id(std::declval<const json&>())} -> std::convertible_to<typename T::IdType>;
+    {T::save_id(std::declval<const typename T::IdType&>())} -> std::convertible_to<json>;
     T::load(
         std::declval<std::shared_ptr<T>>(),
         std::declval<const json&>(), 
@@ -141,6 +172,12 @@ using WeakRef = std::weak_ptr<T>;
 template<typename T>
 using OptionalRef = std::optional<std::shared_ptr<T>>;
 
+/**
+ * \brief Concept ensuring that a resource list contains a specific type,
+ * used to ensure resource dependencies are fulfilled at compile time
+ */
+template<typename T, typename... Resources> 
+concept HasResource = (std::same_as<T, Resources> || ...);
 
 /**
  * \brief A generic resource manager that lazily loads values of type T.
@@ -169,7 +206,6 @@ public:
    
     /** \brief Move construct this generic store from another rvalue reference */
     GenericResourceManager(SelfType&& other) : m_stores{std::move(other.m_stores)} {}
-
     /** \brief  Move the assigned store into this one by assignment */
     inline SelfType& operator=(SelfType&& other) {
         this->m_stores = std::move(other.m_stores);
@@ -183,13 +219,16 @@ public:
      */
     template<Resource T>
     requires requires {
-        (std::is_same_v<T, Values> || ...);
+        HasResource<T, Values...>;
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
     }
     bool generate_cachefile(const std::filesystem::path& cachefile_path) {
         std::get<MapType<T>>(this->m_stores).clear();
         std::filesystem::recursive_directory_iterator resource_items;
         try {
+            if(!std::filesystem::exists(ResourceSerializer<T>::RESOURCE_DIR)) {
+                std::filesystem::create_directories(ResourceSerializer<T>::RESOURCE_DIR);
+            }
             resource_items = std::filesystem::recursive_directory_iterator{ResourceSerializer<T>::RESOURCE_DIR};
         } catch(const std::exception& e) {
             logger::error(
@@ -205,7 +244,10 @@ public:
                     std::ifstream entry_file{entry.path()};
                     json entry_json;
                     entry_file >> entry_json;
-                    auto [elem, inserted] = std::get<MapType<T>>(this->m_stores).emplace(ResourceSerializer<T>::load_id(entry_json), ResourceManagerEntry<T>{});
+                    auto [elem, inserted] = std::get<MapType<T>>(this->m_stores).emplace(
+                        ResourceSerializer<T>::load_id(entry_json.at("id")),
+                        ResourceManagerEntry<T>{}
+                    );
                     if(!inserted) {
                         logger::warn(
                             "Two elements with ID {} detected while populating cache file, using {} over {}",
@@ -215,7 +257,7 @@ public:
                         );
                         continue;
                     }
-                    //ResourceManagerEntry<T>::Preloaded::from_json(elem->second.preloaded, entry_json);
+                    ResourceManagerEntry<T>::Preloaded::from_json(elem->second.preloaded, entry_json);
                 } catch(const std::exception& e) {
                     logger::error(
                         "Failed to read file {} while populating cache file {}: {}",
@@ -253,6 +295,7 @@ public:
      */
     template<Resource T, typename Id>
     requires requires(const Id& id, MapType<T> map) {
+        HasResource<T, Values...>;
         map.find(id);
         std::is_default_constructible_v<T>;
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
@@ -280,6 +323,7 @@ public:
      */
     template<Resource T, typename Id>
     requires requires(const Id& id, MapType<T> map) {
+        HasResource<T, Values...>;
         map.find(id);
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
     }
@@ -318,6 +362,7 @@ public:
      */
     template<Resource T, typename Id>
     requires requires(const Id& id, MapType<T> map) {
+        HasResource<T, Values...>;
         map.find(id);
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
     }
@@ -363,18 +408,22 @@ private:
 
             for(const auto& entry_json : cache_json) {
                 std::get<MapType<T>>(this->m_stores).emplace(
-                    ResourceSerializer<T>::load_id(entry_json),
-                    entry_json.template get<ResourceManagerEntry<T>>()
+                    ResourceSerializer<T>::load_id(entry_json.at("id")),
+                    entry_json.at("entry").template get<ResourceManagerEntry<T>>()
                 );
             }
         } catch(std::exception& e) {
-            logger::warn("Failed to load a cached resource file {}, generating one", cachefile_path.c_str());
+            logger::warn(
+                "Failed to load a cached resource file {}: {}, generating one",
+                cachefile_path.c_str(),
+                e.what()
+            );
             this->generate_cachefile<T>(cachefile_path);
         }
     }
-    
+
     /** 
-     * \brief Convert an ID of any type to a string if it supported by the `fmt` library
+     * \brief Convert an ID of any type to a string if it supported by std::to_string
      * or contains an overloaded operator<< for std::ostream's 
      * \return A string representation of the given ID, or the string {ID} if the ID cannot
      * be converted to a string
@@ -391,6 +440,7 @@ private:
             return "{ID}";
         }
     }
+    
 
     /** \brief A map of all known IDs to store entries that may contain loaded values */
     std::tuple<MapType<Values>...> m_stores;

@@ -92,20 +92,7 @@ struct ResourceSerializer<model::Component> {
     using Component = model::Component;
     using IdType = std::string;
     static const std::filesystem::path RESOURCE_DIR;
-
-    struct Preloaded {
-        static void from_json(Preloaded& self, const json& j) {
-            j.at("name").get_to(self.name);
-        }
-
-        json to_json() const {
-            return {
-                {"name", this->name}
-            };
-        }
-
-        std::string name;
-    };
+    using Preloaded = SinglePreload<std::string, 'n', 'a', 'm', 'e'>;
     
     template<typename... Resources>
     static inline json save(std::shared_ptr<Component> component, GenericResourceManager<Resources...>&) {
@@ -123,7 +110,8 @@ struct ResourceSerializer<model::Component> {
 
         return obj;
     }
-    static inline std::string load_id(const json& json_val) { return json_val.at("id").get<std::string>(); }
+    static inline std::string load_id(const json& json_val) { return json_val.get<std::string>(); }
+    static inline std::string save_id(const std::string& id) { return id; }
     static inline std::string load_name(const json& json_val) { return json_val.at("name").get<std::string>(); }
     template<typename... Resources>
     static inline void load(
@@ -134,7 +122,7 @@ struct ResourceSerializer<model::Component> {
         Preloaded& preloaded
     ) {
         component->m_id = std::string_view{idref};
-        component->m_name = std::string_view{preloaded.name};
+        component->m_name = std::string_view{preloaded};
         json_val.at("footprint").get_to<model::Footprint>(component->m_fp);
         for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
             auto elem = component->m_ports.emplace(port_id, model::ConnectionPort{}).first;

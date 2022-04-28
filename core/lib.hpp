@@ -130,9 +130,8 @@ struct ResourceSerializer<model::ComponentNode> {
 
         std::string name;
     };
-
-    static inline IdType load_id(const json& json_val) { return json_val["id"].get<uuids::uuid>(); }
-    static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
+    static inline IdType save_id(const IdType& id) { return id; }
+    static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
     template<Resource... Resources>
     static inline json save(
         std::shared_ptr<ComponentNode> component,
@@ -166,7 +165,6 @@ struct ResourceSerializer<model::ComponentNode> {
         }
     }
 };
-
 template<>
 struct ResourceSerializer<model::WireEdge> {
     using WireEdge = model::WireEdge;
@@ -174,7 +172,8 @@ struct ResourceSerializer<model::WireEdge> {
     static const std::filesystem::path RESOURCE_DIR;
 
     using Preloaded = NoPreload;
-    static inline IdType load_id(const json& json_val) { return json_val.at("id").get<uuids::uuid>(); }
+    static inline IdType save_id(const IdType& id) { return id; }
+    static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
     template<Resource... Resources>
     static inline json save(
         std::shared_ptr<WireEdge> wire,
@@ -199,6 +198,10 @@ struct ResourceSerializer<model::WireEdge> {
     }
 
     template<Resource... Resources>
+    requires(
+        HasResource<model::ComponentNode, Resources...> &&
+        HasResource<model::Connector, Resources...>
+    )
     static inline void load(
         std::shared_ptr<WireEdge> wire,
         const json& json_val,
