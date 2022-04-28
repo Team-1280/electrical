@@ -184,15 +184,28 @@ struct FatPtr {
     T val;
 };
 
+template<typename T>
+requires sizeof(T) > (2 * sizeof(T*))
+struct FatPtr {
+    FatPtr() 
+        : refcnt{}, val{reinterpret_cast<T* const>(new std::byte[sizeof(T)])} {}
+    std::atomic_size_t refcnt;
+    T * const val;
+};
+
+template<typename T>
+struct BasicRef {
+public:
+    BasicRef() : m_ptr{new FatPtr{}} {}
+protected:
+    FatPtr * const m_ptr;
+};
+
 }
 
 template<typename T>
-class ConstRef {
+class ConstRef : public _detail::BasicRef<T> {
 public:
-    ConstRef() : m_ptr{} {}
-    ConstRef(std::shared_ptr<T> ptr) :
-        m_ptr{ptr}, m_entry{entry} {}
-    
     inline T const& operator*() const noexcept {
         return this->m_ptr.operator*();
     }
@@ -201,8 +214,6 @@ public:
     }
 
 private:
-    std::shared_ptr<T> m_ptr;
-
     friend class WeakRef<T>;
 };
 
