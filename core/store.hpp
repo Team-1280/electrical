@@ -11,86 +11,18 @@
 
 #include "fmt/core.h"
 #include "fmt/format.h"
+#include <fmt/ostream.h>
 #include "ser.hpp"
 #include "util/hash.hpp"
 
 /**
- * \brief Contains the name and file path to load a 
- * value from a JSON file, plus an optional weak reference to an
- * allocated component if it has been loaded
- * \implements ser::ResourceManagerEntry
- * \sa ResourceManager
- */
-template<typename T>
-struct ResourceManagerEntry {
-public:
-    /** \brief A pointer that is invalidated if the value is no longer used */
-    std::weak_ptr<T> loaded;
-    /** \brief The name of the component type, shared with the Component instance */
-    std::string name;
-    /** \brief Path to load the component from */
-    std::filesystem::path path;
-        
-    /** \brief Convert this cached entry to a JSON value */
-    inline json to_json() const {
-        return {
-            {"name", this->name},
-            {"path", this->path.c_str()}
-        };
-    }
-    
-    /** \brief Convert this cache entry from a JSON value */
-    static inline void from_json(ResourceManagerEntry<T>& self, const json& j) {
-        self.name = j["name"].get<std::string>();
-        self.path = j["path"].get<std::filesystem::path>();
-    }
-    
-    ResourceManagerEntry() = default;
-    inline ResourceManagerEntry(const std::filesystem::path& p) : loaded{}, name{}, path{p} {};
-    ~ResourceManagerEntry() = default;
-};
-
-/**
  * \brief Structure that must be specialized for a type T in order for
- * T to fulfill Generic
+ * T to fulfill the Resource concept
  */
 template<typename T>
 struct ResourceSerializer;
 template<typename... Resources>
 class GenericResourceManager;
-
-namespace _detail {
-
-/** \brief Helper struct enabling an optimization when strings are used as the Id type of a GenericStore */
-template<typename Id, typename T>
-struct map_type_helper { using MapType = std::unordered_map<Id, ResourceManagerEntry<T>>;};
-/** \brief Helper specialization enabling std::string_view's to be passed as IDs instead of string references */
-template<typename T>
-struct map_type_helper<std::string, T> { using MapType = std::unordered_map<std::string, ResourceManagerEntry<T>, StringHasher, std::equal_to<>>; };
-
-}
-
-/**
- * \brief Concept that all template specializations of ResourceSerializer
- * must satisfy
- * \sa ResourceSerializer
- */
-template<typename T, typename... Resources>
-concept ResourceSerializerImpl = requires {
-    typename T::IdType;
-    {std::unordered_map<typename T::IdType, std::string>{}};
-    {T::RESOURCE_DIR} -> std::convertible_to<const std::filesystem::path>;
-    {T::load_id(std::declval<const json&>())} -> std::convertible_to<typename T::IdType>;
-    {T::load_name(std::declval<const json&>())} -> std::convertible_to<std::string>;
-    {T::load(
-        std::declval<std::shared_ptr<T>>(),
-        std::declval<const json&>(), 
-        std::declval<GenericResourceManager<Resources...>&>(),
-        std::declval<const typename T::IdType&>(),
-        std::declval<ResourceManagerEntry<T>&>()
-    )};
-    {T::save(std::declval<std::shared_ptr<T>>(), std::declval<GenericResourceManager<Resources...>&>())} -> std::convertible_to<json>;
-};
 
 /**
  * \brief Concept specifying that a type T can be stored in a GenericResourceManager,
@@ -105,6 +37,93 @@ concept Resource = requires() {
 };
 
 /**
+ * \brief A structure that contains no data and has empty
+ * to and from json methods, used to specify that a ResourceSerializer implementation
+ * does not preload any data
+ */
+struct NoPreload {
+    inline json to_json() const { return nullptr; }
+    inline consteval static void from_json(NoPreload&, const json&) {}
+};
+
+/**
+ * \brief Contains the file path to load a 
+ * value from a JSON file, plus an optional weak reference to an
+ * allocated component if it has been loaded and some eagerly loaded data
+ *
+ * \sa ResourceManager
+ */
+template<typename T>
+struct ResourceManagerEntry {
+public:
+    using Preloaded = typename ResourceSerializer<T>::Preloaded;
+
+    /** \brief A pointer that is invalidated if the value is no longer used */
+    std::weak_ptr<T> loaded;
+    
+    /** \brief Preloaded data that is stored in the cache file before lazy loading */
+    Preloaded preloaded;
+
+    /** \brief Path to load the component from */
+    std::filesystem::path path;
+        
+    /** \brief Convert this cached entry to a JSON value */
+    inline json to_json() const {
+        return {
+            {"preload", this->preloaded},
+            {"path", this->path.c_str()}
+        };
+    }
+    
+    /** \brief Convert this cache entry from a JSON value */
+    static inline void from_json(ResourceManagerEntry<T>& self, const json& j) {
+        Preloaded::from_json(self.preloaded, j.at("preload"));
+        self.path = j.at("path").get<std::filesystem::path>();
+    }
+    
+    ResourceManagerEntry() = default;
+    inline ResourceManagerEntry(const std::filesystem::path& p) : loaded{}, preloaded{}, path{p} {};
+    ~ResourceManagerEntry() = default;
+};
+
+/**
+ * \brief Concept that all template specializations of ResourceSerializer
+ * must satisfy
+ * \sa ResourceSerializer
+ */
+template<typename T, typename... Resources>
+concept ResourceSerializerImpl = requires {
+    typename T::IdType;
+    typename T::Preloaded;
+    {std::unordered_map<typename T::IdType, std::string>{}};
+    {T::RESOURCE_DIR} -> std::convertible_to<const std::filesystem::path>;
+    {T::load_id(std::declval<const json&>())} -> std::convertible_to<typename T::IdType>;
+    T::load(
+        std::declval<std::shared_ptr<T>>(),
+        std::declval<const json&>(), 
+        std::declval<GenericResourceManager<Resources...>&>(),
+        std::declval<const typename T::IdType&>(),
+        std::declval<const typename T::Preloaded&>() 
+    );
+    {T::save(std::declval<std::shared_ptr<T>>(), std::declval<GenericResourceManager<Resources...>&>())} -> std::convertible_to<json>;
+};
+
+namespace _detail {
+
+/** \brief Helper struct enabling an optimization when strings are used as the Id type of a GenericStore */
+template<typename Id, typename T>
+struct map_type_helper {
+    using MapType = std::unordered_map<Id, ResourceManagerEntry<T>>;
+};
+/** \brief Helper specialization enabling std::string_view's to be passed as IDs instead of string references */
+template<typename T>
+struct map_type_helper<std::string, T> {
+    using MapType = std::unordered_map<std::string, ResourceManagerEntry<T>, StringHasher, std::equal_to<>>; 
+};
+
+}
+
+/**
  * \brief Exception thrown when accessing a resource with an invalid / nonexistent ID
  *
  * \sa GenericResourceManager::try_get
@@ -113,6 +132,14 @@ struct InvalidResourceIdException : public std::runtime_error {
 public:
     inline InvalidResourceIdException(std::string&& msg) : std::runtime_error{std::move(msg)} {}
 };
+
+template<typename T>
+using Ref = std::shared_ptr<T>;
+template<typename T>
+using WeakRef = std::weak_ptr<T>;
+template<typename T>
+using OptionalRef = std::optional<std::shared_ptr<T>>;
+
 
 /**
  * \brief A generic resource manager that lazily loads values of type T.
@@ -126,25 +153,13 @@ public:
 template<Resource... Values>
 class GenericResourceManager<Values...> {
 public:
-    template<typename T>
-    using Ref = std::shared_ptr<T>;
-    template<typename T>
-    using WeakRef = std::weak_ptr<T>;
-    template<typename T>
-    using OptionalRef = std::optional<std::shared_ptr<T>>;
-
     using SelfType = GenericResourceManager<Values...>;
 
     template<Resource T>
     using MapType = typename _detail::map_type_helper<typename ResourceSerializer<T>::IdType, T>::MapType;
 
-    /*static_assert(
-        (ResourceSerializerImpl<ResourceSerializer<Values>> && ...),
-        "GenericResourceManager instantiated with value types containing no viable Serializer specialization"
-    );*/
-
     /** 
-     * \brief Construct a new store, loading entries from a cache file.
+     * \brief Construct a new resource manager, loading entries from a cache file.
      * If the cache file doesn't exist / is invalid then a new one will be generated (this may take some time)
      */
     GenericResourceManager() {
@@ -161,7 +176,7 @@ public:
     }
 
     /** 
-     * \brief Generate a cache file at the given path, also repopulating 
+     * \brief Generate a cache file for the given resource type at the given path, also repopulating 
      * the internal ID to resource map using the new data 
      * \return true If the cache file was generated successfully
      */
@@ -189,7 +204,7 @@ public:
                     std::ifstream entry_file{entry.path()};
                     json entry_json;
                     entry_file >> entry_json;
-                    auto [elem, inserted] = std::get<MapType<T>>(this->m_stores).emplace(ResourceSerializer<T>::load_id(entry_json), entry.path());
+                    auto [elem, inserted] = std::get<MapType<T>>(this->m_stores).emplace(ResourceSerializer<T>::load_id(entry_json), ResourceManagerEntry<T>{});
                     if(!inserted) {
                         logger::warn(
                             "Two elements with ID {} detected while populating cache file, using {} over {}",
@@ -199,7 +214,7 @@ public:
                         );
                         continue;
                     }
-                    elem->second.name = std::move(ResourceSerializer<T>::load_name(entry_json));
+                    ResourceManagerEntry<T>::Preloaded::from_json(elem->second.preloaded, entry_json);
                 } catch(const std::exception& e) {
                     logger::error(
                         "Failed to read file {} while populating cache file {}: {}",
@@ -277,14 +292,15 @@ public:
         json jsonval;
         json_file >> jsonval;
         Ref<T> loaded = std::make_shared<T>();
-        stored->second.loaded = WeakRef{loaded};
+        stored->second.loaded = WeakRef<T>{loaded};
         ResourceSerializer<T>::load(
             loaded,
             jsonval,
             *this,
             stored->first,
-            stored->second
+            stored->second.preload
         );
+
         return loaded;
     }
 
@@ -316,15 +332,15 @@ public:
             json jsonval;
             json_file >> jsonval;
             Ref<T> loaded = std::make_shared<T>();
-            stored->second.loaded = WeakRef{loaded};
+            stored->second.loaded = WeakRef<T>{loaded};
             ResourceSerializer<T>::load(
                 loaded,
                 jsonval,
                 *this,
                 stored->first,
-                stored->second
+                stored->second.preload
             );
-            return OptionalRef{loaded};
+            return OptionalRef<T>{loaded};
         } catch(std::exception& e) {
             logger::error("Failed to load value from {}: {}", to_load.c_str(), e.what());
             return OptionalRef<T>{};
@@ -341,7 +357,10 @@ private:
             cachefile >> cache_json;
 
             for(const auto& [id, entry_json] : cache_json.items()) {
-                std::get<MapType<T>>(this->m_stores).emplace(id, entry_json.template get<ResourceManagerEntry<T>>());
+                std::get<MapType<T>>(this->m_stores).emplace(
+                    id,
+                    entry_json.template get<ResourceManagerEntry<T>>()
+                );
             }
         } catch(std::exception& e) {
             logger::warn("Failed to load a cached resource file {}, generating one", cachefile_path.c_str());

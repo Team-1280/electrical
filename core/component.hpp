@@ -92,6 +92,20 @@ struct ResourceSerializer<model::Component> {
     using Component = model::Component;
     using IdType = std::string;
     static const std::filesystem::path RESOURCE_DIR;
+
+    struct Preloaded {
+        static void from_json(Preloaded& self, const json& j) {
+            j.at("name").get_to(self.name);
+        }
+
+        json to_json() const {
+            return {
+                {"name", this->name}
+            };
+        }
+
+        std::string name;
+    };
     
     template<typename... Resources>
     static inline json save(std::shared_ptr<Component> component, GenericResourceManager<Resources...>&) {
@@ -109,24 +123,24 @@ struct ResourceSerializer<model::Component> {
 
         return obj;
     }
-    static inline std::string load_id(const json& json_val) { return json_val["id"].get<std::string>(); }
-    static inline std::string load_name(const json& json_val) { return json_val["name"].get<std::string>(); }
+    static inline std::string load_id(const json& json_val) { return json_val.at("id").get<std::string>(); }
+    static inline std::string load_name(const json& json_val) { return json_val.at("name").get<std::string>(); }
     template<typename... Resources>
     static inline void load(
         std::shared_ptr<Component> component,
         const json& json_val,
         GenericResourceManager<Resources...>&,
         const std::string& idref,
-        ResourceManagerEntry<Component>& entry
+        Preloaded& preloaded
     ) {
         component->m_id = std::string_view{idref};
-        component->m_name = std::string_view{entry.name};
-        json_val["footprint"].get_to<model::Footprint>(component->m_fp);
-        for(const auto& [port_id, port_json] : json_val["ports"].items()) {
+        component->m_name = std::string_view{preloaded.name};
+        json_val.at("footprint").get_to<model::Footprint>(component->m_fp);
+        for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
             auto elem = component->m_ports.emplace(port_id, model::ConnectionPort{}).first;
             
-            port_json["name"].get_to(elem->second.m_name);
-            port_json["pos"].get_to(elem->second.m_pt);
+            port_json.at("name").get_to(elem->second.m_name);
+            port_json.at("pos").get_to(elem->second.m_pt);
             elem->second.m_id = std::string_view{elem->first};
         }
     }

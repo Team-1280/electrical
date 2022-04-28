@@ -1,1 +1,1 @@
-{"1280.test-conn":{"name":"Test Connector","path":"./assets/connectors/1280/test-conn.json"}}
+{"1280.test-conn":{"path":"","preload":{"name":"Test Connector"}}}

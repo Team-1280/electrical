@@ -4,6 +4,8 @@
 #include <optional>
 #include <mutex>
 #include <fmt/format.h>
+#include <fmt/ostream.h>
+
 #include <cstdlib>
 
 #include <buildopts.h>

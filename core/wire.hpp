@@ -43,18 +43,25 @@ struct ResourceSerializer<model::Connector> {
     using Connector = model::Connector;
     using IdType = std::string;
     static const std::filesystem::path RESOURCE_DIR;
-    static inline IdType load_id(const json& j) { return j["id"].get<IdType>(); }
-    static inline std::string load_name(const json& j) { return j["name"].get<std::string>(); }
+    
+    struct Preloaded {
+        static inline void from_json(Preloaded& self, const json& j) { j.at("name").get_to(self.name); }
+        inline json to_json() const { return { {"name", this->name} }; }
+        std::string name;
+    };
+
+    static inline IdType load_id(const json& j) { return j.at("id").get<IdType>(); }
+
     template<Resource... Resources>
     static inline void load(
         std::shared_ptr<Connector> connector,
         const json&,
         GenericResourceManager<Resources...>&,
         const IdType& idref,
-        ResourceManagerEntry<Connector>& entry
+        Preloaded& preload
     ) {
         connector->m_id = std::string_view{idref};
-        connector->m_name = std::string_view{entry.name};
+        connector->m_name = std::string_view{preload.name};
     }
 
     template<Resource... Resources>
