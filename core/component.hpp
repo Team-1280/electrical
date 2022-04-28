@@ -95,13 +95,13 @@ struct ResourceSerializer<model::Component> {
     using Preloaded = SinglePreload<std::string, 'n', 'a', 'm', 'e'>;
     
     template<typename... Resources>
-    static inline json save(std::shared_ptr<Component> component, GenericResourceManager<Resources...>&) {
+    static inline json save(Component& component, GenericResourceManager<Resources...>&) {
         json::object_t obj{};
-        obj.emplace("id", component->m_id);
-        obj.emplace("name", component->m_name);
-        obj.emplace("footprint", component->m_fp);
+        obj.emplace("id", component.m_id);
+        obj.emplace("name", component.m_name);
+        obj.emplace("footprint", component.m_fp);
         obj.emplace("ports", json::object({}));
-        for(const auto& [port_id, port] : component->m_ports) {
+        for(const auto& [port_id, port] : component.m_ports) {
             json::object_t port_json{};
             port_json.emplace("name", port.m_name);
             port_json.emplace("pos", port.m_pt);
@@ -112,10 +112,9 @@ struct ResourceSerializer<model::Component> {
     }
     static inline std::string load_id(const json& json_val) { return json_val.get<std::string>(); }
     static inline std::string save_id(const std::string& id) { return id; }
-    static inline std::string load_name(const json& json_val) { return json_val.at("name").get<std::string>(); }
     template<typename... Resources>
     static inline void load(
-        std::shared_ptr<Component> component,
+        MutableRef<Component> component,
         const json& json_val,
         GenericResourceManager<Resources...>&,
         const std::string& idref,

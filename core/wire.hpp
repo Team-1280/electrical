@@ -49,7 +49,7 @@ struct ResourceSerializer<model::Connector> {
     static inline json save_id(const IdType& id) { return id; }
     template<Resource... Resources>
     static inline void load(
-        std::shared_ptr<Connector> connector,
+        MutableRef<Connector> connector,
         const json&,
         GenericResourceManager<Resources...>&,
         const IdType& idref,
@@ -60,10 +60,10 @@ struct ResourceSerializer<model::Connector> {
     }
 
     template<Resource... Resources>
-    static inline json save(std::shared_ptr<Connector> connector, GenericResourceManager<Resources...>&) {
+    static inline json save(Connector& connector, GenericResourceManager<Resources...>&) {
         return {
-            {"id", connector->m_id},
-            {"name", connector->m_name}
+            {"id", connector.m_id},
+            {"name", connector.m_name}
         };
     }
 };

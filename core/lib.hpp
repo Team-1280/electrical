@@ -134,15 +134,15 @@ struct ResourceSerializer<model::ComponentNode> {
     static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
     template<Resource... Resources>
     static inline json save(
-        std::shared_ptr<ComponentNode> component,
+        ComponentNode& component,
         GenericResourceManager<Resources...>&
     ) {
         json::object_t obj{};
-        obj.emplace("name", component->m_name);
-        obj.emplace("id", component->m_id);
-        obj.emplace("type", component->m_ty->m_id);
+        obj.emplace("name", component.m_name);
+        obj.emplace("id", component.m_id);
+        obj.emplace("type", component.m_ty->m_id);
         obj.emplace("conns", json::array({}));
-        for(const auto& conn : component->m_wires) {
+        for(const auto& conn : component.m_wires) {
             obj["conns"].push_back(conn->id());
         }
 
@@ -151,7 +151,7 @@ struct ResourceSerializer<model::ComponentNode> {
 
     template<Resource... Resources>
     static inline void load(
-        std::shared_ptr<ComponentNode> node,
+        MutableRef<ComponentNode> node,
         const json& json_val,
         GenericResourceManager<Resources...> res,
         const IdType& id,
@@ -176,17 +176,17 @@ struct ResourceSerializer<model::WireEdge> {
     static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
     template<Resource... Resources>
     static inline json save(
-        std::shared_ptr<WireEdge> wire,
+        WireEdge& wire,
         GenericResourceManager<Resources...>&
     ) {
         json::object_t obj{};
-        obj.emplace("id", wire->m_id);
+        obj.emplace("id", wire.m_id);
         obj.emplace("conns", json::array({}));
-        for(const auto& conn : wire->m_conns) {
+        for(const auto& conn : wire.m_conns) {
             if(conn.m_component.expired()) {
                 obj.at("conns").push_back(nullptr);
             }
-            std::shared_ptr<model::ComponentNode> component = conn.m_component.lock();
+            auto component = conn.m_component.lock();
             json::object_t conn_obj{};
             conn_obj.emplace("node", component->id());
             conn_obj.emplace("port", conn.m_port->id());
@@ -203,7 +203,7 @@ struct ResourceSerializer<model::WireEdge> {
         HasResource<model::Connector, Resources...>
     )
     static inline void load(
-        std::shared_ptr<WireEdge> wire,
+        MutableRef<WireEdge> wire,
         const json& json_val,
         GenericResourceManager<Resources...> res,
         const IdType& id,
@@ -226,17 +226,19 @@ namespace model {
 
 using ResourceManager = GenericResourceManager<model::Component, model::Connector, model::WireEdge, model::ComponentNode>;
 
-
 /**  
  * \brief A graph data structures in which the
  * nodes are `Component`s and the edges are wires
  */
 class BoardGraph {
 public:
-    /** \brief ID number used for nonexistent components when serializing */
-    static constexpr const std::size_t NULL_ID = 0;
-
+    /**
+     * \brief Initialize this board graph, loading or regenerating
+     * cached resource files 
+     */
     BoardGraph() : m_res{} {}
+
+    //Ref<ComponentNode> add()
 
     inline BoardGraph(BoardGraph&& other) : m_res{std::move(other.m_res)} {}
     inline BoardGraph& operator=(BoardGraph&& other) {

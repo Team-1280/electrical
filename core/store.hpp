@@ -9,6 +9,7 @@
 #include <exception>
 #include <stdexcept>
 #include <sstream>
+#include <atomic>
 
 #include "fmt/core.h"
 #include "fmt/format.h"
@@ -24,7 +25,7 @@
 template<typename T>
 struct ResourceSerializer;
 template<typename... Resources>
-class GenericResourceManager;
+class GenericResourceManager { template<typename T> struct Entry; };
 
 /**
  * \brief Concept specifying that a type T can be stored in a GenericResourceManager,
@@ -77,6 +78,7 @@ private:
     T m_val;
 };
 
+
 /**
  * \brief Contains the file path to load a 
  * value from a JSON file, plus an optional weak reference to an
@@ -97,7 +99,12 @@ public:
 
     /** \brief Path to load the component from */
     std::filesystem::path path;
-        
+    
+    /** 
+     * \brief Flag indicating that the data contained by this entry may have been mutated
+     */
+    mutable bool mutated;
+
     /** \brief Convert this cached entry to a JSON value */
     inline json to_json() const {
         return {
@@ -166,11 +173,80 @@ public:
 };
 
 template<typename T>
-using Ref = std::shared_ptr<T>;
+class WeakRef;
+
+namespace _detail {
+
 template<typename T>
-using WeakRef = std::weak_ptr<T>;
+struct FatPtr {
+    FatPtr() : refcnt{} {}
+    std::atomic_size_t refcnt;
+    T val;
+};
+
+}
+
 template<typename T>
-using OptionalRef = std::optional<std::shared_ptr<T>>;
+class ConstRef {
+public:
+    ConstRef() : m_ptr{} {}
+    ConstRef(std::shared_ptr<T> ptr) :
+        m_ptr{ptr}, m_entry{entry} {}
+    
+    inline T const& operator*() const noexcept {
+        return this->m_ptr.operator*();
+    }
+    inline T const * operator->() const noexcept {
+        return this->m_ptr.operator->();
+    }
+
+private:
+    std::shared_ptr<T> m_ptr;
+
+    friend class WeakRef<T>;
+};
+
+template<typename T>
+class MutableRef {
+public:
+    Ref() : m_ptr{} {}
+    Ref(std::shared_ptr<T> ptr) : m_ptr{ptr} {} 
+    
+    inline T& operator*() const noexcept {
+        return this->m_ptr.operator*();
+    }
+    inline T* operator->() const noexcept {
+        return this->m_ptr->operator->();
+    }
+
+private:
+    std::shared_ptr<T> m_ptr;
+    friend class WeakRef<T>;
+};
+
+template<typename T>
+class WeakRef {
+public:
+    WeakRef() : m_ptr{} {}
+    WeakRef(ConstRef<T> ref) : m_ptr{ref.m_ptr} {}
+    WeakRef(MutableRef<T> ref) : m_ptr{ref.m_ptr} {}
+    inline MutableRef<T> lock_mut() const {
+        return MutableRef<T>{this->m_ptr.lock()}; 
+    }
+    inline ConstRef<T> lock() const {
+        return ConstRef<T>{this->m_ptr.lock()};
+    }
+
+    inline bool expired() const {
+        return this->m_ptr.expired();
+    }
+
+private:
+    std::weak_ptr<T> m_ptr;
+};
+
+template<typename T>
+using Optional = std::optional<T>;
 
 /**
  * \brief Concept ensuring that a resource list contains a specific type,
@@ -303,11 +379,11 @@ public:
     inline OptionalRef<T> get_or_default(const typename ResourceSerializer<T>::IdType& id) {
        auto stored = std::get<MapType<T>>(this->m_stores).find(id);
         if(stored == std::get<MapType<T>>(this->m_stores).end()) {
-            return OptionalRef<T>{};
+            return Optional<T>{};
         } else if(!stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
         } else {
-            Ref<T> defaultRef = std::make_shared<T>();
+            ConstRef<T> defaultRef = Ref(std::make_shared<T>(), &stored->second);
             stored->second.loaded = WeakRef<T>{defaultRef};
             return defaultRef;
         }
@@ -340,7 +416,7 @@ public:
         std::ifstream json_file{to_load};
         json jsonval;
         json_file >> jsonval;
-        Ref<T> loaded = std::make_shared<T>();
+        ConstRef<T> loaded = ConstRef<T>{std::make_shared<T>()};
         stored->second.loaded = WeakRef<T>{loaded};
         ResourceSerializer<T>::load(
             loaded,
@@ -367,13 +443,13 @@ public:
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
     }
     [[nodiscard("An unused shared reference will immediately be deallocated")]]
-    OptionalRef<T> get(const Id& id) {
+    Optional<ConstRef<T>> get(const Id& id) {
         auto stored = std::get<MapType<T>>(this->m_stores).find(id); 
         if(stored != std::get<MapType<T>>(this->m_stores).end() && !stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
         } else if(stored == std::get<MapType<T>>(this->m_stores).end()) {
             logger::warn("Attempted to retrieve value by ID {} that does not exist", idstr(id));
-            return OptionalRef<T>{};
+            return Optional<ConstRef<T>>{};
         }
 
         std::filesystem::path to_load = stored->second.path;
@@ -381,7 +457,7 @@ public:
             std::ifstream json_file{to_load};
             json jsonval;
             json_file >> jsonval;
-            Ref<T> loaded = std::make_shared<T>();
+            ConstRef<T> loaded = ConstRef<T>{std::make_shared<T>()};
             stored->second.loaded = WeakRef<T>{loaded};
             ResourceSerializer<T>::load(
                 loaded,
@@ -390,10 +466,10 @@ public:
                 stored->first,
                 stored->second.preload
             );
-            return OptionalRef<T>{loaded};
+            return Optional<ConstRef<T>>{loaded};
         } catch(std::exception& e) {
             logger::error("Failed to load value from {}: {}", to_load.c_str(), e.what());
-            return OptionalRef<T>{};
+            return Optional<ConstRef<T>>{};
         }
 
     }
@@ -440,7 +516,7 @@ private:
             return "{ID}";
         }
     }
-    
+   
 
     /** \brief A map of all known IDs to store entries that may contain loaded values */
     std::tuple<MapType<Values>...> m_stores;
