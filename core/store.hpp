@@ -8,6 +8,7 @@
 #include <tuple>
 #include <exception>
 #include <stdexcept>
+#include <sstream>
 
 #include "fmt/core.h"
 #include "fmt/format.h"
@@ -43,7 +44,7 @@ concept Resource = requires() {
  */
 struct NoPreload {
     inline json to_json() const { return nullptr; }
-    inline consteval static void from_json(NoPreload&, const json&) {}
+    inline static void from_json(NoPreload&, const json&) {}
 };
 
 /**
@@ -208,13 +209,13 @@ public:
                     if(!inserted) {
                         logger::warn(
                             "Two elements with ID {} detected while populating cache file, using {} over {}",
-                            elem->first,
+                            idstr(elem->first),
                             elem->second.path.c_str(),
                             entry.path().c_str()
                         );
                         continue;
                     }
-                    ResourceManagerEntry<T>::Preloaded::from_json(elem->second.preloaded, entry_json);
+                    //ResourceManagerEntry<T>::Preloaded::from_json(elem->second.preloaded, entry_json);
                 } catch(const std::exception& e) {
                     logger::error(
                         "Failed to read file {} while populating cache file {}: {}",
@@ -228,9 +229,13 @@ public:
         }
         try {
             std::ofstream cachefile{cachefile_path};
-            json::object_t cache_json{};
+            json::array_t cache_json{};
             for(const auto& [id, entry] : std::get<MapType<T>>(this->m_stores)) {
-                cache_json.emplace(id, entry);
+                
+                cache_json.push_back({
+                    {"id", ResourceSerializer<T>::save_id(id)},
+                    {"entry", entry}
+                });
             }
             cachefile << cache_json;
         } catch(const std::exception& e) {
@@ -284,7 +289,7 @@ public:
         if(stored != std::get<MapType<T>>(this->m_stores).end() && !stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
         } else if(stored == std::get<MapType<T>>(this->m_stores).end()) {
-            throw InvalidResourceIdException(fmt::format("Attempted to retrieve value by ID {} that does not exist", id));
+            throw InvalidResourceIdException(fmt::format("Attempted to retrieve value by ID {} that does not exist", idstr(id)));
         }
 
         std::filesystem::path to_load = stored->second.path;
@@ -322,7 +327,7 @@ public:
         if(stored != std::get<MapType<T>>(this->m_stores).end() && !stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
         } else if(stored == std::get<MapType<T>>(this->m_stores).end()) {
-            logger::warn("Attempted to retrieve value by ID {} that does not exist", id);
+            logger::warn("Attempted to retrieve value by ID {} that does not exist", idstr(id));
             return OptionalRef<T>{};
         }
 
@@ -356,15 +361,34 @@ private:
             json cache_json;
             cachefile >> cache_json;
 
-            for(const auto& [id, entry_json] : cache_json.items()) {
+            for(const auto& entry_json : cache_json) {
                 std::get<MapType<T>>(this->m_stores).emplace(
-                    id,
+                    ResourceSerializer<T>::load_id(entry_json),
                     entry_json.template get<ResourceManagerEntry<T>>()
                 );
             }
         } catch(std::exception& e) {
             logger::warn("Failed to load a cached resource file {}, generating one", cachefile_path.c_str());
             this->generate_cachefile<T>(cachefile_path);
+        }
+    }
+    
+    /** 
+     * \brief Convert an ID of any type to a string if it supported by the `fmt` library
+     * or contains an overloaded operator<< for std::ostream's 
+     * \return A string representation of the given ID, or the string {ID} if the ID cannot
+     * be converted to a string
+     */
+    template<typename T>
+    static inline std::string idstr(const T& id) {
+        if constexpr(requires { std::to_string(id); }) {
+            return std::to_string(id); 
+        } else if constexpr(requires(std::stringstream ss) { ss << id; }) {
+            std::stringstream ss;
+            ss << id;
+            return ss.str();
+        } else {
+            return "{ID}";
         }
     }
 
