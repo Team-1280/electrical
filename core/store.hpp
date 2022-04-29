@@ -99,11 +99,6 @@ public:
 
     /** \brief Path to load the component from */
     std::filesystem::path path;
-    
-    /** 
-     * \brief Flag indicating that the data contained by this entry may have been mutated
-     */
-    mutable bool mutated;
 
     /** \brief Convert this cached entry to a JSON value */
     inline json to_json() const {
