@@ -116,20 +116,8 @@ struct ResourceSerializer<model::ComponentNode> {
     using ComponentNode = model::ComponentNode;
     using IdType = uuids::uuid;
     static const std::filesystem::path RESOURCE_DIR;
+    using Preloaded = SinglePreload<std::string, 'n', 'a', 'm', 'e'>;
 
-    struct Preloaded {
-        static void from_json(Preloaded& self, const json& j) {
-            j["name"].get_to(self.name);
-        }
-        
-        json to_json() const {
-            return {
-                {"name", this->name}
-            };
-        }
-
-        std::string name;
-    };
     static inline IdType save_id(const IdType& id) { return id; }
     static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
     template<Resource... Resources>
@@ -157,7 +145,7 @@ struct ResourceSerializer<model::ComponentNode> {
         const IdType& id,
         Preloaded& preload
     ) {
-        node->m_name = std::string_view{preload.name};
+        node->m_name = std::string_view{preload};
         node->m_id = id.as_bytes();
         node->m_ty = res.template try_get<model::Component>(json_val["id"].get<IdType>());
         for(const auto& conn_json : json_val["conns"]) {

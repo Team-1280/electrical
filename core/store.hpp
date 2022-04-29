@@ -175,87 +175,31 @@ public:
 template<typename T>
 class WeakRef;
 
-namespace _detail {
-
 template<typename T>
-struct FatPtr {
-    FatPtr() : refcnt{} {}
-    std::atomic_size_t refcnt;
-    T val;
-};
-
-template<typename T>
-requires sizeof(T) > (2 * sizeof(T*))
-struct FatPtr {
-    FatPtr() 
-        : refcnt{}, val{reinterpret_cast<T* const>(new std::byte[sizeof(T)])} {}
-    std::atomic_size_t refcnt;
-    T * const val;
-};
-
-template<typename T>
-struct BasicRef {
+class Ref {
 public:
-    BasicRef() : m_ptr{new FatPtr{}} {}
-protected:
-    FatPtr * const m_ptr;
-};
+    inline Ref(const std::shared_ptr<T>& ptr, ResourceManagerEntry * const entry) 
+        : m_ptr{ptr}, m_entry{entry} {}
+    inline Ref(std::shared_ptr<T>&& ptr, ResourceManagerEntry * const entry) 
+        : m_ptr{std::move(ptr)}, m_entry{entry} {}
+    inline Ref(ResourceManagerEntry * const entry) : m_ptr{}, m_entry{entry} {}
 
-}
-
-template<typename T>
-class ConstRef : public _detail::BasicRef<T> {
-public:
-    inline T const& operator*() const noexcept {
-        return this->m_ptr.operator*();
-    }
-    inline T const * operator->() const noexcept {
-        return this->m_ptr.operator->();
+    constexpr inline std::shared_ptr<T>& operator std::shared_ptr<T>&() const {
+        return this->m_ptr;
     }
 
-private:
-    friend class WeakRef<T>;
-};
-
-template<typename T>
-class MutableRef {
-public:
-    Ref() : m_ptr{} {}
-    Ref(std::shared_ptr<T> ptr) : m_ptr{ptr} {} 
-    
-    inline T& operator*() const noexcept {
-        return this->m_ptr.operator*();
+    ~ConstRef() {
+        if(this->m_ptr.use_count() == 1) {
+            ResourceSerializer<T>::save()
+        }
     }
-    inline T* operator->() const noexcept {
-        return this->m_ptr->operator->();
-    }
-
 private:
     std::shared_ptr<T> m_ptr;
-    friend class WeakRef<T>;
+    ResourceManagerEntry * const m_entry;
 };
 
 template<typename T>
-class WeakRef {
-public:
-    WeakRef() : m_ptr{} {}
-    WeakRef(ConstRef<T> ref) : m_ptr{ref.m_ptr} {}
-    WeakRef(MutableRef<T> ref) : m_ptr{ref.m_ptr} {}
-    inline MutableRef<T> lock_mut() const {
-        return MutableRef<T>{this->m_ptr.lock()}; 
-    }
-    inline ConstRef<T> lock() const {
-        return ConstRef<T>{this->m_ptr.lock()};
-    }
-
-    inline bool expired() const {
-        return this->m_ptr.expired();
-    }
-
-private:
-    std::weak_ptr<T> m_ptr;
-};
-
+using WeakRef = std::weak_ptr<T>;
 template<typename T>
 using Optional = std::optional<T>;
 
@@ -387,10 +331,10 @@ public:
         std::is_default_constructible_v<T>;
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
     } 
-    inline OptionalRef<T> get_or_default(const typename ResourceSerializer<T>::IdType& id) {
+    inline Optional<ConstRef<T>> get_or_default(const typename ResourceSerializer<T>::IdType& id) {
        auto stored = std::get<MapType<T>>(this->m_stores).find(id);
         if(stored == std::get<MapType<T>>(this->m_stores).end()) {
-            return Optional<T>{};
+            return Optional<ConstRef<T>>{};
         } else if(!stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
         } else {
@@ -415,7 +359,7 @@ public:
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
     }
     [[nodiscard("An unused shared reference will immediately be deallocated")]]
-    Ref<T> try_get(const Id& id) {
+    Optional<ConstRef<T>> try_get(const Id& id) {
         auto stored = std::get<MapType<T>>(this->m_stores).find(id); 
         if(stored != std::get<MapType<T>>(this->m_stores).end() && !stored->second.loaded.expired()) {
             return stored->second.loaded.lock();
