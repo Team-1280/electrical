@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <iterator>
 #include <uuid.h>
 
 #include "geom.hpp"
@@ -31,7 +32,16 @@ class ComponentNode;
  * \implements Resource
  */
 class WireEdge {
-public:     
+public:
+    /** 
+     * \brief Enumeration representing the 'sides' of a wire, the names don't mean 
+     * anything but ensure that different wire ends can be represented in code
+     */
+    enum Side: std::uint8_t {
+        LEFT = 0,
+        RIGHT = 1
+    };
+
     /** 
      * A \brief single end of a wire, that may be free-floating (not connected to any component node)
      * or connected to a specific port on a component node
@@ -42,10 +52,31 @@ public:
         inline Connection(WeakRef<ComponentNode> component, ConnectionPort const * port) :
             m_component{component}, m_port{port} {}
     
+        /**
+         * \brief Get the port that this connection is attached to on the component node
+         *
+         * \return an empty std::optional if this connection end is not attached to any node in the graph
+         * or a reference to the connection port on the attached component this is attached to
+         */
+        std::optional<std::reference_wrapper<const ConnectionPort>> port() const;
+        /** \brief Get the graph node that this connection is attached to */ 
+        inline WeakRef<ComponentNode> component() const noexcept { return this->m_component; }
+        /** \brief Get the connector type of this connection point */
+        inline Ref<Connector> connector() const noexcept { return this->m_connector; }
+        /**
+         * \brief Check if this connection is attached to a graph node
+         * \return true if this connection point does not attach to a node in the graph
+         */
+        inline constexpr bool is_floating() { return this->m_component.expired(); }
+
     private:
         /** \brief Node in the graph that this edge connects to */
         WeakRef<ComponentNode> m_component;
-        /** \brief Pointer to a connection port on the component node's type */
+        /** 
+         * \brief Pointer to a connection port on the component node's type 
+         *
+         * Implementation note: This MUST not be invalid if m_component is not expired
+         */
         ConnectionPort const * m_port;
         /** \brief A shared resource pointing to a user-defined connector on this connection point */
         Ref<Connector> m_connector;
@@ -55,15 +86,37 @@ public:
         friend class BoardGraph;
         friend struct ResourceSerializer<WireEdge>;
     };
-
+    
+    /** \brief Get the UUID of this wire edge */
     constexpr inline uuidref id() const { return this->m_id; }
-   
+    /** \brief Get the pair of Connection structures representing the ends of this wire edge */
+    inline const std::array<Connection, 2> connections() const { return this->m_conns; }
+    /** 
+     * \brief Check if this edge connects to the given node in the graph
+     * \return true if this edge attaches to the given node
+     */
+    inline bool connects(const Ref<ComponentNode>& node) const { 
+        return std::any_of(
+            this->m_conns.begin(),
+            this->m_conns.end(),
+            [node](auto conn) { return conn.m_component == node; } 
+        );
+    }
+    
+    /**
+     * \brief Convenience method to fetch a wire end by side 
+     * \tparam SIDE Compile-time known wire side
+     */
+    template<Side SIDE>
+    inline constexpr Connection& side() { return this->m_conns[SIDE]; } 
+    
 private:
     /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
-    
     /** \brief Internal ID number of this wire edge */
     uuidref m_id;
+    /** \brief User-placed points that this wire travels between on the workspace */
+    std::vector<Point> m_wire_pts;
 
     WireEdge() : m_conns{}, m_id{nullptr, 16} {};
 
@@ -74,7 +127,8 @@ private:
 /**
  * \brief A component that has been placed in a BoardGraph with
  * a component type reference and user-entered data
- *
+ * 
+ * \sa WireEdge
  * \implements Resource
  */
 class ComponentNode {
@@ -86,10 +140,9 @@ public:
     inline constexpr uuidref id() const { return this->m_id; }
     
     /** \brief Fetch the underlying component type of this node */
-    inline Ref<Component> type() const { return this->m_ty; }
+    inline Ref<Component> type() const noexcept { return this->m_ty; }
+    ComponentNode(const uuids::uuid& id) : m_ty{}, m_id{id.as_bytes()}, m_name{}, m_pos{} {}
     
-    ComponentNode(const uuids::uuid id) : m_ty{}, m_id{id.as_bytes()}, m_name{}, m_pos{} {}
-
 private:
     /** \brief What kind of component this is, shared with other components */
     Ref<Component> m_ty;
@@ -102,11 +155,22 @@ private:
     std::string m_name;
     /** \brief Offset in the workspace from center */
     Point m_pos;
+        
+    /**
+     * \brief Structure containing a reference to an edge in the graph
+     * and the side of the wire that connects to this node
+     */
+    struct EdgeConnection {
+        Ref<WireEdge> edge;
+        WireEdge::Side side;
+    };
+
     /** \brief All graph edges connecting this component node to others */
-    std::vector<Ref<WireEdge>> m_wires;
+    std::vector<EdgeConnection> m_edges;
 
     friend class BoardGraph;
     friend struct ResourceSerializer<ComponentNode>;
+    friend class ConnectedNodesIterator;
 };
 
 }
@@ -126,8 +190,11 @@ struct ResourceSerializer<model::ComponentNode> {
         obj.emplace("id", component.m_id);
         obj.emplace("type", component.m_ty->id());
         obj.emplace("conns", json::array({}));
-        for(const auto& conn : component.m_wires) {
-            obj["conns"].push_back(conn->id());
+        for(const auto& conn : component.m_edges) {
+            obj["conns"].push_back({
+                {"edge", conn.edge->id()},
+                {"side", conn.side}
+            });
         }
 
         return obj;
@@ -145,7 +212,7 @@ struct ResourceSerializer<model::ComponentNode> {
         node->m_id = id.as_bytes();
         node->m_ty = res.template try_get<model::Component>(json_val["id"].get<IdType>());
         for(const auto& conn_json : json_val["conns"]) {
-            node->m_wires.push_back(res.template try_get<model::WireEdge>(conn_json.get<uuids::uuid>()));
+            node->m_edges.push_back(res.template try_get<model::WireEdge>(conn_json.get<uuids::uuid>()));
         }
     }
 };
@@ -218,8 +285,6 @@ public:
      * cached resource files 
      */
     BoardGraph() : m_res{} {}
-
-    //Ref<ComponentNode> add()
 
     inline BoardGraph(BoardGraph&& other) : m_res{std::move(other.m_res)} {}
     inline BoardGraph& operator=(BoardGraph&& other) {

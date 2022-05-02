@@ -182,6 +182,10 @@ public:
     inline Ref(std::shared_ptr<T>&& ptr, Entry * const entry) 
         : m_ptr{std::move(ptr)}, m_entry{entry} {}
     inline Ref(Entry * const entry) : m_ptr{}, m_entry{entry} {}
+    /** \brief Pointer to pointer comparison of two references */
+    inline constexpr bool operator ==(const Ref<T>& other) const {
+        return this->m_ptr == other.m_ptr;
+    }
 
     constexpr inline operator std::shared_ptr<T>&() const {
         return this->m_ptr;
@@ -220,6 +224,7 @@ public:
 private:
     std::shared_ptr<T> m_ptr;
     ResourceManagerEntry<T> * const m_entry;
+    friend class WeakRef<T>;
 };
 
 /**
@@ -234,6 +239,14 @@ public:
     
     inline constexpr operator std::weak_ptr<T>&() const {
         return this->m_ptr;
+    }
+    
+    inline constexpr bool operator==(const WeakRef<T>& other) const {
+        return !this->expired() && !other.expired() &&
+            this->m_ptr.lock() == other.m_ptr.lock();
+    }
+    inline constexpr bool operator ==(const Ref<T>& other) const {
+        return !this->expired() && this->m_ptr.lock() == other.m_ptr;
     }
     
     /**
