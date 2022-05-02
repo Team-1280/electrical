@@ -49,18 +49,17 @@ struct ResourceSerializer<model::Connector> {
     static inline json save_id(const IdType& id) { return id; }
     template<Resource... Resources>
     static inline void load(
-        MutableRef<Connector> connector,
+        Ref<Connector> connector,
         const json&,
         GenericResourceManager<Resources...>&,
         const IdType& idref,
         Preloaded& preload
     ) {
         connector->m_id = std::string_view{idref};
-        connector->m_name = std::string_view{preload};
+        connector->m_name = std::string_view{static_cast<std::string>(preload)};
     }
 
-    template<Resource... Resources>
-    static inline json save(Connector& connector, GenericResourceManager<Resources...>&) {
+    static inline json save(Connector& connector) {
         return {
             {"id", connector.m_id},
             {"name", connector.m_name}

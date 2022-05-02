@@ -120,15 +120,11 @@ struct ResourceSerializer<model::ComponentNode> {
 
     static inline IdType save_id(const IdType& id) { return id; }
     static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
-    template<Resource... Resources>
-    static inline json save(
-        ComponentNode& component,
-        GenericResourceManager<Resources...>&
-    ) {
+    static inline json save(ComponentNode& component) {
         json::object_t obj{};
         obj.emplace("name", component.m_name);
         obj.emplace("id", component.m_id);
-        obj.emplace("type", component.m_ty->m_id);
+        obj.emplace("type", component.m_ty->id());
         obj.emplace("conns", json::array({}));
         for(const auto& conn : component.m_wires) {
             obj["conns"].push_back(conn->id());
@@ -139,13 +135,13 @@ struct ResourceSerializer<model::ComponentNode> {
 
     template<Resource... Resources>
     static inline void load(
-        MutableRef<ComponentNode> node,
+        Ref<ComponentNode> node,
         const json& json_val,
         GenericResourceManager<Resources...> res,
         const IdType& id,
         Preloaded& preload
     ) {
-        node->m_name = std::string_view{preload};
+        node->m_name = std::string_view{static_cast<std::string>(preload)};
         node->m_id = id.as_bytes();
         node->m_ty = res.template try_get<model::Component>(json_val["id"].get<IdType>());
         for(const auto& conn_json : json_val["conns"]) {
@@ -163,10 +159,7 @@ struct ResourceSerializer<model::WireEdge> {
     static inline IdType save_id(const IdType& id) { return id; }
     static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
     template<Resource... Resources>
-    static inline json save(
-        WireEdge& wire,
-        GenericResourceManager<Resources...>&
-    ) {
+    static inline json save(WireEdge& wire) {
         json::object_t obj{};
         obj.emplace("id", wire.m_id);
         obj.emplace("conns", json::array({}));
@@ -191,7 +184,7 @@ struct ResourceSerializer<model::WireEdge> {
         HasResource<model::Connector, Resources...>
     )
     static inline void load(
-        MutableRef<WireEdge> wire,
+        Ref<WireEdge> wire,
         const json& json_val,
         GenericResourceManager<Resources...> res,
         const IdType& id,
