@@ -16,6 +16,14 @@ std::optional<std::reference_wrapper<const ConnectionPort>> WireEdge::Connection
     }
 }
 
+void WireEdge::Connection::detach() {
+    if(!this->is_floating()) {
+        this->m_pos = this->m_component.lock()->pos() + this->m_port->pos();
+        this->m_component.lock()->remove_port(this->m_port);
+        this->m_component.reset();
+    }
+}
+
 Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::connnect_port(ConnectionPortRef port, Ref<WireEdge> edge, const WireEdge::Side side, bool force) {
     auto elem = this->m_ty->get_port(port->name());
     if(!elem.has_value()) {

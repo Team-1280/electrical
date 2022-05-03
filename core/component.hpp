@@ -22,6 +22,8 @@ public:
     constexpr inline const std::string& name() const { return this->m_name; }
     /** Get this connection port's ID */
     constexpr inline const std::string_view id() const { return this->m_id; }
+    /** Get the offset from the component base of this connection port */
+    constexpr inline const Point& pos() const { return this->m_pt; }
 
     inline ConnectionPort(ConnectionPort&& other) : m_pt{std::move(other.m_pt)}, m_name{std::move(other.m_name)}, m_id{std::move(other.m_id)} {}
     inline ConnectionPort& operator=(ConnectionPort&& other) {

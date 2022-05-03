@@ -25,7 +25,20 @@ public:
     constexpr bool operator==(const Point& other) const {
         return other.x == this->x && other.y == this->y;
     }
-    
+
+    constexpr inline Point operator*(const Point& other) const {
+        return Point{this->x * other.x, this->y * other.y};
+    }
+    constexpr inline Point operator/(const Point& other) const {
+        return Point{this->x / other.x, this->y / other.y};
+    }
+    constexpr inline Point operator+(const Point& other) const {
+        return Point{this->x + other.x, this->y + other.y};
+    }
+    constexpr inline Point operator-(const Point& other) const {
+        return Point{this->x - other.x, this->y - other.y};
+    }
+  
     /**
      * \brief Get the distance between two points, returning a distance in the units
      * of this's x coordinate

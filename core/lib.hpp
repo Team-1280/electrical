@@ -118,7 +118,7 @@ public:
         return std::any_of(
             this->m_conns.begin(),
             this->m_conns.end(),
-            [node](const auto& conn) { return conn.m_component == node; } 
+            [&node](const auto& conn) { return conn.m_component == node; } 
         );
     }
     
@@ -190,6 +190,17 @@ public:
      * force is false and there is already a connection to the port
      */
     Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> connnect_port(ConnectionPortRef port, Ref<WireEdge> edge, const WireEdge::Side side, bool force = true);
+    
+    /**
+     * \brief Remove a port's connections from this node
+     * \param port The port to remove connections from
+     */
+    inline void remove_port(ConnectionPortRef port) {
+        this->m_edges.erase(port);
+    }
+    
+    /** \brief Get the position of this component */
+    inline constexpr const Point& pos() const { return this->m_pos; }
 private:
     /** \brief What kind of component this is, shared with other components */
     Ref<Component> m_ty;
@@ -330,6 +341,11 @@ public:
     inline BoardGraph& operator=(BoardGraph&& other) {
         this->m_res = std::move(other.m_res);
         return *this;
+    }
+
+    template<typename Resource, typename Id>
+    inline Optional<Ref<Resource>> get(const Id& id) {
+        return this->m_res.get<Resource>(id);
     }
 
     Ref<WireEdge> new_wire();

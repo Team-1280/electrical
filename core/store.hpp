@@ -181,11 +181,11 @@ public:
     /** \brief Construct a new Ref containing a null pointer */
     inline Ref() : m_ptr{}, m_entry{} {}
 
-    inline Ref(const std::shared_ptr<T>& ptr, Entry * const entry) 
+    inline Ref(const std::shared_ptr<T>& ptr, const Entry * entry) 
         : m_ptr{ptr}, m_entry{entry} {}
-    inline Ref(std::shared_ptr<T>&& ptr, Entry * const entry) 
+    inline Ref(std::shared_ptr<T>&& ptr, const Entry * entry) 
         : m_ptr{std::move(ptr)}, m_entry{entry} {}
-    inline Ref(Entry * const entry) : m_ptr{}, m_entry{entry} {}
+    inline Ref(const Entry * entry) : m_ptr{}, m_entry{entry} {}
     /** \brief Pointer to pointer comparison of two references */
     inline constexpr bool operator ==(const Ref<T>& other) const {
         return this->m_ptr == other.m_ptr;
@@ -213,6 +213,7 @@ public:
         return *this;
     }
 
+    Ref(const Ref<T>& other) : m_ptr{other.m_ptr}, m_entry{other.m_entry} {}
     ~Ref() {
         if(this->m_ptr.unique()) {
             try {
@@ -247,7 +248,7 @@ public:
     inline WeakRef(const Ref<T>& ref) : m_ptr{ref.m_ptr}, m_entry{ref.m_entry} {}
     inline WeakRef() : m_ptr{}, m_entry{nullptr} {}
     
-    inline constexpr operator std::weak_ptr<T>&() const {
+    inline constexpr operator std::weak_ptr<T>&() {
         return this->m_ptr;
     }
     
@@ -257,6 +258,11 @@ public:
     }
     inline constexpr bool operator ==(const Ref<T>& other) const {
         return !this->expired() && this->m_ptr.lock() == other.m_ptr;
+    }
+    
+    /** \brief Reset this weak reference to a null value */
+    inline void reset() noexcept {
+        this->m_ptr.reset();
     }
     
     /**
@@ -278,7 +284,7 @@ public:
 
 private:
     std::weak_ptr<T> m_ptr;
-    ResourceManagerEntry<T> * const m_entry;
+    const ResourceManagerEntry<T> * m_entry;
 };
 
 template<typename T>
@@ -542,7 +548,7 @@ public:
     Optional<Ref<T>> get(const Id& id) {
         auto stored = std::get<MapType<T>>(this->m_stores).find(id); 
         if(stored != std::get<MapType<T>>(this->m_stores).end() && !stored->second.loaded.expired()) {
-            return stored->second.loaded.lock();
+            return Ref{stored->second.loaded.lock(), &stored->second};
         } else if(stored == std::get<MapType<T>>(this->m_stores).end()) {
             logger::warn("Attempted to retrieve value by ID {} that does not exist", idstr(id));
             return Optional<Ref<T>>{};
@@ -553,14 +559,14 @@ public:
             std::ifstream json_file{to_load};
             json jsonval;
             json_file >> jsonval;
-            Ref<T> loaded = Ref<T>{std::make_shared<T>()};
+            Ref<T> loaded = Ref<T>{std::make_shared<T>(), &stored->second};
             stored->second.loaded = WeakRef<T>{loaded};
             ResourceSerializer<T>::load(
                 loaded,
                 jsonval,
                 *this,
                 stored->first,
-                stored->second.preload
+                stored->second.preloaded
             );
             return Optional<Ref<T>>{loaded};
         } catch(std::exception& e) {
