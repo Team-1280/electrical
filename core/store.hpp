@@ -3,6 +3,7 @@
 #include <memory>
 #include <filesystem>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <fstream>
 #include <tuple>
@@ -96,6 +97,9 @@ template<typename T>
 struct ResourceManagerEntry {
 public:
     using Preloaded = typename ResourceSerializer<T>::Preloaded;
+
+    ResourceManagerEntry(Preloaded&& preloaded, std::filesystem::path&& path) : loaded{}, preloaded{preloaded}, path{path} {}
+    ResourceManagerEntry(const Preloaded& preloaded, std::filesystem::path&& path) : loaded{}, preloaded{preloaded}, path{path} {}
 
     /** \brief A pointer that is invalidated if the value is no longer used */
     std::weak_ptr<T> loaded;
@@ -203,6 +207,12 @@ public:
         return this->m_ptr.operator bool();
     }
 
+    constexpr inline Ref<T>& operator =(const Ref<T>& other) {
+        this->m_ptr = other.m_ptr;
+        this->m_entry = other.m_entry;
+        return *this;
+    }
+
     ~Ref() {
         if(this->m_ptr.unique()) {
             try {
@@ -223,7 +233,7 @@ public:
     }
 private:
     std::shared_ptr<T> m_ptr;
-    ResourceManagerEntry<T> * const m_entry;
+    const ResourceManagerEntry<T> * m_entry;
     friend class WeakRef<T>;
 };
 
@@ -402,6 +412,54 @@ public:
     }
     
     /**
+     * \brief Add a new resource to this store, serialized at the given path
+     * \param id The ID of the added resource
+     * \param path A path to a file that this resource will be serialized to, does not need to exist
+     * \param args Arguments used to construct the resource in place
+     * \return A reference to the added resource, or an empty optional if the resource's constructor
+     * throws an exception
+     */
+    template<Resource T, typename Id, typename Preloaded, typename... Args>
+    requires requires(const Id& id, T&& res, MapType<T> map, Args&&... args) {
+        HasResource<T, Values...>;
+        new T{args...};
+        map.find(id);
+        std::convertible_to<Preloaded, typename ResourceSerializer<T>::Preloaded>;
+        ResourceSerializerImpl<T, Values...>;
+    } Optional<Ref<T>> emplace(const Id& id, Preloaded preload, std::filesystem::path&& path, Args&&... args) {
+        ResourceManagerEntry<T> entry = ResourceManagerEntry{preload, path};
+        try {
+            auto [elem, inserted] = std::get<MapType<T>>(this->m_stores).emplace(
+                std::make_pair<typename ResourceSerializer<T>::IdType, T>(id, preload, path)
+            );
+            if(!inserted) {
+                logger::error(
+                    "Failed to insert a new element[{}] into a resource manager",
+                    idstr(id)
+                );
+                return {};
+            }
+
+            Ref<T> resource = Ref<T>{&elem->second, new T{args...}};
+            elem->second->loaded = std::weak_ptr{resource->m_ptr};
+            return resource;
+        } catch(const std::exception& e) {
+            logger::error(
+                "Failed to add new resource with id {} to store (most likely a constructor failed): {}",
+                idstr(id),
+                e.what()
+            );
+            return {};
+        } catch(...) {
+            logger::error(
+                "Failed to add a new resource with id {} to store (most likely a constructor failed)",
+                idstr(id)
+            );
+            return {};
+        }
+    }
+
+    /**
      * \brief Attempt to retrieve a value by ID, and if it is not loaded return a default initialized reference
      * \return A reference to a default constructed value if the store *contains* an entry for the given ID but is has not
      * yet been loaded, or if the component has been loaded. Returns an empty reference if there exists no entry for the 
@@ -414,7 +472,7 @@ public:
         std::is_default_constructible_v<T>;
         ResourceSerializerImpl<ResourceSerializer<T>, Values...>;
     } 
-    inline Optional<Ref<T>> get_or_default(const typename ResourceSerializer<T>::IdType& id) {
+    Optional<Ref<T>> get_or_default(const typename ResourceSerializer<T>::IdType& id) {
        auto stored = std::get<MapType<T>>(this->m_stores).find(id);
         if(stored == std::get<MapType<T>>(this->m_stores).end()) {
             return Optional<Ref<T>>{};

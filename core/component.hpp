@@ -44,6 +44,8 @@ private:
     friend class Component;
 };
 
+using ConnectionPortRef = const ConnectionPort *;
+
 /**
  * \brief A component in the board design with required parameters like
  * footprint
@@ -64,10 +66,10 @@ public:
     /** Get the user-assigned ID of this component */
     inline constexpr std::string_view id() const { return this->m_id; }
     
-    /** Get a port by name, O(n) lookup time */
+    /** Get a port by name, O(1) lookup time */
     std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
-    /** Get a port index by name */
-    std::optional<const ConnectionPort* const> get_port_ptr(const std::string_view id) const;
+    /** Get a port pointer by name */
+    std::optional<ConnectionPortRef> get_port_ptr(const std::string_view id);
 
 private:
     /* User-facing name of the component type, shared with the ComponentStore */
