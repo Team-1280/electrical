@@ -126,7 +126,7 @@ struct ResourceSerializer<model::Component> {
         Preloaded& preloaded
     ) {
         component->m_id = std::string_view{idref};
-        component->m_name = std::string_view{static_cast<std::string>(preloaded)};
+        component->m_name = std::string_view{preloaded.value()};
         json_val.at("footprint").get_to<model::Footprint>(component->m_fp);
         for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
             auto elem = component->m_ports.emplace(port_id, model::ConnectionPort{}).first;

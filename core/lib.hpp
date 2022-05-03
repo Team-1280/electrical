@@ -258,7 +258,7 @@ struct ResourceSerializer<model::ComponentNode> {
         const IdType& id,
         Preloaded& preload
     ) {
-        node->m_name = std::string_view{static_cast<std::string>(preload)};
+        node->m_name = std::string_view{preload.value()};
         node->m_id = id.as_bytes();
         node->m_ty = res.template try_get<model::Component>(json_val["id"].get<IdType>());
         for(const auto& conn_json : json_val["conns"]) {

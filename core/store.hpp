@@ -80,6 +80,11 @@ struct SinglePreload {
     inline constexpr SinglePreload<T, Name...>& operator=(T&& other) requires(std::is_move_constructible_v<T>) {
         this->m_val = std::move(other);
         return *this;
+    }   
+
+    /** \brief Get a reference to the preloaded value */
+    inline constexpr T& value() {
+        return this->m_val;
     }
 private:
     T m_val;

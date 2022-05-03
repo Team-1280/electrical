@@ -56,7 +56,7 @@ struct ResourceSerializer<model::Connector> {
         Preloaded& preload
     ) {
         connector->m_id = std::string_view{idref};
-        connector->m_name = std::string_view{static_cast<std::string>(preload)};
+        connector->m_name = std::string_view{preload.value()};
     }
 
     static inline json save(Connector& connector) {
