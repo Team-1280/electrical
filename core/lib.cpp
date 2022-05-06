@@ -1,5 +1,7 @@
 #include "lib.hpp"
+#include "store.hpp"
 #include "util/log.hpp"
+#include "uuid.h"
 #include <functional>
 #include <unordered_set>
 
@@ -53,6 +55,20 @@ Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::p
     }
 
     return std::ref(elem->second);
+}
+
+Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string_view name) {
+    uuids::uuid id = uuids::uuid_system_generator{}();
+    return *this->m_res.emplace<ComponentNode>(
+        id,
+        SinglePreload<std::string>{name},
+        std::filesystem::path{""},
+        [type](Ref<ComponentNode> val, const uuids::uuid& id, typename ResourceSerializer<ComponentNode>::Preloaded& preload) {
+            val->m_ty = type;
+            val->m_name = std::string_view{preload.value()};
+            val->m_id = uuidref{id.as_bytes()};
+        }
+    ); 
 }
 
 }

@@ -16,17 +16,20 @@ set(
 set(CMAKE_CXX_STANDARD 20)
 
 add_library(${NAME} ${SRC})
-
 include(FetchContent)
-set(UUID_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(UUID_TIME_GENERATOR ON CACHE BOOL "" FORCE)
 FetchContent_Declare(
     stduuid
     GIT_REPOSITORY https://github.com/mariusbancila/stduuid.git
     GIT_TAG v1.2.2
 )
-FetchContent_MakeAvailable(stduuid)
-# add_subdirectory(${stduuid_SOURCE_DIR} ${stduuid_BINARY_DIR} EXCLUDE_FROM_ALL)
+FetchContent_GetProperties(stduuid)
+if(NOT stduuid_POPULATED)
+    FetchContent_Populate(stduuid)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${stduuid_SOURCE_DIR}/cmake")
+    set(UUID_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(UUID_SYSTEM_GENERATOR ON CACHE BOOL "" FORCE)
+    add_subdirectory(${stduuid_SOURCE_DIR} ${stduuid_BINARY_DIR})
+endif()
 
 option(BUILD_CORE_DOCS "Build doxygen documentation for the core library" OFF)
 find_package(Doxygen)
@@ -46,5 +49,6 @@ target_compile_options(${NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
 )
+target_compile_definitions(${NAME} PRIVATE UUID_SYSTEM_GENERATOR)
 target_include_directories(${NAME} PUBLIC ./)
 target_link_libraries(${NAME} PUBLIC nlohmann_json::nlohmann_json fmt::fmt stduuid)

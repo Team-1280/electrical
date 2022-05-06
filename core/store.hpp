@@ -61,6 +61,9 @@ struct SinglePreload {
     /** \brief Compile-time string constant for the field name of the preloaded value */
     static constexpr const char FIELD[sizeof...(Name) + 1] = { Name..., '\0'};
     
+    template<typename... Args>
+    SinglePreload(Args&&... args) : m_val{args...} {}
+    
     static inline void from_json(SinglePreload<T, Name...> self, const json& j) {
         j.at(FIELD).template get_to<T>(self.m_val);
     }
@@ -90,7 +93,6 @@ private:
     T m_val;
 };
 
-
 /**
  * \brief Contains the file path to load a 
  * value from a JSON file, plus an optional weak reference to an
@@ -102,7 +104,9 @@ template<typename T>
 struct ResourceManagerEntry {
 public:
     using Preloaded = typename ResourceSerializer<T>::Preloaded;
-
+    
+    template<typename P>
+    ResourceManagerEntry(P t) : loaded{}, preloaded{t}, path{} {}
     ResourceManagerEntry(Preloaded&& preloaded, std::filesystem::path&& path) : loaded{}, preloaded{preloaded}, path{path} {}
     ResourceManagerEntry(const Preloaded& preloaded, std::filesystem::path&& path) : loaded{}, preloaded{preloaded}, path{path} {}
 
@@ -218,6 +222,13 @@ public:
         return *this;
     }
 
+    constexpr inline T* get() const noexcept {
+        return this->m_ptr.get();
+    }
+    constexpr inline std::shared_ptr<T> ptr() const noexcept {
+        return this->m_ptr;
+    }
+
     Ref(const Ref<T>& other) : m_ptr{other.m_ptr}, m_entry{other.m_entry} {}
     ~Ref() {
         if(this->m_ptr.unique()) {
@@ -313,6 +324,22 @@ public:
  */
 template<typename T, typename... Resources> 
 concept HasResource = (std::same_as<T, Resources> || ...);
+
+/**
+ * \brief Concept specifying that a value can be called with arguments in order to create a Resource of 
+ * type R
+ * \sa Resource
+ */
+template<typename T, typename R>
+concept ResourceCreatorFn = requires {
+    /*std::invocable<
+        T,
+        Ref<R>,
+        const typename ResourceSerializer<R>::IdType&,
+        typename ResourceSerializer<T>::Preloaded&
+    >;*/
+    std::invocable<T, int>;
+};
 
 /**
  * \brief A generic resource manager that lazily loads values of type T.
@@ -421,27 +448,30 @@ public:
         }
         return true;
     }
-    
+
     /**
-     * \brief Add a new resource to this store, serialized at the given path
+     * \brief Add a new resource to this store, automatically creating a preloaded value
      * \param id The ID of the added resource
-     * \param path A path to a file that this resource will be serialized to, does not need to exist
-     * \param args Arguments used to construct the resource in place
-     * \return A reference to the added resource, or an empty optional if the resource's constructor
-     * throws an exception
+     * \param preload The new preloaded data to store in the resource manager's entry
+     * \param creator A function object to initilize the new resource using a reference to the ID type
+     * and preloaded data
+     * \param path The path to save the added resource to
+     * \return A reference to the new value
      */
-    template<Resource T, typename Id, typename Preloaded, typename... Args>
-    requires requires(const Id& id, T&& res, MapType<T> map, Args&&... args) {
+    template<Resource T, ResourceCreatorFn<T> C>
+    requires requires(MapType<T> map) {
         HasResource<T, Values...>;
-        new T{args...};
-        map.find(id);
-        std::convertible_to<Preloaded, typename ResourceSerializer<T>::Preloaded>;
         ResourceSerializerImpl<T, Values...>;
-    } Optional<Ref<T>> emplace(const Id& id, Preloaded preload, std::filesystem::path&& path, Args&&... args) {
-        ResourceManagerEntry<T> entry = ResourceManagerEntry{preload, path};
+    } Optional<Ref<T>> emplace(
+        const typename ResourceSerializer<T>::IdType& id,
+        const typename ResourceSerializer<T>::Preloaded& preload,
+        std::filesystem::path&& path,
+        const C& creator
+    ) {
         try {
             auto [elem, inserted] = std::get<MapType<T>>(this->m_stores).emplace(
-                std::make_pair<typename ResourceSerializer<T>::IdType, T>(id, preload, path)
+                id,
+                preload
             );
             if(!inserted) {
                 logger::error(
@@ -450,9 +480,10 @@ public:
                 );
                 return {};
             }
-
-            Ref<T> resource = Ref<T>{&elem->second, new T{args...}};
-            elem->second->loaded = std::weak_ptr{resource->m_ptr};
+            elem->second.path = path;
+            Ref<T> resource = Ref<T>{&elem->second};
+            creator(resource, elem->first, elem->second.preloaded);
+            elem->second.loaded = std::weak_ptr{resource.ptr()};
             return resource;
         } catch(const std::exception& e) {
             logger::error(
@@ -468,6 +499,7 @@ public:
             );
             return {};
         }
+
     }
 
     /**
@@ -623,7 +655,6 @@ private:
             return "{ID}";
         }
     }
-   
 
     /** \brief A map of all known IDs to store entries that may contain loaded values */
     std::tuple<MapType<Values>...> m_stores;

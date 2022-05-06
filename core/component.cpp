@@ -16,7 +16,7 @@ std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(
     }
 }
 
-std::optional<ConnectionPortRef> Component::get_port_ptr(const std::string_view id) {
+std::optional<ConnectionPortRef> Component::get_port_ref(const std::string_view id) {
     const auto& port = this->m_ports.find(id);
     if(port != this->m_ports.end()) {
         return &port->second;

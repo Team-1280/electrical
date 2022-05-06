@@ -262,7 +262,7 @@ struct ResourceSerializer<model::ComponentNode> {
         node->m_id = id.as_bytes();
         node->m_ty = res.template try_get<model::Component>(json_val["id"].get<IdType>());
         for(const auto& conn_json : json_val["conns"]) {
-            model::ConnectionPortRef port = *node->m_ty->get_port_ptr(conn_json.at("port").get<std::string_view>());
+            model::ConnectionPortRef port = *node->m_ty->get_port_ref(conn_json.at("port").get<std::string_view>());
             node->m_edges[port] = res.template try_get<model::WireEdge>(conn_json.get<uuids::uuid>());
         }
     }
@@ -315,7 +315,7 @@ struct ResourceSerializer<model::WireEdge> {
             }
             
             wire->m_conns[i].m_component = res.template try_get<model::ComponentNode>(conn_json.at("node").get<uuids::uuid>());
-            wire->m_conns[i].m_port = *wire->m_conns[i].m_component.lock()->type()->get_port_ptr(conn_json.at("port").get<std::string_view>());
+            wire->m_conns[i].m_port = *wire->m_conns[i].m_component.lock()->type()->get_port_ref(conn_json.at("port").get<std::string_view>());
             wire->m_conns[i].m_connector = res.template try_get<model::Connector>(conn_json.at("connector").get<std::string_view>());
         }
     }
@@ -342,6 +342,13 @@ public:
         this->m_res = std::move(other.m_res);
         return *this;
     }
+    
+    /**
+     * \brief Create a new component node with the given type 
+     * \param type The type of component to create
+     * \return A reference to the created graph node
+     */
+    Ref<ComponentNode> component(Ref<Component> type, std::string_view name); 
 
     template<typename Resource, typename Id>
     inline Optional<Ref<Resource>> get(const Id& id) {

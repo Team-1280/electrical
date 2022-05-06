@@ -71,7 +71,7 @@ public:
     /** Get a port by name, O(1) lookup time */
     std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
     /** Get a port pointer by name */
-    std::optional<ConnectionPortRef> get_port_ptr(const std::string_view id);
+    std::optional<ConnectionPortRef> get_port_ref(const std::string_view id);
 
 private:
     /* User-facing name of the component type, shared with the ComponentStore */
