@@ -54,6 +54,9 @@ struct NoPreload {
 /**
  * \brief Helper structure for preloaded values specifying a single value to be retrieved
  * from a JSON object
+ * \tparam T The value type to deserialize from entry JSON files
+ * \tparam Name A compile-time string literal specifying which field to deserialize this preloaded
+ * value from in an entry JSON file
  * \sa NoPreload
  */
 template<typename T, char... Name>
@@ -61,13 +64,19 @@ struct SinglePreload {
     /** \brief Compile-time string constant for the field name of the preloaded value */
     static constexpr const char FIELD[sizeof...(Name) + 1] = { Name..., '\0'};
     
+    /** 
+     * \brief Construct a new SinglePreload from any arguments 
+     * that can construct the contained value
+     */
     template<typename... Args>
     SinglePreload(Args&&... args) : m_val{args...} {}
     
+    /** \brief Deserialize this single preloaded value from JSON */
     static inline void from_json(SinglePreload<T, Name...> self, const json& j) {
         j.at(FIELD).template get_to<T>(self.m_val);
     }
-
+    
+    /** \brief Convert this single preloaded value to JSON */
     inline json to_json() const {
         return {
             {FIELD, this->m_val}
@@ -103,12 +112,21 @@ private:
 template<typename T>
 struct ResourceManagerEntry {
 public:
+    /**
+     * \brief Preloaded data, declared by the template specialization of
+     * ResourceSerializer for T
+     * \sa ResourceSerializerImpl
+     * \sa ResourceSerializer
+     */
     using Preloaded = typename ResourceSerializer<T>::Preloaded;
     
-    template<typename P>
-    ResourceManagerEntry(P t) : loaded{}, preloaded{t}, path{} {}
-    ResourceManagerEntry(Preloaded&& preloaded, std::filesystem::path&& path) : loaded{}, preloaded{preloaded}, path{path} {}
-    ResourceManagerEntry(const Preloaded& preloaded, std::filesystem::path&& path) : loaded{}, preloaded{preloaded}, path{path} {}
+    /**
+     * \brief Construct a new entry, constructing the Preloaded value
+     * using args, initializing all other fields to nullptr
+     * \tparam Args The argument types to construct an instance of Preloaded from
+     */
+    template<typename... Args>
+    ResourceManagerEntry(Args&&... args) : loaded{}, preloaded{args...}, path{} {}
 
     /** \brief A pointer that is invalidated if the value is no longer used */
     std::weak_ptr<T> loaded;
@@ -140,7 +158,9 @@ public:
 
 /**
  * \brief Concept that all template specializations of ResourceSerializer
- * must satisfy in order to be usable with a ResourceManager
+ * must satisfy in order to be usable with a ResourceManager. Declares 
+ * the type of preloaded data to eagerly load, as well as ID types and function 
+ * definitions for (de)serializing a Resource
  * \sa ResourceSerializer
  */
 template<typename T, typename... Resources>
@@ -199,19 +219,24 @@ public:
     inline constexpr bool operator ==(const Ref<T>& other) const {
         return this->m_ptr == other.m_ptr;
     }
-
+    
+    /** \brief Implicitly convert this Ref to a std::shared_ptr to its resource */
     constexpr inline operator std::shared_ptr<T>&() const {
         return this->m_ptr;
     }
     
+    /** \brief Dereference this Ref as though it were a pointer */
     constexpr inline T& operator*() const noexcept {
         return this->m_ptr.operator*();
     }
-
+    
     constexpr inline T * operator->() const noexcept {
         return this->m_ptr.operator->();
     }
-
+    
+    /** \brief Implicitly convert this Ref to a bool
+     * \return true if the Ref is not null
+     */
     constexpr inline operator bool() const noexcept {
         return this->m_ptr.operator bool();
     }
@@ -221,15 +246,26 @@ public:
         this->m_entry = other.m_entry;
         return *this;
     }
-
+    
+    /** 
+     * \brief Get a pointer to the contained resource
+     */
     constexpr inline T* get() const noexcept {
         return this->m_ptr.get();
     }
+    /** 
+     * \brief Explicitly access the contained std::shared_ptr to the contained resource
+     * \sa operator std::shared_ptr&
+     */
     constexpr inline std::shared_ptr<T> ptr() const noexcept {
         return this->m_ptr;
     }
 
     Ref(const Ref<T>& other) : m_ptr{other.m_ptr}, m_entry{other.m_entry} {}
+    /**
+     * Destruct this Ref, saving the contained resource to a file if there exist no 
+     * other owning references to the contained resource
+     */
     ~Ref() {
         if(this->m_ptr.unique()) {
             try {
@@ -249,7 +285,9 @@ public:
         }
     }
 private:
+    /** \brief An owning reference to a resource */
     std::shared_ptr<T> m_ptr;
+    /** \brief Pointer to the ResourceManager entry for this resource */
     const ResourceManagerEntry<T> * m_entry;
     friend class WeakRef<T>;
 };
@@ -284,7 +322,7 @@ public:
     /**
      * \brief Attempt to upgrade this weak reference to an owning Ref
      *
-     * \return An owning reference to the resource 
+     * \return An owning reference to the resource
      */
     inline Ref<T> lock() const {
         return Ref{this->m_ptr.lock(), this->m_entry};
@@ -353,7 +391,12 @@ template<Resource... Values>
 class GenericResourceManager<Values...> {
 public:
     using SelfType = GenericResourceManager<Values...>;
-
+    
+    /**
+     * \brief A helper type definition that enables an optimization allowing for std::string_views to be used
+     * as keys when looking up values in an std::unordered_map 
+     * \sa _detail::map_type_helper
+     */
     template<Resource T>
     using MapType = typename _detail::map_type_helper<typename ResourceSerializer<T>::IdType, T>::MapType;
 
@@ -375,7 +418,8 @@ public:
 
     /** 
      * \brief Generate a cache file for the given resource type at the given path, also repopulating 
-     * the internal ID to resource map using the new data 
+     * the internal ID to resource map using the new data
+     * \param cachefile_path Path to the cache file to generate from new entry JSON
      * \return true If the cache file was generated successfully
      */
     template<Resource T>
@@ -658,4 +702,3 @@ private:
     /** \brief A map of all known IDs to store entries that may contain loaded values */
     std::tuple<MapType<Values>...> m_stores;
 };
-

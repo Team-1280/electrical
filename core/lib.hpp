@@ -18,6 +18,9 @@ class WireEdge;
 class ComponentNode;
 }
 
+/**
+ * Span that references a uuids::uuid 
+ */
 using uuidref = uuids::span<std::byte const, 16L>;
 
 namespace model {
@@ -349,13 +352,14 @@ public:
      * \return A reference to the created graph node
      */
     Ref<ComponentNode> component(Ref<Component> type, std::string_view name); 
-
+    
+    /**
+     * \brief Get a value of a specific type from the internal resource manager
+     */
     template<typename Resource, typename Id>
     inline Optional<Ref<Resource>> get(const Id& id) {
         return this->m_res.get<Resource>(id);
     }
-
-    Ref<WireEdge> new_wire();
 private:
     /** \brief Collection of all loaded component types */
     ResourceManager m_res;
