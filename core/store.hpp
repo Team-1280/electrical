@@ -332,13 +332,12 @@ concept HasResource = (std::same_as<T, Resources> || ...);
  */
 template<typename T, typename R>
 concept ResourceCreatorFn = requires {
-    /*std::invocable<
+    std::invocable<
         T,
         Ref<R>,
         const typename ResourceSerializer<R>::IdType&,
-        typename ResourceSerializer<T>::Preloaded&
-    >;*/
-    std::invocable<T, int>;
+        typename ResourceSerializer<R>::Preloaded&
+    >;
 };
 
 /**
