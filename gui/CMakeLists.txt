@@ -1,6 +1,7 @@
 set(
     SRC
     "main.cpp"
+    "window.cpp"
 )
 
 set(NAME
@@ -15,11 +16,11 @@ add_executable(${NAME} ${SRC})
 set(FLTK_BUILD_TEST OFF CACHE BOOL " " FORCE)
 include(FetchContent)
 FetchContent_Declare(
-    fltk
+    FLTK
     GIT_REPOSITORY https://github.com/fltk/fltk.git
-    GIT_TAG master
+    GIT_TAG release-1.3.8
 )
-FetchContent_MakeAvailable(fltk)
+FetchContent_MakeAvailable(FLTK)
 
-
-target_link_libraries(${NAME} PUBLIC fltk e1280-core)
+target_include_directories(${NAME} PRIVATE ${fltk_BINARY_DIR} ${fltk_SOURCE_DIR})
+target_link_libraries(${NAME} PRIVATE fltk e1280-core)
