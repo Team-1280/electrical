@@ -125,8 +125,10 @@ public:
      * using args, initializing all other fields to nullptr
      * \tparam Args The argument types to construct an instance of Preloaded from
      */
-    template<typename... Args>
-    ResourceManagerEntry(Args&&... args) : loaded{}, preloaded{args...}, path{} {}
+    template<typename A, typename...Args>
+    ResourceManagerEntry(A a, Args&&... args) : loaded{}, preloaded{a, args...}, path{} {}
+    /** \brief Requires default constructor separate from template one because C++ */
+    ResourceManagerEntry() : loaded{}, preloaded{}, path{} {}
 
     /** \brief A pointer that is invalidated if the value is no longer used */
     std::weak_ptr<T> loaded;
@@ -151,7 +153,6 @@ public:
         self.path = j.at("path").get<std::filesystem::path>();
     }
     
-    ResourceManagerEntry() = default;
     inline ResourceManagerEntry(const std::filesystem::path& p) : loaded{}, preloaded{}, path{p} {};
     ~ResourceManagerEntry() = default;
 };

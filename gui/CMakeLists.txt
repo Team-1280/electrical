@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(${NAME} ${SRC})
 
+set(FLTK_BUILD_TEST OFF CACHE BOOL " " FORCE)
 include(FetchContent)
 FetchContent_Declare(
     fltk
@@ -21,4 +22,4 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(fltk)
 
 
-target_link_libraries(${NAME} PUBLIC fltk::fltk)
+target_link_libraries(${NAME} PUBLIC fltk e1280-core)
