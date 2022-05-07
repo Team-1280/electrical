@@ -13,14 +13,9 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_executable(${NAME} ${SRC})
 
-set(FLTK_BUILD_TEST OFF CACHE BOOL " " FORCE)
-include(FetchContent)
-FetchContent_Declare(
-    FLTK
-    GIT_REPOSITORY https://github.com/fltk/fltk.git
-    GIT_TAG release-1.3.8
-)
-FetchContent_MakeAvailable(FLTK)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTKMM REQUIRED IMPORTED_TARGET gtkmm-4.0)
 
-target_include_directories(${NAME} PRIVATE ${fltk_BINARY_DIR} ${fltk_SOURCE_DIR})
-target_link_libraries(${NAME} PRIVATE fltk e1280-core)
+target_link_directories(${NAME} PRIVATE ${GTKMM_LIBRARY_DIRS})
+target_include_directories(${NAME} PRIVATE ${GTKMM_INCLUDE_DIRS})
+target_link_libraries(${NAME} PRIVATE ${GTKMM_LIBRARIES} e1280-core)
