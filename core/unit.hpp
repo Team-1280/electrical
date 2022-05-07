@@ -44,8 +44,14 @@ public:
      * \brief Construct a new quantity value from unit and value
      */
     constexpr Quantity(U unit, V val) : m_unit{unit}, m_val{val} {}
-    
     constexpr Quantity() requires(std::default_initializable<V>) : m_unit(U::DEFAULT), m_val{} {}
+    
+    /**
+     * \brief Create a new Quantity using the default unit
+     */
+    template<typename T>
+    requires(std::constructible_from<V, T>)
+    inline Quantity(const T& v) : m_unit{U::DEFAULT}, m_val{v} {}
     
     /** \brief Copy construct this quantity from another quantity */
     constexpr Quantity(const Quantity& other) requires requires {
@@ -88,6 +94,10 @@ public:
      */
     constexpr inline Quantity<U, V> to(U unit) const {
         return Quantity(unit, this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit]);
+    }
+
+    constexpr inline V default_unit() const {
+        return this->raw_to(U::DEFAULT);
     }
     
     /**

@@ -68,6 +68,12 @@ public:
     json to_json() const;
 
     /**
+     * \brief Get the first point in this footprint, guranteed to be 
+     * available
+     */
+    inline const Point& first() const { return this->m_pts[0]; }
+
+    /**
      * \brief Create a new footprint from a list of connected points
      */
     Footprint(const std::vector<Point>& pts) : m_pts{pts} {}
@@ -76,6 +82,9 @@ public:
     constexpr operator std::vector<Point>&() {
         return this->m_pts;
     }
+
+    std::vector<Point>::iterator begin() { return this->m_pts.begin(); }
+    std::vector<Point>::iterator end() { return this->m_pts.end(); }
 
 private:
     /** \brief A vector of points that each connect to the prior one*/
