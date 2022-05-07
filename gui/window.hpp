@@ -4,7 +4,10 @@
 
 class MainWindow : public Gtk::Window {
 public:
-    MainWindow() {}
+    MainWindow();
 private:
 
+    void on_click();
+    
+    Gtk::Button m_button;
 };
