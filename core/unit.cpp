@@ -82,3 +82,7 @@ std::string LengthUnit::to_string() const noexcept {
 }
 
 }
+
+model::Length operator ""_m(long double val) {
+    return model::Length(model::LengthUnit::Meters, val);
+}

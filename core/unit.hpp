@@ -51,7 +51,7 @@ public:
      */
     template<typename T>
     requires(std::constructible_from<V, T>)
-    inline Quantity(const T& v) : m_unit{U::DEFAULT}, m_val{v} {}
+    explicit inline Quantity(const T& v) : m_unit{U::DEFAULT}, m_val{v} {}
     
     /** \brief Copy construct this quantity from another quantity */
     constexpr Quantity(const Quantity& other) requires requires {
@@ -128,30 +128,75 @@ public:
     }
     
     /** \brief Add two quantities, returning a quantity with the same units as the left-hand side operand */
-    constexpr inline Quantity<U, V> operator+(const Quantity<U, V>& other) const requires requires {
-        {std::declval<V>() + std::declval<V>()} -> std::convertible_to<V>;
+    constexpr inline Quantity<U, V> operator+(const Quantity<U, V>& other) const requires requires(V v) {
+        {v + v} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val + other.raw_to(this->m_unit));
     }
     /** \brief Subtract two quantities, returning a new quantity with the same units as the left-hand side operand */
-    constexpr inline Quantity<U, V> operator-(const Quantity<U, V>& other) const requires requires {
-        {std::declval<V>() - std::declval<V>()} -> std::convertible_to<V>;
+    constexpr inline Quantity<U, V> operator-(const Quantity<U, V>& other) const requires requires(V v) {
+        {v - v} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val - other.raw_to(this->m_unit));
     }
     /** \brief Divide two quantities, returning a new quantity with the same units as the left-hand side operand */
-    constexpr inline Quantity<U, V> operator/(const Quantity<U, V>& other) const requires requires {
-        {std::declval<V>() / std::declval<V>()} -> std::convertible_to<V>;
+    constexpr inline Quantity<U, V> operator/(const Quantity<U, V>& other) const requires requires(V v) {
+        {v / v} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val / other.raw_to(this->m_unit));
     }
     /** \brief Multiply two quantities, returning a new quantity with the same units as the left-hand side operand*/
-    constexpr inline Quantity<U, V> operator*(const Quantity<U, V>& other) const requires requires {
-        {std::declval<V>() * std::declval<V>()} -> std::convertible_to<V>;
+    constexpr inline Quantity<U, V> operator*(const Quantity<U, V>& other) const requires requires(V v) {
+        {v * v} -> std::convertible_to<V>;
     } {
         return Quantity(this->m_unit, this->m_val * other.raw_to(this->m_unit));
     }
+
+    constexpr inline Quantity<U, V>& operator+=(const Quantity<U, V>& other) requires requires(V v) { 
+        {v += v}->std::convertible_to<V&>; 
+    } {
+        this->m_val += other.raw_to(this->m_unit);
+        return *this;
+    }
+    constexpr inline Quantity<U, V>& operator-=(const Quantity<U, V>& other) requires requires(V v) { 
+        {v -= v}->std::convertible_to<V&>; 
+    } {
+        this->m_val -= other.raw_to(this->m_unit);
+        return *this;
+    }
+    constexpr inline Quantity<U, V>& operator*=(const Quantity<U, V>& other) requires requires(V v) { 
+        {v *= v}->std::convertible_to<V&>; 
+    } {
+        this->m_val *= other.raw_to(this->m_unit);
+        return *this;
+    }
+    constexpr inline Quantity<U, V>& operator/=(const Quantity<U, V>& other) requires requires(V v) { 
+        {v /= v}->std::convertible_to<V&>; 
+    } {
+        this->m_val /= other.raw_to(this->m_unit);
+        return *this;
+    }
     
+    /** \brief Scale this quantity by a floating-point value */
+    constexpr inline Quantity<U, V> operator*(float scale) const {
+        return Quantity(this->m_unit, this->m_val * scale);
+    }
+
+    constexpr inline Quantity<U, V>& operator*=(float scale) {
+        this->m_val *= scale;
+        return *this;
+    }
+    /** \brief Scale this quantity by a floating-point value */
+    constexpr inline Quantity<U, V> operator/(float scale) const {
+        return Quantity(this->m_unit, this->m_val / scale);
+    }
+
+    constexpr inline Quantity<U, V>& operator/=(float scale) {
+        this->m_val /= scale;
+        return *this;
+    }
+
+
     /** \brief Compare two quantities */
     constexpr inline auto operator<=>(const Quantity<U, V>& other) const requires requires {
         std::declval<V>() <=> std::declval<V>();
@@ -238,7 +283,14 @@ private:
     UnitVal m_u;
 };
 
+
 using Length = Quantity<LengthUnit, float>;
+
+
+
 static_assert(ser::StringSerializable<Length>);
 
 }
+
+/** \brief Custom suffix operator for creating a new length in meters */
+model::Length operator ""_m(long double);

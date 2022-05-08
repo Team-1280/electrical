@@ -40,7 +40,7 @@ GraphRender::GraphRender() :
         m_drag_event{Gtk::GestureDrag::create()},
         m_scroll_event{Gtk::EventControllerScroll::create()},
         m_pxpmeter{static_cast<double>(this->smallest_dim())},
-        m_campos{0, 0},
+        m_campos{0._m, 0._m},
         m_oldcampos{this->m_campos}
     {
     this->set_draw_func(sigc::mem_fun(*this, &GraphRender::on_draw));
@@ -49,7 +49,7 @@ GraphRender::GraphRender() :
         x = this->px_to_meters(x);
         y = this->px_to_meters(y);
 
-        this->m_campos = this->m_oldcampos + model::Point{x, y};
+        this->m_campos = this->m_oldcampos + model::Point{model::Length{x}, model::Length{y}};
         this->queue_draw();
     });
     this->m_scroll_event->set_flags(Gtk::EventControllerScroll::Flags::VERTICAL);
@@ -57,11 +57,8 @@ GraphRender::GraphRender() :
             double old_pxpmeter = this->m_pxpmeter; 
 
             this->m_pxpmeter += (this->m_pxpmeter / 10.) * dy;
-
-            this->m_campos.x = this->m_campos.x * old_pxpmeter / this->m_pxpmeter;
-            this->m_campos.y = this->m_campos.y * old_pxpmeter / this->m_pxpmeter;
-            this->m_oldcampos.x = this->m_oldcampos.x * old_pxpmeter / this->m_pxpmeter;
-            this->m_oldcampos.y = this->m_oldcampos.y * old_pxpmeter / this->m_pxpmeter;
+            this->m_campos *= old_pxpmeter / this->m_pxpmeter;
+            this->m_oldcampos *= old_pxpmeter / this->m_pxpmeter;
             
             this->queue_draw();
             return true;

@@ -38,7 +38,46 @@ public:
     constexpr inline Point operator-(const Point& other) const {
         return Point{this->x - other.x, this->y - other.y};
     }
-  
+
+    constexpr inline Point& operator+=(const Point& other) {
+        this->x += other.x;
+        this->y += other.y;
+        return *this;
+    }
+    constexpr inline Point& operator-=(const Point& other) {
+        this->x -= other.x;
+        this->y -= other.y;
+        return *this;
+    } 
+    constexpr inline Point& operator*=(const Point& other) {
+        this->x *= other.x;
+        this->y *= other.y;
+        return *this;
+    }
+    constexpr inline Point& operator/=(const Point& other) {
+        this->x /= other.x;
+        this->y /= other.y;
+        return *this;
+    }
+
+    constexpr inline Point operator*(float scale) const {
+        return Point(this->x * scale, this->y * scale);
+    }
+    constexpr inline Point& operator*=(float scale) {
+        this->x *= scale;
+        this->y *= scale;
+        return *this;
+    }
+
+    constexpr inline Point operator/(float scale) const {
+        return Point(this->x / scale, this->y / scale);
+    }
+    constexpr inline Point& operator/=(float scale) {
+        this->x /= scale;
+        this->y /= scale;
+        return *this;
+    }
+
     /**
      * \brief Get the distance between two points, returning a distance in the units
      * of this's x coordinate
