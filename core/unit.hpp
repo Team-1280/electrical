@@ -118,9 +118,14 @@ public:
     }
     
     /** \brief Get the underlying raw value of this quantity */
-    constexpr inline V raw_val() const {
+    constexpr inline V const& raw_val() const {
         return this->m_val;
     }
+    /** \brief Get the underlying raw value of this quantity */
+    constexpr inline V& raw_val() {
+        return this->m_val;
+    }
+    
     
     /** \brief Get the units for this quantity */
     constexpr inline U unit() const {

@@ -1,6 +1,8 @@
 #pragma once
 
 #include "geom.hpp"
+#include "lib.hpp"
+#include <gtkmm/eventcontrollermotion.h>
 #include <gtkmm/eventcontrollerscroll.h>
 #include <gtkmm/gesturedrag.h>
 #include <cairomm/context.h>
@@ -22,7 +24,7 @@ protected:
     void on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int h);
     
 private:
-    void draw_fp(const Cairo::RefPtr<Cairo::Context>& cairo, model::Footprint& fp);
+    void draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<model::ComponentNode> fp);
 
     inline double px_to_meters(double px) const noexcept { return px / this->m_pxpmeter; }
     inline double meters_to_px(double m) const noexcept { return m * this->m_pxpmeter; }
@@ -34,6 +36,8 @@ private:
     Glib::RefPtr<Gtk::GestureDrag> m_drag_event;
     /** \brief Receive scroll events, same behavior as m_zoom_event */
     Glib::RefPtr<Gtk::EventControllerScroll> m_scroll_event;
+    /** \brief Receive mouse motion events to draw cursor position text */
+    Glib::RefPtr<Gtk::EventControllerMotion> m_motion_event;
     
     /** \brief Pixels per meter */
     double m_pxpmeter;
@@ -43,6 +47,9 @@ private:
     
     /** \brief Used while dragging to store the original camera postition */
     model::Point m_oldcampos;
+    
+    /** \brief Last recorded position of the mouse */
+    model::Point m_mousepos;
 };
 
 class MainWindow : public Gtk::Window {

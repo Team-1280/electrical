@@ -122,8 +122,8 @@ public:
         return this->m_pts;
     }
 
-    std::vector<Point>::iterator begin() { return this->m_pts.begin(); }
-    std::vector<Point>::iterator end() { return this->m_pts.end(); }
+    std::vector<Point>::const_iterator begin() const { return this->m_pts.begin(); }
+    std::vector<Point>::const_iterator end() const { return this->m_pts.end(); }
 
 private:
     /** \brief A vector of points that each connect to the prior one*/

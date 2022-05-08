@@ -56,6 +56,7 @@ using ConnectionPortRef = const ConnectionPort *;
  */ 
 class Component {
 public:
+    using port_map_type = std::unordered_map<std::string, ConnectionPort, StringHasher, std::equal_to<>>;
     Component(Component&& other) : 
         m_name{other.m_name},
         m_id{other.m_id},
@@ -67,11 +68,17 @@ public:
     inline constexpr const std::string_view name() const { return this->m_name; }
     /** Get the user-assigned ID of this component */
     inline constexpr std::string_view id() const { return this->m_id; }
+    /** Get a reference to this component's footprint */
+    constexpr inline const Footprint& footprint() const { return this->m_fp; }
     
     /** Get a port by name, O(1) lookup time */
     std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
     /** Get a port pointer by name */
     std::optional<ConnectionPortRef> get_port_ref(const std::string_view id);
+    
+    /** \brief Get an iterator over thte ports of this component type */
+    port_map_type::const_iterator begin() const { return this->m_ports.begin(); }
+    port_map_type::const_iterator end() const { return this->m_ports.end(); }
 
 private:
     /* User-facing name of the component type, shared with the ComponentStore */
@@ -83,7 +90,7 @@ private:
      * Note: The WireEdge class contains pointers into this map, meaning that
      * after construction elements MUST not be removed
      */
-    std::unordered_map<std::string, ConnectionPort, StringHasher, std::equal_to<>> m_ports;
+    port_map_type m_ports;
     /* Shape of the component in the workspace */ 
     Footprint m_fp;
     
