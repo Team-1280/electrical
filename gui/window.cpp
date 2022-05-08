@@ -5,6 +5,8 @@
 #include <gtkmm/enums.h>
 #include <gtkmm/builder.h>
 
+#include <iostream>
+
 MainWindow::MainWindow() : 
     m_layout{Gtk::Orientation::VERTICAL},
     m_toolbar{Gtk::Orientation::HORIZONTAL},
@@ -44,8 +46,10 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
         model::Point{model::Length{-0.5}, model::Length{0.8}}
     }};
     
-    cairo->scale((double)w * this->zoom, (double)h * this->zoom);
-    cairo->translate(this->zoom, this->zoom / 2.);
+    this->m_pxpmeter = this->smallest_dim();
+    std::cout << this->m_pxpmeter << std::endl;
+    cairo->scale(this->m_pxpmeter, this->m_pxpmeter);
+    cairo->translate(this->m_campos.x.default_unit(), this->m_campos.y.default_unit());
     this->draw_fp(cairo, fp);
 }
 
@@ -68,4 +72,13 @@ void GraphRender::draw_fp(const Cairo::RefPtr<Cairo::Context>& cairo, model::Foo
     cairo->stroke();
 
     cairo->restore();
+}
+
+void GraphRender::on_drag_update(double x, double y) {
+    x = this->px_to_meters(x);
+    y = this->px_to_meters(y);
+
+    this->m_campos = this->m_oldcampos + model::Point{x, y};
+    std::cout << this->m_campos.to_json() << " " << this->m_pxpmeter << std::endl;
+    this->queue_draw();
 }

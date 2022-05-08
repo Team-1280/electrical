@@ -185,6 +185,7 @@ public:
     requires ser::StringSerializable<U> && std::convertible_to<V, double> {
         return std::to_string(double(this->m_val)) + this->m_unit.to_string();
     }
+
 private:
     U m_unit;
     V m_val;
