@@ -1,7 +1,8 @@
 #pragma once
 
 #include "geom.hpp"
-#include "gtkmm/gesturedrag.h"
+#include <gtkmm/eventcontrollerscroll.h>
+#include <gtkmm/gesturedrag.h>
 #include <cairomm/context.h>
 #include <cairomm/refptr.h>
 #include <gtkmm/drawingarea.h>
@@ -15,24 +16,13 @@
  */
 class GraphRender : public Gtk::DrawingArea {
 public:
-    GraphRender() : 
-        Gtk::DrawingArea{},
-        m_drag_event{Gtk::GestureDrag::create()},
-        m_pxpmeter{static_cast<double>(this->smallest_dim())},
-        m_campos{0, 0},
-        m_oldcampos{this->m_campos}
-    {
-        this->set_draw_func(sigc::mem_fun(*this, &GraphRender::on_draw));
-        this->m_drag_event->signal_drag_begin().connect([this](double,double){ this->m_oldcampos = this->m_campos; });
-        this->m_drag_event->signal_drag_update().connect(sigc::mem_fun(*this, &GraphRender::on_drag_update));
-        this->add_controller(this->m_drag_event);
-    }
+    GraphRender();
+
 protected:
     void on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int h);
     
 private:
     void draw_fp(const Cairo::RefPtr<Cairo::Context>& cairo, model::Footprint& fp);
-    void on_drag_update(double x, double y);
 
     inline double px_to_meters(double px) const noexcept { return px / this->m_pxpmeter; }
     inline double meters_to_px(double m) const noexcept { return m * this->m_pxpmeter; }
@@ -40,11 +30,10 @@ private:
     /** \brief Get the smallest dimension of this drawing area */
     inline int smallest_dim() const { return std::min(this->get_width(), this->get_height()); }
 
-    /**
-     * \brief Receive events when the user pans the view around
-     */
+    /** \brief Receive events when the user pans the view around */
     Glib::RefPtr<Gtk::GestureDrag> m_drag_event;
-    double dragx, dragy;
+    /** \brief Receive scroll events, same behavior as m_zoom_event */
+    Glib::RefPtr<Gtk::EventControllerScroll> m_scroll_event;
     
     /** \brief Pixels per meter */
     double m_pxpmeter;

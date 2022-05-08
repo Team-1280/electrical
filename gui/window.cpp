@@ -1,5 +1,6 @@
 #include "window.hpp"
 #include "geom.hpp"
+#include "gtkmm/eventcontrollerscroll.h"
 #include "unit.hpp"
 
 #include <gtkmm/enums.h>
@@ -34,11 +35,54 @@ void MainWindow::on_click() {
 
 }
 
+GraphRender::GraphRender() : 
+        Gtk::DrawingArea{},
+        m_drag_event{Gtk::GestureDrag::create()},
+        m_scroll_event{Gtk::EventControllerScroll::create()},
+        m_pxpmeter{static_cast<double>(this->smallest_dim())},
+        m_campos{0, 0},
+        m_oldcampos{this->m_campos}
+    {
+    this->set_draw_func(sigc::mem_fun(*this, &GraphRender::on_draw));
+    this->m_drag_event->signal_drag_begin().connect([this](double,double){ this->m_oldcampos = this->m_campos; });
+    this->m_drag_event->signal_drag_update().connect([this](double x, double y) {
+        x = this->px_to_meters(x);
+        y = this->px_to_meters(y);
+
+        this->m_campos = this->m_oldcampos + model::Point{x, y};
+        this->queue_draw();
+    });
+    this->m_scroll_event->set_flags(Gtk::EventControllerScroll::Flags::VERTICAL);
+    this->m_scroll_event->signal_scroll().connect([this](double dx, double dy) {
+            double old_pxpmeter = this->m_pxpmeter; 
+
+            this->m_pxpmeter += (this->m_pxpmeter / 10.) * dy;
+
+            this->m_campos.x = this->m_campos.x * old_pxpmeter / this->m_pxpmeter;
+            this->m_campos.y = this->m_campos.y * old_pxpmeter / this->m_pxpmeter;
+            this->m_oldcampos.x = this->m_oldcampos.x * old_pxpmeter / this->m_pxpmeter;
+            this->m_oldcampos.y = this->m_oldcampos.y * old_pxpmeter / this->m_pxpmeter;
+            
+            this->queue_draw();
+            return true;
+        },
+        true
+    );
+
+    this->add_controller(this->m_drag_event);
+    this->add_controller(this->m_scroll_event);
+
+    this->signal_resize().connect([this](int w, int h) {
+        this->m_pxpmeter = this->smallest_dim();
+    });
+}
+
+
 void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int h) {
-    /*cairo->save();
-    cairo->set_source_rgb(0.7, 0.7, 1.);
+    cairo->save();
+    cairo->set_source_rgb(0.9, 0.9, 0.9);
     cairo->paint();
-    cairo->restore();*/
+    cairo->restore();
 
     model::Footprint fp{std::vector{
         model::Point{model::Length{0.}, model::Length{0.}},
@@ -46,11 +90,14 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
         model::Point{model::Length{-0.5}, model::Length{0.8}}
     }};
     
-    this->m_pxpmeter = this->smallest_dim();
-    std::cout << this->m_pxpmeter << std::endl;
+    cairo->save();
+    cairo->translate(static_cast<float>(w) / 2.f, static_cast<float>(h) / 2.f);
     cairo->scale(this->m_pxpmeter, this->m_pxpmeter);
+
     cairo->translate(this->m_campos.x.default_unit(), this->m_campos.y.default_unit());
     this->draw_fp(cairo, fp);
+
+    cairo->restore();
 }
 
 void GraphRender::draw_fp(const Cairo::RefPtr<Cairo::Context>& cairo, model::Footprint& fp) {
@@ -74,11 +121,3 @@ void GraphRender::draw_fp(const Cairo::RefPtr<Cairo::Context>& cairo, model::Foo
     cairo->restore();
 }
 
-void GraphRender::on_drag_update(double x, double y) {
-    x = this->px_to_meters(x);
-    y = this->px_to_meters(y);
-
-    this->m_campos = this->m_oldcampos + model::Point{x, y};
-    std::cout << this->m_campos.to_json() << " " << this->m_pxpmeter << std::endl;
-    this->queue_draw();
-}
