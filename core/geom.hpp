@@ -3,7 +3,6 @@
 #include <unit.hpp>
 #include <ser.hpp>
 
-namespace model {
 
 /**
  * \brief A 2D point on the workspace plane
@@ -133,5 +132,3 @@ private:
 static_assert(ser::JsonSerializable<Footprint>);
 
 
-
-}

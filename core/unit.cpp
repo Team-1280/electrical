@@ -10,8 +10,6 @@ static bool equal_ignore_case(const std::string_view a, const std::string_view b
     );
 }
 
-namespace model {
-
 void LengthUnit::from_string(LengthUnit& self, std::string_view unit_str) {
     self.m_u = LengthUnit::Meters;
 
@@ -81,8 +79,7 @@ std::string LengthUnit::to_string() const noexcept {
     }
 }
 
-}
 
-model::Length operator ""_m(long double val) {
-    return model::Length(model::LengthUnit::Meters, val);
+Length operator ""_m(long double val) {
+    return Length(LengthUnit::Meters, val);
 }

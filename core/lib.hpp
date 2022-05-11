@@ -10,20 +10,15 @@
 #include "component.hpp"
 #include "wire.hpp"
 #include "ser.hpp"
-#include "store.hpp"
+#include "resource.hpp"
 #include "unit.hpp"
 
-namespace model {
-class WireEdge;
-class ComponentNode;
-}
 
 /**
  * Span that references a uuids::uuid 
  */
 using uuidref = uuids::span<std::byte const, 16L>;
 
-namespace model {
 
 class ComponentNode;
 
@@ -106,7 +101,6 @@ public:
         Connection() : m_component{}, m_port{} {}
         friend class WireEdge;
         friend class BoardGraph;
-        friend struct ResourceSerializer<WireEdge>;
     };
     
     /** \brief Get the UUID of this wire edge */
@@ -121,7 +115,7 @@ public:
         return std::any_of(
             this->m_conns.begin(),
             this->m_conns.end(),
-            [&node](const auto& conn) { return conn.m_component == node; } 
+            [&node](const auto& conn) { return (conn.m_component.expired()) ? false : conn.m_component.lock() == node; } 
         );
     }
     
@@ -141,7 +135,6 @@ private:
     WireEdge() : m_conns{}, m_id{nullptr, 16} {};
 
     friend class BoardGraph;
-    friend struct ResourceSerializer<WireEdge>;
 };
 
 /**
@@ -221,7 +214,6 @@ private:
     std::map<ConnectionPortRef, EdgeConnection> m_edges;
 
     friend class BoardGraph;
-    friend struct ResourceSerializer<ComponentNode>;
     friend class ConnectedNodesIterator;
 };
 
@@ -251,23 +243,6 @@ struct ResourceSerializer<model::ComponentNode> {
         }
 
         return obj;
-    }
-
-    template<Resource... Resources>
-    static inline void load(
-        Ref<ComponentNode> node,
-        const json& json_val,
-        GenericResourceManager<Resources...> res,
-        const IdType& id,
-        Preloaded& preload
-    ) {
-        node->m_name = std::string_view{preload.value()};
-        node->m_id = id.as_bytes();
-        node->m_ty = res.template try_get<model::Component>(json_val["id"].get<IdType>());
-        for(const auto& conn_json : json_val["conns"]) {
-            model::ConnectionPortRef port = *node->m_ty->get_port_ref(conn_json.at("port").get<std::string_view>());
-            node->m_edges[port] = res.template try_get<model::WireEdge>(conn_json.get<uuids::uuid>());
-        }
     }
 };
 template<>
@@ -324,13 +299,11 @@ struct ResourceSerializer<model::WireEdge> {
     }
 };
 
-namespace model {
-
-using ResourceManager = GenericResourceManager<model::Component, model::Connector, model::WireEdge, model::ComponentNode>;
-
 /**  
  * \brief A graph data structures in which the
  * nodes are `Component`s and the edges are wires
+ *
+ * \implements ser::FromJson
  */
 class BoardGraph {
 public:
@@ -339,6 +312,11 @@ public:
      * cached resource files 
      */
     BoardGraph() : m_res{} {}
+    
+    /**
+     * \brief Load a board graph from a saved file, or create a new save file with the given file
+     */
+    BoardGraph(std::filesystem::path&&);
 
     inline BoardGraph(BoardGraph&& other) : m_res{std::move(other.m_res)} {}
     inline BoardGraph& operator=(BoardGraph&& other) {
@@ -354,15 +332,23 @@ public:
     Ref<ComponentNode> component(Ref<Component> type, std::string_view name); 
     
     /**
-     * \brief Get a value of a specific type from the internal resource manager
+     * \brief Load a board graph from a JSON file
      */
-    template<typename Resource, typename Id>
-    inline Optional<Ref<Resource>> get(const Id& id) {
-        return this->m_res.get<Resource>(id);
-    }
+    static void from_json(BoardGraph&, const json&); 
+    /** \brief Save this board graph to a file */
+    json to_json() const;
+
 private:
+    Optional<Ref<ComponentNode>> load_node(const uuids::uuid id, const json& json_val);
+    Optional<Ref<ComponentNode>> load_edge(const uuids::uuid id, const json& json_val);
+
     /** \brief Collection of all loaded component types */
-    ResourceManager m_res;
+    SharedResources m_res;
+
+    Map<uuids::uuid, Ref<ComponentNode>> m_nodes;
+    Map<uuids::uuid, Ref<WireEdge>> m_edges;
+    
+    /** \brief Path to a file used for saving and loading this board graph */
+    std::filesystem::path m_path; 
 };
 
-}

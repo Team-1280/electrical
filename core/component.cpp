@@ -5,8 +5,6 @@
 
 #include "util/log.hpp"
 
-namespace model {
-
 std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string_view id) const {
     const auto& port = this->m_ports.find(id);
     if(port != this->m_ports.end()) {
@@ -36,7 +34,3 @@ constexpr std::uint64_t fnv1a(const std::string_view str) {
 
     return hash;
 }
-
-}
-
-const std::filesystem::path ResourceSerializer<model::Component>::RESOURCE_DIR = "./assets/components";

@@ -59,16 +59,42 @@ Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::p
 
 Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string_view name) {
     uuids::uuid id = uuids::uuid_system_generator{}();
-    return *this->m_res.emplace<ComponentNode>(
-        id,
-        SinglePreload<std::string>{name},
-        std::filesystem::path{""},
-        [type](Ref<ComponentNode> val, const uuids::uuid& id, typename ResourceSerializer<ComponentNode>::Preloaded& preload) {
-            val->m_ty = type;
-            val->m_name = std::string_view{preload.value()};
-            val->m_id = uuidref{id.as_bytes()};
+    (void)name, (void)type, (void)id;
+    return {};
+}
+
+Optional<Ref<ComponentNode>> BoardGraph::load_node(const uuid id, const std::filesystem::path& path) {
+    auto [entry, ins] = this->m_nodes.emplace(id);
+
+    try {
+        std::ifstream file{path};
+        json json_val;
+        file >> json_val;
+        file.close();
+
+        Ref<ComponentNode> node{new ComponentNode{}};
+        node->m_name = json_val.at("name").get<std::string>();
+        node->m_id = uuidref{entry->first.to_bytes()};
+        node->m_ty = *this->m_res->get_component(json_val.at("type").get<std::string_view>());
+        for(const auto& conn_json : json_val["conns"]) {
+            ConnectionPortRef port = *node->m_ty->get_port_ref(conn_json.at("port").get<std::string_view>());
+            node->m_edges[port] = this->load_id(conn_json.get<uuids::uuid>());
         }
-    ); 
+
+        entry->second = node;
+    } catch(const std::exception& e) {
+        logger::error("Failed to load a graph node from file {} with id {}: {}", path.c_str(), uuids::to_string(id), e.what());
+        return {};
+    }
+
+}
+
+void BoardGraph::from_json(BoardGraph& self, const json& json_val) {
+     
+}
+
+BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_path{path} {
+    
 }
 
 }

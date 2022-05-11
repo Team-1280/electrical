@@ -55,13 +55,14 @@ GraphRender::GraphRender() :
 
     this->m_scroll_event->set_flags(Gtk::EventControllerScroll::Flags::VERTICAL);
     this->m_scroll_event->signal_scroll().connect([this](double dx, double dy) {
-            double old_pxpmeter = this->m_pxpmeter; 
+            double zoom_ratio = this->m_pxpmeter; 
 
             this->m_pxpmeter += (this->m_pxpmeter / 10.) * dy;
-            this->m_campos *= old_pxpmeter / this->m_pxpmeter;
-            this->m_oldcampos *= old_pxpmeter / this->m_pxpmeter;
-            this->m_mousepos *= old_pxpmeter / this->m_pxpmeter;
-
+            zoom_ratio /= this->m_pxpmeter;
+            
+            this->m_campos *= zoom_ratio;
+            this->m_oldcampos *= zoom_ratio;
+            this->m_mousepos *= zoom_ratio; 
             this->queue_draw();
             return true;
         },

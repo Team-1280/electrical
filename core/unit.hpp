@@ -10,7 +10,6 @@
 #include "ser.hpp"
 #include "util/log.hpp"
 
-namespace model {
 
 /**
  * \brief Concept specifying the requirements for a unit type used
@@ -295,7 +294,6 @@ using Length = Quantity<LengthUnit, float>;
 
 static_assert(ser::StringSerializable<Length>);
 
-}
 
 /** \brief Custom suffix operator for creating a new length in meters */
-model::Length operator ""_m(long double);
+Length operator ""_m(long double);

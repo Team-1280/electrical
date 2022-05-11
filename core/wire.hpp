@@ -1,11 +1,8 @@
 #pragma once
+
 #include <string_view>
 #include <memory>
 
-
-#include "store.hpp"
-
-namespace model {
 
 /** 
  * \brief Class modelling a single connector with information
@@ -32,40 +29,7 @@ private:
      * entry value
      */
     std::string_view m_name;
-    
-    friend struct ResourceSerializer<Connector>;
+
+    friend class SharedResourceStore;
 };
-
-}
-
-template<>
-struct ResourceSerializer<model::Connector> {
-    using Connector = model::Connector;
-    using IdType = std::string;
-    static const std::filesystem::path RESOURCE_DIR;
-    using Preloaded = SinglePreload<std::string, 'n', 'a', 'm', 'e'>;    
-
-    static inline IdType load_id(const json& j) { return j.get<IdType>(); }
-    static inline json save_id(const IdType& id) { return id; }
-    template<Resource... Resources>
-    static inline void load(
-        Ref<Connector> connector,
-        const json&,
-        GenericResourceManager<Resources...>&,
-        const IdType& idref,
-        Preloaded& preload
-    ) {
-        connector->m_id = std::string_view{idref};
-        connector->m_name = std::string_view{preload.value()};
-    }
-
-    static inline json save(Connector& connector) {
-        return {
-            {"id", connector.m_id},
-            {"name", connector.m_name}
-        };
-    }
-};
-
-static_assert(Resource<model::Connector>);
 
