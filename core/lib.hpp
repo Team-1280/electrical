@@ -217,88 +217,6 @@ private:
     friend class ConnectedNodesIterator;
 };
 
-}
-
-template<>
-struct ResourceSerializer<model::ComponentNode> {
-    using ComponentNode = model::ComponentNode;
-    using IdType = uuids::uuid;
-    static const std::filesystem::path RESOURCE_DIR;
-    using Preloaded = SinglePreload<std::string, 'n', 'a', 'm', 'e'>;
-
-    static inline IdType save_id(const IdType& id) { return id; }
-    static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
-    static inline json save(ComponentNode& component) {
-        json::object_t obj{};
-        obj.emplace("name", component.m_name);
-        obj.emplace("id", component.m_id);
-        obj.emplace("type", component.m_ty->id());
-        obj.emplace("conns", json::array({}));
-        for(const auto& [port, conn] : component.m_edges) {
-            obj["conns"].push_back({
-                {"port", port->id()},
-                {"edge", conn.edge->id()},
-                {"side", conn.side}
-            });
-        }
-
-        return obj;
-    }
-};
-template<>
-struct ResourceSerializer<model::WireEdge> {
-    using WireEdge = model::WireEdge;
-    using IdType = uuids::uuid;
-    static const std::filesystem::path RESOURCE_DIR;
-
-    using Preloaded = NoPreload;
-    static inline IdType save_id(const IdType& id) { return id; }
-    static inline IdType load_id(const json& json_val) { return json_val.get<uuids::uuid>(); }
-    template<Resource... Resources>
-    static inline json save(WireEdge& wire) {
-        json::object_t obj{};
-        obj.emplace("id", wire.m_id);
-        obj.emplace("conns", json::array({}));
-        for(const auto& conn : wire.m_conns) {
-            if(conn.m_component.expired()) {
-                obj.at("conns").push_back(nullptr);
-            }
-            auto component = conn.m_component.lock();
-            json::object_t conn_obj{};
-            conn_obj.emplace("node", component->id());
-            conn_obj.emplace("port", conn.m_port->id());
-            conn_obj.emplace("connector", conn.m_connector->id());
-            obj.at("conns").push_back(conn_obj);
-        }
-    
-        return obj;
-    }
-
-    template<Resource... Resources>
-    requires(
-        HasResource<model::ComponentNode, Resources...> &&
-        HasResource<model::Connector, Resources...>
-    )
-    static inline void load(
-        Ref<WireEdge> wire,
-        const json& json_val,
-        GenericResourceManager<Resources...> res,
-        const IdType& id,
-        NoPreload&
-    ) {
-        wire->m_id = id.as_bytes();
-        for(std::size_t i = 0; const auto& conn_json : json_val.at("conns")) {
-            if(conn_json.is_null() || i >= 2) {
-                continue;
-            }
-            
-            wire->m_conns[i].m_component = res.template try_get<model::ComponentNode>(conn_json.at("node").get<uuids::uuid>());
-            wire->m_conns[i].m_port = *wire->m_conns[i].m_component.lock()->type()->get_port_ref(conn_json.at("port").get<std::string_view>());
-            wire->m_conns[i].m_connector = res.template try_get<model::Connector>(conn_json.at("connector").get<std::string_view>());
-        }
-    }
-};
-
 /**  
  * \brief A graph data structures in which the
  * nodes are `Component`s and the edges are wires
@@ -339,14 +257,16 @@ public:
     json to_json() const;
 
 private:
-    Optional<Ref<ComponentNode>> load_node(const uuids::uuid id, const json& json_val);
-    Optional<Ref<ComponentNode>> load_edge(const uuids::uuid id, const json& json_val);
+    Optional<Ref<ComponentNode>> get_node(const uuids::uuid& id);
+    Optional<Ref<WireEdge>> get_edge(const uuids::uuid& id);
 
     /** \brief Collection of all loaded component types */
     SharedResources m_res;
 
     Map<uuids::uuid, Ref<ComponentNode>> m_nodes;
+    std::filesystem::path m_node_path;
     Map<uuids::uuid, Ref<WireEdge>> m_edges;
+    std::filesystem::path m_edge_path;
     
     /** \brief Path to a file used for saving and loading this board graph */
     std::filesystem::path m_path; 

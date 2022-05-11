@@ -1,14 +1,9 @@
 #include "lib.hpp"
-#include "store.hpp"
 #include "util/log.hpp"
 #include "uuid.h"
 #include <functional>
 #include <unordered_set>
 
-const std::filesystem::path ResourceSerializer<model::ComponentNode>::RESOURCE_DIR = "./assets/boards/nodes";
-const std::filesystem::path ResourceSerializer<model::WireEdge>::RESOURCE_DIR = "./assets/boards/edges";
-
-namespace model {
 
 std::optional<std::reference_wrapper<const ConnectionPort>> WireEdge::Connection::port() const {
     if(!this->m_component.expired()) {
@@ -63,8 +58,14 @@ Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string_
     return {};
 }
 
-Optional<Ref<ComponentNode>> BoardGraph::load_node(const uuid id, const std::filesystem::path& path) {
+Optional<Ref<ComponentNode>> BoardGraph::get_node(const uuids::uuid& id) {
+    const auto& existing = this->m_nodes.find(id);
+    if(existing != this->m_nodes.end()) {
+        return existing->second;
+    }
+
     auto [entry, ins] = this->m_nodes.emplace(id);
+    const auto path = (this->m_node_path / uuids::to_string(id)).concat(".json");
 
     try {
         std::ifstream file{path};
@@ -74,14 +75,19 @@ Optional<Ref<ComponentNode>> BoardGraph::load_node(const uuid id, const std::fil
 
         Ref<ComponentNode> node{new ComponentNode{}};
         node->m_name = json_val.at("name").get<std::string>();
-        node->m_id = uuidref{entry->first.to_bytes()};
+        node->m_id = entry->first.as_bytes();
         node->m_ty = *this->m_res->get_component(json_val.at("type").get<std::string_view>());
         for(const auto& conn_json : json_val["conns"]) {
             ConnectionPortRef port = *node->m_ty->get_port_ref(conn_json.at("port").get<std::string_view>());
-            node->m_edges[port] = this->load_id(conn_json.get<uuids::uuid>());
+            auto edge = *this->get_edge(conn_json.at("edge").get<uuids::uuid>());
+            node->m_edges[port] = ComponentNode::EdgeConnection{
+                .edge = edge,
+                .side = conn_json.at("side")
+            };
         }
 
         entry->second = node;
+        return node;
     } catch(const std::exception& e) {
         logger::error("Failed to load a graph node from file {} with id {}: {}", path.c_str(), uuids::to_string(id), e.what());
         return {};
@@ -89,12 +95,47 @@ Optional<Ref<ComponentNode>> BoardGraph::load_node(const uuid id, const std::fil
 
 }
 
-void BoardGraph::from_json(BoardGraph& self, const json& json_val) {
-     
+Optional<Ref<WireEdge>> BoardGraph::get_edge(const uuids::uuid& id) {
+    const auto& existing = this->m_edges.find(id);
+    if(existing != this->m_edges.end()) {
+        return existing->second;
+    }
+
+    auto [entry, ins] = this->m_edges.emplace(id);
+    const auto path = (this->m_edge_path / uuids::to_string(id)).concat(".json");
+
+    try {
+        std::ifstream file{path};
+        json json_val;
+        file >> json_val;
+        file.close();
+
+        Ref<WireEdge> edge{};
+        edge->m_id = id.as_bytes();
+        for(std::size_t i = 0; const auto& conn_json : json_val.at("conns")) {
+            if(conn_json.is_null() || i >= 2) {
+                continue;
+            }
+            
+            edge->m_conns[i].m_component = *this->get_node(conn_json.at("node").get<uuids::uuid>());
+            edge->m_conns[i].m_port = *edge->m_conns[i].m_component.lock()->type()->get_port_ref(conn_json.at("port").get<std::string_view>());
+            edge->m_conns[i].m_connector = *this->m_res->get_connector(conn_json.at("connector").get<std::string_view>());
+        }
+
+        entry->second = edge;
+        return edge;
+    } catch(const std::exception& e) {
+        logger::error(
+            "Failed to load a graph edge from file {} with id {}: {}",
+            path.c_str(),
+            uuids::to_string(id),
+            e.what()
+        );
+        return {};
+    }
 }
 
 BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_path{path} {
     
 }
 
-}
