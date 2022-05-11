@@ -49,7 +49,7 @@ GraphRender::GraphRender() :
         x = this->px_to_meters(x);
         y = this->px_to_meters(y);
 
-        this->m_campos = this->m_oldcampos + model::Point{model::Length{x}, model::Length{y}};
+        this->m_campos = this->m_oldcampos + Point{Length{x}, Length{y}};
         this->queue_draw();
     });
 
@@ -99,7 +99,7 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     cairo->restore();
 }
 
-void GraphRender::draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<model::ComponentNode> node) {
+void GraphRender::draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<ComponentNode> node) {
     cairo->save();
     
     cairo->set_line_cap(Cairo::Context::LineCap::ROUND);

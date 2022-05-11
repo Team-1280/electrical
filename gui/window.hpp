@@ -24,7 +24,7 @@ protected:
     void on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int h);
     
 private:
-    void draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<model::ComponentNode> fp);
+    void draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<ComponentNode> fp);
 
     inline double px_to_meters(double px) const noexcept { return px / this->m_pxpmeter; }
     inline double meters_to_px(double m) const noexcept { return m * this->m_pxpmeter; }
@@ -43,13 +43,13 @@ private:
     double m_pxpmeter;
 
     /** \brief Camera position in the workspace*/
-    model::Point m_campos;
+    Point m_campos;
     
     /** \brief Used while dragging to store the original camera postition */
-    model::Point m_oldcampos;
+    Point m_oldcampos;
     
     /** \brief Last recorded position of the mouse */
-    model::Point m_mousepos;
+    Point m_mousepos;
 };
 
 class MainWindow : public Gtk::Window {

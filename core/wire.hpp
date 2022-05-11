@@ -19,16 +19,15 @@ public:
 private:
     /** 
      * \brief User-created ID string of this connector, 
-     * shared with the ConnectorStore's map key and guranteed to be
+     * shared with the SharedResources map key and guranteed to be
      * NULL-terminated
      */
     std::string_view m_id;
     
     /** 
-     * \brief Name of this connector type, shared with the ConnectorStore's 
-     * entry value
+     * \brief Name of this connector type
      */
-    std::string_view m_name;
+    std::string m_name;
 
     friend class SharedResourceStore;
 };

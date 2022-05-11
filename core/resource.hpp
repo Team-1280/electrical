@@ -63,11 +63,12 @@ public:
 
 private:
     json save_component(const Component& component);
-    Optional<Ref<Component>> load_component(const std::string_view id, const std::filesystem::path& path);
 
     Map<std::string, Ref<Component>> m_components; ///< A map of component IDs to loaded components
+    static const std::filesystem::path COMPONENT_DIR; ///< Directory to load all component files from
     
-    static const std::filesystem::path COMPONENT_DIR;
+    Map<std::string, Ref<Connector>> m_connectors; ///< A map of IDs to connector instances
+    static const std::filesystem::path CONNECTOR_DIR; ///< Directory to load connectors from
 };
 
 using SharedResources = std::shared_ptr<SharedResourceStore>;

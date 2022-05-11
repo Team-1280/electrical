@@ -64,7 +64,7 @@ Optional<Ref<ComponentNode>> BoardGraph::get_node(const uuids::uuid& id) {
         return existing->second;
     }
 
-    auto [entry, ins] = this->m_nodes.emplace(id);
+    auto [entry, ins] = this->m_nodes.emplace(id, Ref<ComponentNode>{});
     const auto path = (this->m_node_path / uuids::to_string(id)).concat(".json");
 
     try {
@@ -101,7 +101,7 @@ Optional<Ref<WireEdge>> BoardGraph::get_edge(const uuids::uuid& id) {
         return existing->second;
     }
 
-    auto [entry, ins] = this->m_edges.emplace(id);
+    auto [entry, ins] = this->m_edges.emplace(id, Ref<WireEdge>{});
     const auto path = (this->m_edge_path / uuids::to_string(id)).concat(".json");
 
     try {

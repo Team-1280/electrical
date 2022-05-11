@@ -66,7 +66,7 @@ public:
          * \brief Check if this connection is attached to a graph node
          * \return true if this connection point does not attach to a node in the graph
          */
-        inline constexpr bool is_floating() { return this->m_component.expired(); }
+        inline bool is_floating() const { return this->m_component.expired(); }
                 
         /**
          * \brief Detach this wire end from the component node's port, if
@@ -255,11 +255,22 @@ public:
     static void from_json(BoardGraph&, const json&); 
     /** \brief Save this board graph to a file */
     json to_json() const;
-
-private:
+    
+    /**
+     * \brief Get or load a node in this graph by ID
+     * \param id UUID of the loaded node
+     * \return An empty optional if the file for the UUID does not exist or 
+     * deserialization failed
+     */
     Optional<Ref<ComponentNode>> get_node(const uuids::uuid& id);
+    /**
+     * \brief Get or load an edge in this graph by ID
+     * \param id UUID of the loaded edge
+     * \return An empty optional if the file does not exist or deserialization fails
+     */
     Optional<Ref<WireEdge>> get_edge(const uuids::uuid& id);
 
+private:
     /** \brief Collection of all loaded component types */
     SharedResources m_res;
 

@@ -63,7 +63,7 @@ public:
     Component() : m_name{}, m_id{}, m_ports{}, m_fp{} {};
     
     /** Get the name of this component */
-    inline constexpr const std::string_view name() const { return this->m_name; }
+    inline const std::string_view name() const { return this->m_name; }
     /** Get the user-assigned ID of this component */
     inline constexpr std::string_view id() const { return this->m_id; }
     /** Get a reference to this component's footprint */

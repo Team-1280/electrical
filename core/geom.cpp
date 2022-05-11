@@ -1,7 +1,5 @@
 #include "geom.hpp"
 
-namespace model {
-
 void Footprint::from_json(Footprint& self, const json& val) {
     for(const json& v : val) {
         self.m_pts.push_back(v.get<Point>());
@@ -38,6 +36,4 @@ constexpr Length Point::distance(const Point &other) const {
             std::pow(this->y.raw_val() - other.y.raw_to(units), 2)
         )
     );
-}
-
 }

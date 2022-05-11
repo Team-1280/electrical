@@ -4,12 +4,7 @@
 
 const std::filesystem::path SharedResourceStore::COMPONENT_DIR = "./assets/";
 
-SharedResourceStore::SharedResourceStore() : m_components{} {
-    auto components = std::filesystem::recursive_directory_iterator{COMPONENT_DIR};
-    for(const auto& entry : components) {
-        
-    }
-}
+SharedResourceStore::SharedResourceStore() : m_components{} {}
 
 json SharedResourceStore::save_component(const Component& component) {
     json::object_t obj{};
@@ -27,9 +22,19 @@ json SharedResourceStore::save_component(const Component& component) {
     return obj;
 }
 
-Optional<Ref<Component>> SharedResourceStore::load_component(const std::string_view id, const std::filesystem::path& component_path) {
+Optional<Ref<Component>> SharedResourceStore::get_component(const std::string_view id) {
+    const auto& existing = this->m_components.find(id);
+    if(existing != this->m_components.end()) {
+        return existing->second;
+    }
+
     try {
-        auto [entry, ins] = this->m_components.emplace(id);
+        auto [entry, ins] = this->m_components.emplace(
+            id,
+            Ref<Component>{}
+        );
+
+        auto component_path = (COMPONENT_DIR / id).concat(".json");
         std::ifstream file{component_path};
         json json_val{};
         file >> json_val;
@@ -61,10 +66,38 @@ Optional<Ref<Component>> SharedResourceStore::load_component(const std::string_v
     return {};
 }
 
-Optional<Ref<Component>> SharedResourceStore::get_component(const std::string_view id) {
-    const auto& entry = this->m_components.find(id);
-    if(entry != this->m_components.end()) {
+Optional<Ref<Connector>> SharedResourceStore::get_connector(const std::string_view id) {
+    const auto& existing = this->m_connectors.find(id);
+    if(existing != this->m_connectors.end()) {
+        return existing->second;
+    }
+
+    try {
+        auto [entry, ins] = this->m_connectors.emplace(
+            id,
+            Ref<Connector>{}
+        );
+
+        auto component_path = (COMPONENT_DIR / id).concat(".json");
+        std::ifstream file{component_path};
+        json json_val{};
+        file >> json_val;
+        file.close();
+        
+        Ref<Connector> component{new Connector{}};
+        entry->second = component;
+        
+        component->m_id = std::string_view{entry->first};
+        json_val.at("name").get_to<std::string>(entry->second->m_name);
         return entry->second;
+    } catch(const std::exception& e) {
+        logger::error(
+            "Failed to load component by id {}: {}",
+            id,
+            e.what()
+        );
+        return {};
     }
     return {};
+
 }
