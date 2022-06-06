@@ -18,7 +18,7 @@
 template<typename T>
 concept Unit = requires {
     {T::DEFAULT} -> std::convertible_to<T>;
-    std::convertible_to<T, size_t>;
+    requires std::convertible_to<T, size_t>;
     {T::NUM} -> std::convertible_to<size_t>;
     {T::CONV_FACTORS} -> std::convertible_to<std::array<float, T::NUM>>;
 };
@@ -54,8 +54,8 @@ public:
     
     /** \brief Copy construct this quantity from another quantity */
     constexpr Quantity(const Quantity& other) requires requires {
-        std::copy_constructible<U>;
-        std::copy_constructible<V>;
+        requires std::copy_constructible<U>;
+        requires std::copy_constructible<V>;
     } : m_unit{other.m_unit}, m_val{other.m_val} {}
     
     /** \brief Move construct this quantity */
