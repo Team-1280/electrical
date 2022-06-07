@@ -1,5 +1,6 @@
 #include "window.hpp"
 #include "geom.hpp"
+#include "lib.hpp"
 #include "unit.hpp"
 
 #include <gtkmm/enums.h>
@@ -11,7 +12,8 @@ MainWindow::MainWindow() :
     m_layout{Gtk::Orientation::VERTICAL},
     m_toolbar{Gtk::Orientation::HORIZONTAL},
     m_button{"Button"},
-    m_render{} 
+    m_graph{"./assets/boards/board.json"},
+    m_render{this->m_graph}
 {
     this->set_title("Electrical");
     this->set_default_size(1280, 720);
@@ -34,14 +36,15 @@ void MainWindow::on_click() {
 
 }
 
-GraphRender::GraphRender() : 
+GraphRender::GraphRender(BoardGraph& graph) : 
         Gtk::DrawingArea{},
         m_drag_event{Gtk::GestureDrag::create()},
         m_scroll_event{Gtk::EventControllerScroll::create()},
         m_motion_event{Gtk::EventControllerMotion::create()},
         m_pxpmeter{static_cast<double>(this->smallest_dim())},
         m_campos{0._m, 0._m},
-        m_oldcampos{this->m_campos}
+        m_oldcampos{this->m_campos},
+        graph{graph}
     {
     this->set_draw_func(sigc::mem_fun(*this, &GraphRender::on_draw));
     this->m_drag_event->signal_drag_begin().connect([this](double,double){ this->m_oldcampos = this->m_campos; });

@@ -1,0 +1,11 @@
+{
+    "edges": {},
+    "nodes": {
+        "66c2b33f-94dc-4c50-add8-2afd816765b2": {
+            "name": "Test",
+            "type": "1280.test",
+            "pos": ["12in", "10 m"],
+            "conns": []
+        }
+    }
+}

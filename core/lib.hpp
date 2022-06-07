@@ -261,16 +261,15 @@ public:
     /**
      * \brief Get or load a node in this graph by ID
      * \param id UUID of the loaded node
-     * \return An empty optional if the file for the UUID does not exist or 
-     * deserialization failed
+     * \return An empty optional if the file for the UUID does not exist
      */
-    Optional<Ref<ComponentNode>> get_node(const uuids::uuid& id);
+    Optional<Ref<ComponentNode>> get_node(const uuids::uuid& id) const;
     /**
      * \brief Get or load an edge in this graph by ID
      * \param id UUID of the loaded edge
-     * \return An empty optional if the file does not exist or deserialization fails
+     * \return An empty optional if the file does not exis
      */
-    Optional<Ref<WireEdge>> get_edge(const uuids::uuid& id);
+    Optional<Ref<WireEdge>> get_edge(const uuids::uuid& id) const;
     
     /** Save this graph to a file */
     virtual ~BoardGraph();

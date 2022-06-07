@@ -18,14 +18,14 @@
  */
 class GraphRender : public Gtk::DrawingArea {
 public:
-    GraphRender();
+    GraphRender(BoardGraph& graph);
 
 protected:
     void on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int h);
     
 private:
     void draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<ComponentNode> fp);
-
+    
     inline double px_to_meters(double px) const noexcept { return px / this->m_pxpmeter; }
     inline double meters_to_px(double m) const noexcept { return m * this->m_pxpmeter; }
 
@@ -50,6 +50,9 @@ private:
     
     /** \brief Last recorded position of the mouse */
     Point m_mousepos;
+    
+    /** \brief Board graph, shared with the MainWindow */
+    BoardGraph& graph;
 };
 
 class MainWindow : public Gtk::Window {
@@ -63,10 +66,14 @@ private:
     Gtk::Box m_layout;
     /** \brief A toolbar containing multiple buttons for editing */
     Gtk::Box m_toolbar; 
+
     Gtk::Button m_button;
     
     /** \brief Widget to draw the board graph in */
     GraphRender m_render;
+    
+    /** \brief The graph to modify */
+    BoardGraph m_graph;
 };
 
 

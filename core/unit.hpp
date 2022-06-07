@@ -222,7 +222,6 @@ public:
         }
         U::from_string(self.m_unit, str.substr(ptr - str.data()));
         self.m_val = normalize(v, self.m_unit);
-        logger::trace("String {} is quantity {}", std::string{str}, self.to_string());
     }
    
     /**
