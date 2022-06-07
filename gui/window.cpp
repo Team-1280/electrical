@@ -70,8 +70,8 @@ GraphRender::GraphRender() :
     );
 
     this->m_motion_event->signal_motion().connect([this](double x, double y) {
-        this->m_mousepos.x.raw_val() = this->px_to_meters(x);
-        this->m_mousepos.y.raw_val() = this->px_to_meters(y);
+        this->m_mousepos.x.normalized() = this->px_to_meters(x);
+        this->m_mousepos.y.normalized() = this->px_to_meters(y);
     });
 
     this->add_controller(this->m_drag_event);
@@ -93,7 +93,7 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     cairo->save();
     cairo->scale(this->m_pxpmeter, this->m_pxpmeter);
     cairo->translate(-0.5, -0.5);
-    cairo->translate(this->m_campos.x.default_unit(), this->m_campos.y.default_unit());
+    cairo->translate(this->m_campos.x.normalized(), this->m_campos.y.normalized());
     //this->draw_node(cairo, fp);
 
     cairo->restore();
@@ -109,21 +109,21 @@ void GraphRender::draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<Comp
     const auto& fp = node->type()->footprint();
     const auto& pos = node->pos();
     
-    cairo->move_to(fp.first().x.default_unit(), fp.first().y.default_unit());
+    cairo->move_to(fp.first().x.normalized(), fp.first().y.normalized());
     for(const auto& pt : fp) {
         cairo->line_to(
-            pt.x.default_unit(),
-            pt.y.default_unit()
+            pt.x.normalized(),
+            pt.y.normalized()
         );
     }
 
-    cairo->line_to(fp.first().x.default_unit(), fp.first().y.default_unit());
+    cairo->line_to(fp.first().x.normalized(), fp.first().y.normalized());
     cairo->stroke();
 
     for(const auto& [id, port] : *node->type()) {
         cairo->arc(
-            (port.pos().x + pos.x).default_unit(),
-            (port.pos().y + pos.y).default_unit(),
+            (port.pos().x + pos.x).normalized(),
+            (port.pos().y + pos.y).normalized(),
             0.001,
             0,
             2 * std::numbers::pi

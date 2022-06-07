@@ -41,16 +41,16 @@ struct Quantity {
 public:
     /**
      * \brief Construct a new quantity value from unit and value
+     * \param unit The unit that val is in
+     * \param val A measurement in the given units
      */
-    constexpr Quantity(U unit, V val) : m_unit{unit}, m_val{val} {}
-    constexpr Quantity() requires(std::default_initializable<V>) : m_unit(U::DEFAULT), m_val{} {}
+    explicit constexpr Quantity(U unit, V val) : m_unit{unit}, m_val{normalize(val, unit)} {}
+    explicit constexpr Quantity() requires(std::default_initializable<V>) : m_unit(U::DEFAULT), m_val{} {}
     
     /**
      * \brief Create a new Quantity using the default unit
      */
-    template<typename T>
-    requires(std::constructible_from<V, T>)
-    explicit inline Quantity(const T& v) : m_unit{U::DEFAULT}, m_val{v} {}
+    explicit inline Quantity(const V& v) : m_unit{U::DEFAULT}, m_val{v} {}
     
     /** \brief Copy construct this quantity from another quantity */
     constexpr Quantity(const Quantity& other) requires requires {
@@ -75,7 +75,7 @@ public:
     }
     
     /**
-     * \brief Assign the rvalue refernce to another quantity to this quantity
+     * \brief Assign the rvalue reference to another quantity to this quantity
      */
     constexpr Quantity& operator=(Quantity&& other) requires requires {
         std::is_move_assignable_v<U>;
@@ -92,39 +92,37 @@ public:
      * \return A new measurement with the passed unit
      */
     constexpr inline Quantity<U, V> to(U unit) const {
-        return Quantity(unit, this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit]);
+        return Quantity(unit, this->m_val);
+    }
+    
+    /** \brief Get the length value in this quantity's units */
+    constexpr inline V value() const {
+        return this->m_val * U::CONV_FACTORS[this->m_unit];
+    }
+    
+    /** 
+     * \brief Get the value of this quantity in the default unit
+     * \return this quantity normalized to the default unit
+     */
+    constexpr inline V const& normalized() const {
+        return this->m_val;
     }
 
-    constexpr inline V default_unit() const {
-        return this->raw_to(U::DEFAULT);
+    /** 
+     * \brief Get the value of this quantity in the default unit
+     * \return this quantity normalized to the default unit
+     */
+    constexpr inline V& normalized() {
+        return this->m_val;
     }
     
     /**
-     * \brief Change the unit of this quantity in place, converting the stored value
+     * \brief Change the unit of this quantity in place, converting the stored value in place
+     * \param unit The unit to convert to
      */
     constexpr inline void conv(const U unit) {
-        this->m_val = this->raw_to(unit);
         this->m_unit = unit;
     }
-    
-    /**
-     * \brief Convert this measurement into the given units
-     * \param unit The units to convert to
-     * \return A raw value in the passed units
-     */
-    constexpr inline V raw_to(const U unit) const {
-        return this->m_val / U::CONV_FACTORS[this->m_unit] * U::CONV_FACTORS[unit];
-    }
-    
-    /** \brief Get the underlying raw value of this quantity */
-    constexpr inline V const& raw_val() const {
-        return this->m_val;
-    }
-    /** \brief Get the underlying raw value of this quantity */
-    constexpr inline V& raw_val() {
-        return this->m_val;
-    }
-    
     
     /** \brief Get the units for this quantity */
     constexpr inline U unit() const {
@@ -135,49 +133,49 @@ public:
     constexpr inline Quantity<U, V> operator+(const Quantity<U, V>& other) const requires requires(V v) {
         {v + v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val + other.raw_to(this->m_unit));
+        return Quantity(this->m_unit, this->m_val + other.m_val);
     }
     /** \brief Subtract two quantities, returning a new quantity with the same units as the left-hand side operand */
     constexpr inline Quantity<U, V> operator-(const Quantity<U, V>& other) const requires requires(V v) {
         {v - v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val - other.raw_to(this->m_unit));
+        return Quantity(this->m_unit, this->m_val - other.m_val);
     }
     /** \brief Divide two quantities, returning a new quantity with the same units as the left-hand side operand */
     constexpr inline Quantity<U, V> operator/(const Quantity<U, V>& other) const requires requires(V v) {
         {v / v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val / other.raw_to(this->m_unit));
+        return Quantity(this->m_unit, this->m_val / other.m_val);
     }
     /** \brief Multiply two quantities, returning a new quantity with the same units as the left-hand side operand*/
     constexpr inline Quantity<U, V> operator*(const Quantity<U, V>& other) const requires requires(V v) {
         {v * v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val * other.raw_to(this->m_unit));
+        return Quantity(this->m_unit, this->m_val * other.m_val);
     }
 
     constexpr inline Quantity<U, V>& operator+=(const Quantity<U, V>& other) requires requires(V v) { 
         {v += v}->std::convertible_to<V&>; 
     } {
-        this->m_val += other.raw_to(this->m_unit);
+        this->m_val += other.m_val;
         return *this;
     }
     constexpr inline Quantity<U, V>& operator-=(const Quantity<U, V>& other) requires requires(V v) { 
         {v -= v}->std::convertible_to<V&>; 
     } {
-        this->m_val -= other.raw_to(this->m_unit);
+        this->m_val -= other.m_val;
         return *this;
     }
     constexpr inline Quantity<U, V>& operator*=(const Quantity<U, V>& other) requires requires(V v) { 
         {v *= v}->std::convertible_to<V&>; 
     } {
-        this->m_val *= other.raw_to(this->m_unit);
+        this->m_val *= other.m_val;
         return *this;
     }
     constexpr inline Quantity<U, V>& operator/=(const Quantity<U, V>& other) requires requires(V v) { 
         {v /= v}->std::convertible_to<V&>; 
     } {
-        this->m_val /= other.raw_to(this->m_unit);
+        this->m_val /= other.m_val;
         return *this;
     }
     
@@ -205,7 +203,7 @@ public:
     constexpr inline auto operator<=>(const Quantity<U, V>& other) const requires requires {
         std::declval<V>() <=> std::declval<V>();
     } {
-        return this->m_val <=> other.raw_to(this->m_unit);
+        return this->m_val <=> other.m_val;
     }
     /** \brief Check if two Quanties are the equal */
     constexpr inline bool operator==(const Quantity<U, V>& other) const = default;
@@ -219,11 +217,12 @@ public:
     requires ser::StringSerializable<U> && std::convertible_to<double, V> {
         double v = 0.;
         auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), v);
-        self.m_val = v;
         if(ec != std::errc()) {
             throw std::invalid_argument("Bad quantity string \"" + std::string(str) + '\"');
         }
         U::from_string(self.m_unit, str.substr(ptr - str.data()));
+        self.m_val = normalize(v, self.m_unit);
+        logger::trace("String {} is quantity {}", std::string{str}, self.to_string());
     }
    
     /**
@@ -232,11 +231,22 @@ public:
      */
     std::string to_string() const 
     requires ser::StringSerializable<U> && std::convertible_to<V, double> {
-        return std::to_string(double(this->m_val)) + this->m_unit.to_string();
+        return std::to_string(double(this->value())) + this->m_unit.to_string();
+    }
+    
+    /**
+     * \brief Normalize a value in the given unit to the default
+     * \param val Measure in the given unit
+     * \param unit Unit that val is in
+     * \return A value normalized to the base unit of U
+     */
+    static constexpr V normalize(const V& val, const U& unit) {
+        return val / U::CONV_FACTORS[unit];
     }
 
 private:
     U m_unit;
+    /** \brief Quantity value normalized to the base units of V */
     V m_val;
 };
 
@@ -283,6 +293,7 @@ public:
     std::string to_string() const noexcept;
 
     static constexpr const UnitVal DEFAULT = UnitVal::Meters;
+
 private:
     UnitVal m_u;
 };

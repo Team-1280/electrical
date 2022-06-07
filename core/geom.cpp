@@ -32,8 +32,8 @@ constexpr Length Point::distance(const Point &other) const {
     return Length(
         units,
         std::sqrt(
-            std::pow(this->x.raw_val() - other.x.raw_to(units), 2) +
-            std::pow(this->y.raw_val() - other.y.raw_to(units), 2)
+            std::pow(this->x.normalized() - other.x.normalized(), 2) +
+            std::pow(this->y.normalized() - other.y.normalized(), 2)
         )
     );
 }

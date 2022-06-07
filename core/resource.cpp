@@ -4,7 +4,7 @@
 
 const std::filesystem::path SharedResourceStore::COMPONENT_DIR = "./assets/";
 
-SharedResourceStore::SharedResourceStore() : m_components{} {}
+SharedResourceStore::SharedResourceStore() : m_components{}, m_connectors{} {}
 
 json SharedResourceStore::save_component(const Component& component) {
     json::object_t obj{};
