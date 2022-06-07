@@ -130,5 +130,3 @@ private:
 };
 
 static_assert(ser::JsonSerializable<Footprint>);
-
-

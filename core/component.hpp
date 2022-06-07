@@ -50,7 +50,6 @@ using ConnectionPortRef = const ConnectionPort *;
  * \brief A component in the board design with required parameters like
  * footprint
  *
- * \implements Resource
  */ 
 class Component {
 public:

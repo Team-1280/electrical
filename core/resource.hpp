@@ -72,4 +72,3 @@ private:
 };
 
 using SharedResources = std::shared_ptr<SharedResourceStore>;
-
