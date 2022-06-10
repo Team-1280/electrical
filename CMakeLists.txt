@@ -30,6 +30,8 @@ include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 include(FetchContent)
 
+set(JSON_ImplicitConversions CACHE BOOL OFF)
+set(JSON_Diagnostics CACHE BOOL ON)
 FetchContent_Declare(
     nlohmann-json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
 )

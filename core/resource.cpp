@@ -44,7 +44,7 @@ Optional<Ref<Component>> SharedResourceStore::get_component(const std::string_vi
         entry->second = component;
 
         component->m_id = std::string_view{entry->first};
-        component->m_name = json_val.at("name");
+        component->m_name = json_val.at("name").get<std::string>();
         json_val.at("footprint").get_to<Footprint>(component->m_fp);
         for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
             auto elem = component->m_ports.emplace(port_id, ConnectionPort{}).first;

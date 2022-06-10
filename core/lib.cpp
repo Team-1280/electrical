@@ -108,7 +108,7 @@ void BoardGraph::load_node(const std::string& idstr, const json::object_t& root_
             auto edge = *this->get_edge(conn_json.at("edge").get<uuids::uuid>());
             node->m_edges[port] = ComponentNode::EdgeConnection{
                 .edge = edge,
-                .side = conn_json.at("side")
+                .side = conn_json.at("side").get<WireEdge::Side>()
             };
         }
 

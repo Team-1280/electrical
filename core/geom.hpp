@@ -125,7 +125,7 @@ public:
     std::vector<Point>::const_iterator end() const { return this->m_pts.end(); }
 
 private:
-    /** \brief A vector of points that each connect to the prior one*/
+    /** \brief A vector of points that each connect to the prior one, must have at least one point */
     std::vector<Point> m_pts;
 };
 
