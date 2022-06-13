@@ -81,5 +81,5 @@ std::string LengthUnit::to_string() const noexcept {
 
 
 Length operator ""_m(long double val) {
-    return Length(LengthUnit::Meters, val);
+    return Length(LengthUnit::Meters, (float)val);
 }

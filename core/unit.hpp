@@ -7,7 +7,7 @@
 #include <string>
 #include <type_traits>
 
-#include "ser.hpp"
+#include "ser/ser.hpp"
 #include "util/log.hpp"
 
 
@@ -133,25 +133,25 @@ public:
     constexpr inline Quantity<U, V> operator+(const Quantity<U, V>& other) const requires requires(V v) {
         {v + v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val + other.m_val);
+        return raw(this->m_unit, this->m_val + other.m_val);
     }
     /** \brief Subtract two quantities, returning a new quantity with the same units as the left-hand side operand */
     constexpr inline Quantity<U, V> operator-(const Quantity<U, V>& other) const requires requires(V v) {
         {v - v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val - other.m_val);
+        return raw(this->m_unit, this->m_val - other.m_val);
     }
     /** \brief Divide two quantities, returning a new quantity with the same units as the left-hand side operand */
     constexpr inline Quantity<U, V> operator/(const Quantity<U, V>& other) const requires requires(V v) {
         {v / v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val / other.m_val);
+        return raw(this->m_unit, this->m_val / other.m_val);
     }
     /** \brief Multiply two quantities, returning a new quantity with the same units as the left-hand side operand*/
     constexpr inline Quantity<U, V> operator*(const Quantity<U, V>& other) const requires requires(V v) {
         {v * v} -> std::convertible_to<V>;
     } {
-        return Quantity(this->m_unit, this->m_val * other.m_val);
+        return raw(this->m_unit, this->m_val * other.m_val);
     }
 
     constexpr inline Quantity<U, V>& operator+=(const Quantity<U, V>& other) requires requires(V v) { 
@@ -181,7 +181,7 @@ public:
     
     /** \brief Scale this quantity by a floating-point value */
     constexpr inline Quantity<U, V> operator*(float scale) const {
-        return Quantity(this->m_unit, this->m_val * scale);
+        return raw(this->m_unit, this->m_val * scale);
     }
 
     constexpr inline Quantity<U, V>& operator*=(float scale) {
@@ -190,7 +190,7 @@ public:
     }
     /** \brief Scale this quantity by a floating-point value */
     constexpr inline Quantity<U, V> operator/(float scale) const {
-        return Quantity(this->m_unit, this->m_val / scale);
+        return raw(this->m_unit, this->m_val / scale);
     }
 
     constexpr inline Quantity<U, V>& operator/=(float scale) {
@@ -247,6 +247,13 @@ private:
     U m_unit;
     /** \brief Quantity value normalized to the base units of V */
     V m_val;
+
+     /** \brief For internal use only, creates a new Quantity with the given normalized length and unit */
+    static constexpr inline Quantity<U, V> raw(U unit, V val) {
+        Quantity<U, V> q{val};
+        q.m_unit = unit;
+        return q;
+    }
 };
 
 /**
@@ -299,8 +306,6 @@ private:
 
 
 using Length = Quantity<LengthUnit, float>;
-
-
 
 static_assert(ser::StringSerializable<Length>);
 
