@@ -1,5 +1,7 @@
 #include "store.hpp"
 #include "util/log.hpp"
+#include <filesystem>
+#include <fstream>
 
 std::size_t TypeId::IDX = 0;
 
@@ -40,6 +42,18 @@ Id::Iterator Id::end() const {
     return id;
 }
 
+void Id::to_path() {
+    for(auto& idx : this->m_dots) {
+        this->m_string.at(idx) = '/';
+    }
+}
+
+void Id::to_id() {
+    for(auto& idx : this->m_dots) {
+        this->m_string.at(idx) = '.';
+    }
+}
+
 static std::vector<std::size_t> find_dots(const std::string_view str) {
     std::vector<std::size_t> dots{};
     for(std::size_t pos = 0; const auto ch : str) {
@@ -57,13 +71,36 @@ Id::Id(std::string&& str) : m_string{std::move(str)} {
 Id::Id(const std::string& str) : m_string{str} {
     this->m_dots = find_dots(this->m_string);
 }
+Id::Id(const std::string_view str) : m_string{str} {
+    this->m_dots = find_dots(this->m_string);
+}
 
-Ref<void> LazyResourceStore::try_get_id(TypeId id, const char *type_name) {
-    auto elem = this->m_res.find(id.val());
+
+Ref<void> LazyResourceStore::try_get_id(TypeId type_id, const char *type_name, const std::string_view id_str) {
+    auto elem = this->m_res.find(type_id.val());
     if(elem == this->m_res.end()) {
         throw UnregisteredResourceException(
             fmt::format("Type {} has no registered LazyResourceLoader implementation", type_name)
         );
     }
+    
+    auto cached = elem->second.cache.find(id_str);
+    if(cached != elem->second.cache.end() && !cached->second.expired()) {
+        return cached->second.lock();
+    }
+    
+    Id id{id_str};
+    id.to_path();
+    std::filesystem::path resource_path = elem->second.loader->dir() / id.str();
+    resource_path += ".json";
 
+    logger::trace("Resource not found by ID, loading from {}", resource_path.c_str());
+    std::ifstream file{resource_path};
+    json j;
+    file >> j;
+    file.close();
+
+    Ref<void> loaded = elem->second.loader->load_untyped(std::move(id), j, *this);
+    elem->second.cache.emplace(id_str, loaded);
+    return loaded;
 }

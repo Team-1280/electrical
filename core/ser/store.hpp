@@ -101,9 +101,17 @@ public:
     Id(std::string&& str);
     /** Copy a string to this ID */
     Id(const std::string& str);
+    /** Copy a string_view to this ID */
+    Id(const std::string_view str);
     
     /** Get the string that backs this ID */
     inline constexpr std::string const& str() const { return this->m_string; }
+    
+    /** Convert this ID's dots to a path separator in place */
+    void to_path();
+    
+    /** Convert this ID's path separators to dots in place */
+    void to_id();
 private:
     /** String that contains all data of the `Id`, not implemented as a linked list because memory fragmentation is bad */
     std::string m_string;
@@ -121,8 +129,7 @@ private:
  */
 class ErasedLazyResourceLoader {
 public:
-    virtual ~ErasedLazyResourceLoader() = 0;
-    ErasedLazyResourceLoader() = delete;
+    ErasedLazyResourceLoader() = default;
 private:
     /**
      * \brief Load a value from the given JSON value, using a `LazyResourceStore` to deserialize other values by ID
@@ -133,6 +140,7 @@ private:
      * \param store A lazy loading resource store that we can use to load values of other types
      */
     virtual Ref<void> load_untyped(
+        Id&& id,
         const json& json,
         LazyResourceStore& store
     ) = 0;
@@ -142,6 +150,9 @@ private:
      * \return The TypeId of the type that this loader loads
      */
     virtual TypeId id() = 0;
+    
+    /** Get the directory from which resources can be loaded */ 
+    virtual std::filesystem::path const& dir() const noexcept = 0;
 
     friend class LazyResourceStore;
 };
@@ -155,21 +166,29 @@ class LazyResourceLoader : private ErasedLazyResourceLoader {
 public:
     /**
      * \brief Load a value of type `T` in a type-safe way
+     * \param id ID of the resource that is being loaded, can be used if deserialization requires an ID
      * \param json The JSON value to load an element from
      * \param store A store containing other registered type loaders, if `T` has dependencies on other lazily loaded values
      * \return A reference to the loaded value
      * \throws Any exception that may occur when deserializing
      */
-    virtual Ref<T> load(const json& json, LazyResourceStore& store) = 0;
+    virtual Ref<T> load(Id&& id, const json& json, LazyResourceStore& store) = 0;
     
-    virtual ~LazyResourceLoader();
+    virtual ~LazyResourceLoader() = default;
+    LazyResourceLoader() = default;
+    
+    /** Get the directory from which to load resources */
+    virtual std::filesystem::path const& dir() const noexcept override = 0;
 private:
     /** Override to safely implement the unsafe type-erasure functionality of `ErasedLazyResourceLoader` */
-    Ref<void> load_untyped(const json& json, LazyResourceStore& store) override {
-        return this->load(json, store);
+    Ref<void> load_untyped(Id&& id, const json& json, LazyResourceStore& store) override {
+        return this->load(std::move(id), json, store);
     }
+
     /** Always returns the TypeId of `T` */
     TypeId id() override { return TypeId::id<T>(); }
+
+    friend class LazyResourceStore;
 };
 
 /**
@@ -205,7 +224,7 @@ public:
      */
     template<typename T>
     inline void register_loader(LazyResourceLoader<T>* loader) {
-        this->register_loader<T>(std::unique_ptr{loader});
+        this->register_loader<T>(std::unique_ptr<LazyResourceLoader<T>>{loader});
     }
     
     /**
@@ -215,8 +234,8 @@ public:
     template<typename T>
     void register_loader(std::unique_ptr<LazyResourceLoader<T>>&& loader) {
         this->m_res.emplace(
-            loader->id().val(),
-            loader
+            TypeId::id<T>().val(),
+            Slot{std::unique_ptr<ErasedLazyResourceLoader>{static_cast<ErasedLazyResourceLoader*>(loader.release())}}
         );
     }
     
@@ -229,23 +248,38 @@ public:
      * \throws UnregisteredResourceException if `T` does not have a registered `LazyResourceLoader`
      */
     template<typename T>
-    inline Ref<T> try_get() {
-        auto id = TypeId::id<T>();
-        return static_cast<Ref<T>>(this->try_get_id(id, typeid(T).name()));
+    inline Ref<T> try_get(const std::string_view id) {
+        auto type_id = TypeId::id<T>();
+        return std::static_pointer_cast<T>(this->try_get_id(type_id, typeid(T).name(), id));
     }
 
 private:
+    /** 
+     * \brief A single slot associated with a `TypeId` in the resource map
+     */
+    struct Slot {
+        /** A pointer to a derived instance of `ErasedLazyResourceLoader` to load assets */
+        std::unique_ptr<ErasedLazyResourceLoader> loader;
+
+        /** Cache of already loaded values */
+        Map<std::string, WeakRef<void>> cache;
+        
+        /** Create a new Slot with the given type erased resource loader */
+        Slot(std::unique_ptr<ErasedLazyResourceLoader>&& l) : loader{std::move(l)}, cache{} {}
+    };
+
     /**
      * \brief Where the magic happens, effectively maps `TypeId`s, which are just incremented counter values,
      * to their LazyResourceLoader values
      */
-    std::unordered_map<std::size_t, std::unique_ptr<ErasedLazyResourceLoader>> m_res;
+    Map<std::size_t, Slot> m_res;
     
     /**
      * \brief Attempt to load a value using the registered lazy loader for the given type ID
-     * \param id The ID of the type to load 
+     * \param type_id The ID of the type to load 
+     * \param id_str ID to search for or load
      * \param type_name Compile-time known typename of the type referenced by `id`
      * \return A type-erased reference to the value
      */
-    Ref<void> try_get_id(TypeId id, const char *type_name);
+    Ref<void> try_get_id(TypeId type_id, const char *type_name, const std::string_view id_str);
 };
