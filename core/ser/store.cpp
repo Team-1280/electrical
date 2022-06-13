@@ -1,6 +1,8 @@
 #include "store.hpp"
 #include "util/log.hpp"
 
+std::size_t TypeId::IDX = 0;
+
 Id::Iterator& Id::Iterator::operator++() {
     this->m_pos += 1; 
     return *this;
@@ -54,4 +56,14 @@ Id::Id(std::string&& str) : m_string{std::move(str)} {
 }
 Id::Id(const std::string& str) : m_string{str} {
     this->m_dots = find_dots(this->m_string);
+}
+
+Ref<void> LazyResourceStore::try_get_id(TypeId id, const char *type_name) {
+    auto elem = this->m_res.find(id.val());
+    if(elem == this->m_res.end()) {
+        throw UnregisteredResourceException(
+            fmt::format("Type {} has no registered LazyResourceLoader implementation", type_name)
+        );
+    }
+
 }
