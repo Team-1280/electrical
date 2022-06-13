@@ -18,19 +18,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_library(${NAME} ${SRC})
 include(FetchContent)
-FetchContent_Declare(
-    stduuid
-    GIT_REPOSITORY https://github.com/mariusbancila/stduuid.git
-    GIT_TAG v1.2.2
-)
-FetchContent_GetProperties(stduuid)
-if(NOT stduuid_POPULATED)
-    FetchContent_Populate(stduuid)
-    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${stduuid_SOURCE_DIR}/cmake")
-    set(UUID_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(UUID_SYSTEM_GENERATOR ON CACHE BOOL "" FORCE)
-    add_subdirectory(${stduuid_SOURCE_DIR} ${stduuid_BINARY_DIR})
-endif()
 
 option(BUILD_CORE_DOCS "Build doxygen documentation for the core library" OFF)
 find_package(Doxygen)

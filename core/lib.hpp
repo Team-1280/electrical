@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <functional>
 #include <iterator>
-#include <uuid.h>
 
 #include "geom.hpp"
 #include "component.hpp"
@@ -12,12 +11,6 @@
 #include "wire.hpp"
 #include "ser/ser.hpp"
 #include "unit.hpp"
-
-
-/**
- * Span that references a uuids::uuid 
- */
-using uuidref = uuids::span<std::byte const, 16L>;
 
 
 class ComponentNode;
@@ -122,7 +115,6 @@ public:
      * \brief Convenience method to fetch a wire end by side 
      */
     inline constexpr Connection& side(const Side side) { return this->m_conns[side]; }
-    
 private:
     /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
