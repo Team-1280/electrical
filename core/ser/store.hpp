@@ -1,6 +1,5 @@
 #pragma once
 
-#include "resource.hpp"
 #include "ser.hpp"
 #include <filesystem>
 #include <memory>
@@ -121,7 +120,6 @@ private:
     friend class Id::Iterator;
 };
 
-
 /**
  * \brief Class that can load a type-erased value from a file, derive from this type 
  * to register a new loader. Note that nobody should derive from this class, instead see `LazyResourceLoader`, which gurantees type safety
@@ -140,7 +138,7 @@ private:
      * \param store A lazy loading resource store that we can use to load values of other types
      */
     virtual Ref<void> load_untyped(
-        Id&& id,
+        std::string_view id,
         const json& json,
         LazyResourceStore& store
     ) = 0;
@@ -172,7 +170,7 @@ public:
      * \return A reference to the loaded value
      * \throws Any exception that may occur when deserializing
      */
-    virtual Ref<T> load(Id&& id, const json& json, LazyResourceStore& store) = 0;
+    virtual Ref<T> load(std::string_view id, const json& json, LazyResourceStore& store) = 0;
     
     virtual ~LazyResourceLoader() = default;
     LazyResourceLoader() = default;
@@ -181,8 +179,8 @@ public:
     virtual std::filesystem::path const& dir() const noexcept override = 0;
 private:
     /** Override to safely implement the unsafe type-erasure functionality of `ErasedLazyResourceLoader` */
-    Ref<void> load_untyped(Id&& id, const json& json, LazyResourceStore& store) override {
-        return this->load(std::move(id), json, store);
+    Ref<void> load_untyped(std::string_view id, const json& json, LazyResourceStore& store) override {
+        return this->load(id, json, store);
     }
 
     /** Always returns the TypeId of `T` */
@@ -196,7 +194,7 @@ private:
  */
 struct UnregisteredResourceException : public std::exception {
 public:
-    const char * what() {
+    const char * what() const noexcept override {
         return this->m_message.c_str();
     }
 
@@ -248,7 +246,7 @@ public:
      * \throws UnregisteredResourceException if `T` does not have a registered `LazyResourceLoader`
      */
     template<typename T>
-    inline Ref<T> try_get(const std::string_view id) {
+    inline Ref<T> try_get(std::string_view id) {
         auto type_id = TypeId::id<T>();
         return std::static_pointer_cast<T>(this->try_get_id(type_id, typeid(T).name(), id));
     }
@@ -281,5 +279,5 @@ private:
      * \param type_name Compile-time known typename of the type referenced by `id`
      * \return A type-erased reference to the value
      */
-    Ref<void> try_get_id(TypeId type_id, const char *type_name, const std::string_view id_str);
+    Ref<void> try_get_id(TypeId type_id, const char *type_name, std::string_view id_str);
 };

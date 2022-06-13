@@ -22,7 +22,7 @@ void LengthUnit::from_string(LengthUnit& self, std::string_view unit_str) {
     }
 
     if(unit_str.empty()) {
-        throw std::invalid_argument("LengthUnit#LengthUnit(string) called with empty string as argument");
+        return;
     }
     
     const auto metric = [&self, &unit_str](const char * const prefix, UnitVal unit) {

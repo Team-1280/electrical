@@ -6,6 +6,7 @@
 
 #include <ser/ser.hpp>
 #include <geom.hpp>
+#include "ser/store.hpp"
 #include "util/hash.hpp"
 
 
@@ -40,7 +41,7 @@ private:
     /** Internal ID of this connection port, shared with the parent Component and guranteed to be NULL terminated */
     std::string_view m_id;
     
-    friend class SharedResourceStore;
+    friend class ComponentLoader;
     friend class Component;
 };
 
@@ -64,7 +65,7 @@ public:
     /** Get the name of this component */
     inline const std::string_view name() const { return this->m_name; }
     /** Get the user-assigned ID of this component */
-    inline constexpr std::string_view id() const { return this->m_id; }
+    inline constexpr const std::string_view id() const { return this->m_id; }
     /** Get a reference to this component's footprint */
     constexpr inline const Footprint& footprint() const { return this->m_fp; }
     
@@ -91,7 +92,17 @@ private:
     /* Shape of the component in the workspace */ 
     Footprint m_fp;
     
-    friend class SharedResourceStore;
     friend class BoardGraph;
+    friend class ComponentLoader;
 };
 
+/**
+ * Class dedicated to deserializing `Component`s
+ */
+class ComponentLoader : public LazyResourceLoader<Component> {
+public:
+    Ref<Component> load(std::string_view id, const json& json, LazyResourceStore& store) override;
+    std::filesystem::path const& dir() const noexcept override { return DIR; }
+private:
+    static std::filesystem::path DIR;
+};

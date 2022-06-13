@@ -1,5 +1,6 @@
 #include "store.hpp"
 #include "util/log.hpp"
+#include <exception>
 #include <filesystem>
 #include <fstream>
 
@@ -98,9 +99,9 @@ Ref<void> LazyResourceStore::try_get_id(TypeId type_id, const char *type_name, c
     std::ifstream file{resource_path};
     json j;
     file >> j;
-    file.close();
-
-    Ref<void> loaded = elem->second.loader->load_untyped(std::move(id), j, *this);
-    elem->second.cache.emplace(id_str, loaded);
-    return loaded;
+    
+    auto [loaded, ins] = elem->second.cache.emplace(id_str, WeakRef<void>{});
+    Ref<void> load = elem->second.loader->load_untyped(loaded->first, j, *this);
+    loaded->second = WeakRef<void>{load};
+    return load;
 }

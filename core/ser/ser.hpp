@@ -4,9 +4,28 @@
 #include <concepts>
 #include <uuid.h>
 
+#include "util/hash.hpp"
 #include "util/log.hpp"
 
 using json = nlohmann::json;
+
+namespace _detail {
+
+/** \brief Helper struct enabling an optimization when strings are used as the Id type of a GenericStore */
+template<typename Id, typename T>
+struct map_type_helper {
+    using MapType = std::unordered_map<Id, T>;
+};
+/** \brief Helper specialization enabling std::string_view's to be passed as IDs instead of string references */
+template<typename T>
+struct map_type_helper<std::string, T> {
+    using MapType = std::unordered_map<std::string, T, StringHasher, std::equal_to<>>; 
+};
+
+}
+
+template<typename K, typename V>
+using Map = typename _detail::map_type_helper<K, V>::MapType;
 
 /** 
  * \brief Serialization / deserialization concepts and 

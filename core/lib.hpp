@@ -8,9 +8,9 @@
 
 #include "geom.hpp"
 #include "component.hpp"
+#include "ser/store.hpp"
 #include "wire.hpp"
 #include "ser/ser.hpp"
-#include "resource.hpp"
 #include "unit.hpp"
 
 
@@ -102,8 +102,8 @@ public:
         friend class BoardGraph;
     };
     
-    /** \brief Get the UUID of this wire edge */
-    constexpr inline uuidref id() const { return this->m_id; }
+    /** \brief Get the ID of this wire edge */
+    constexpr inline const std::string_view id() const { return this->m_id; }
     /** \brief Get the pair of Connection structures representing the ends of this wire edge */
     inline const std::array<Connection, 2>& connections() const { return this->m_conns; }
     /** 
@@ -127,7 +127,7 @@ private:
     /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
     /** \brief Internal ID number of this wire edge */
-    uuidref m_id;
+    std::string_view m_id;
     /** \brief User-placed points that this wire travels between on the workspace */
     std::vector<Point> m_wire_pts;
 
@@ -159,11 +159,11 @@ public:
     
     /** \brief Get the name of this component node */
     inline constexpr const std::string& name() const { return this->m_name; }
-    inline constexpr uuidref id() const { return this->m_id; }
+    inline constexpr const std::string_view id() const { return this->m_id; }
     
     /** \brief Fetch the underlying component type of this node */
     inline Ref<Component> type() const noexcept { return this->m_ty; }
-    ComponentNode(const uuids::uuid& id) : m_ty{}, m_id{id.as_bytes()}, m_name{}, m_pos{} {}
+    ComponentNode(const std::string_view id) : m_ty{}, m_id{id}, m_name{}, m_pos{} {}
         
     /**
      * \brief Get the wires connected on to a specific port on this component
@@ -202,7 +202,7 @@ private:
      * \brief The internal ID of this component node, it is not a string because it
      * is never presented to the user and is stable between runs of the program
      */
-    uuidref m_id;
+    std::string_view m_id;
     /** \brief User-assigned name of the placed part */
     std::string m_name;
     /** \brief Offset in the workspace from center */
@@ -263,25 +263,25 @@ public:
      * \param id UUID of the loaded node
      * \return An empty optional if the file for the UUID does not exist
      */
-    Optional<Ref<ComponentNode>> get_node(const uuids::uuid& id) const;
+    Optional<Ref<ComponentNode>> get_node(const std::string_view id) const;
     /**
      * \brief Get or load an edge in this graph by ID
      * \param id UUID of the loaded edge
      * \return An empty optional if the file does not exis
      */
-    Optional<Ref<WireEdge>> get_edge(const uuids::uuid& id) const;
+    Optional<Ref<WireEdge>> get_edge(const std::string_view id) const;
     
     /** Save this graph to a file */
     virtual ~BoardGraph();
 
 private:
     /** \brief Collection of all loaded component types */
-    SharedResources m_res;
+    LazyResourceStore m_res;
     
     /** \brief Map of internal node IDs to shared node references */
-    Map<uuids::uuid, Ref<ComponentNode>> m_nodes;
+    Map<std::string, Ref<ComponentNode>> m_nodes;
     /** \brief Map of internal node IDs to shared node references */
-    Map<uuids::uuid, Ref<WireEdge>> m_edges;
+    Map<std::string, Ref<WireEdge>> m_edges;
     
     /**
      * \brief Ensure that a node with the given ID has been loaded from the root object

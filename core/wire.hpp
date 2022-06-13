@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ser/ser.hpp"
+#include "ser/store.hpp"
 #include <string_view>
 #include <memory>
 
@@ -29,6 +31,14 @@ private:
      */
     std::string m_name;
 
-    friend class SharedResourceStore;
+    friend class ConnectorLoader;
 };
 
+class ConnectorLoader : public LazyResourceLoader<Connector> {
+public:
+    Ref<Connector> load(std::string_view id, const json& json_val, LazyResourceStore& store) override;
+    std::filesystem::path const& dir() const noexcept override { return DIR; }
+
+private:
+    static std::filesystem::path DIR;
+};

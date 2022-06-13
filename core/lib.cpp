@@ -1,7 +1,9 @@
 #include "lib.hpp"
+#include "component.hpp"
 #include "geom.hpp"
 #include "util/log.hpp"
 #include "uuid.h"
+#include "wire.hpp"
 #include <algorithm>
 #include <filesystem>
 #include <functional>
@@ -64,7 +66,7 @@ Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string_
     return {};
 }
 
-Optional<Ref<ComponentNode>> BoardGraph::get_node(const uuids::uuid &id) const {
+Optional<Ref<ComponentNode>> BoardGraph::get_node(const std::string_view id) const {
     const auto& existing = this->m_nodes.find(id);
     if(existing != this->m_nodes.end()) {
         return existing->second;
@@ -73,7 +75,7 @@ Optional<Ref<ComponentNode>> BoardGraph::get_node(const uuids::uuid &id) const {
     }
 }
 
-Optional<Ref<WireEdge>> BoardGraph::get_edge(const uuids::uuid &id) const {
+Optional<Ref<WireEdge>> BoardGraph::get_edge(const std::string_view id) const {
     const auto& existing = this->m_edges.find(id);
     if(existing != this->m_edges.end()) {
         return existing->second;
@@ -82,30 +84,24 @@ Optional<Ref<WireEdge>> BoardGraph::get_edge(const uuids::uuid &id) const {
     }
 }
 
-void BoardGraph::load_node(const std::string& idstr, const json::object_t& root_val) {
-    auto idopt = uuids::uuid::from_string(idstr);
-    if(!idopt.has_value()) {
-        logger::error("Failed to initialize a UUID from string {}", idstr);
-        return;
-    }
-    auto id = *idopt;
+void BoardGraph::load_node(const std::string& id, const json::object_t& root_val) {
     const auto existing = this->get_node(id);
     if(existing.has_value()) {
         return;
     }
 
-    auto [entry, ins] = this->m_nodes.emplace(id, Ref<ComponentNode>{});
 
+    auto [entry, ins] = this->m_nodes.emplace(id, Ref<ComponentNode>{new ComponentNode{}});
     try {
-        const auto json_val = root_val.at("nodes").at(idstr).get<json::object_t>();
+        const auto json_val = root_val.at("nodes").at(id).get<json::object_t>();
         Ref<ComponentNode> node{new ComponentNode{}};
         node->m_name = json_val.at("name").get<std::string>();
-        node->m_id = entry->first.as_bytes();
-        node->m_ty = *this->m_res->get_component(json_val.at("type").get<std::string_view>());
+        node->m_id = entry->first;
+        node->m_ty = this->m_res.try_get<Component>(json_val.at("type").get<std::string_view>());
         node->m_pos = json_val.at("pos").get<Point>();
         for(const auto& conn_json : json_val.at("conns")) {
             ConnectionPortRef port = *node->m_ty->get_port_ref(conn_json.at("port").get<std::string_view>());
-            auto edge = *this->get_edge(conn_json.at("edge").get<uuids::uuid>());
+            auto edge = *this->get_edge(conn_json.at("edge").get<std::string_view>());
             node->m_edges[port] = ComponentNode::EdgeConnection{
                 .edge = edge,
                 .side = conn_json.at("side").get<WireEdge::Side>()
@@ -114,19 +110,13 @@ void BoardGraph::load_node(const std::string& idstr, const json::object_t& root_
 
         entry->second = node;
     } catch(const std::exception& e) {
-        logger::error("Failed to load a graph node with id {}: {}", idstr, e.what());
+        this->m_nodes.erase(id);
+        logger::error("Failed to load a graph node with id {}: {}", id, e.what());
     }
 
 }
 
-void BoardGraph::load_edge(const std::string& idstr, const json::object_t& root_val) {
-    auto idopt = uuids::uuid::from_string(idstr);
-    if(!idopt.has_value()) {
-        logger::error("Failed to initialize a UUID from string {}", idstr);
-        return;
-    }
-    auto id = *idopt;
-
+void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val) {
     const auto& existing = this->get_edge(id);
     if(existing.has_value()) {
         return;
@@ -135,36 +125,38 @@ void BoardGraph::load_edge(const std::string& idstr, const json::object_t& root_
     auto [entry, ins] = this->m_edges.emplace(id, Ref<WireEdge>{});
 
     try {
-        const auto json_val = root_val.at("edges").at(idstr).get<json::object_t>();
+        const auto json_val = root_val.at("edges").at(id).get<json::object_t>();
         Ref<WireEdge> edge{};
-        edge->m_id = entry->first.as_bytes();
+        edge->m_id = entry->first;
         for(std::size_t i = 0; const auto& conn_json : json_val.at("conns")) {
             if(conn_json.is_null() || i >= 2) {
                 continue;
             }
             
-            edge->m_conns[i].m_component = *this->get_node(conn_json.at("node").get<uuids::uuid>());
+            edge->m_conns[i].m_component = *this->get_node(conn_json.at("node").get<std::string_view>());
             edge->m_conns[i].m_port = *edge->m_conns[i].m_component.lock()->type()->get_port_ref(conn_json.at("port").get<std::string_view>());
-            edge->m_conns[i].m_connector = *this->m_res->get_connector(conn_json.at("connector").get<std::string_view>());
+            edge->m_conns[i].m_connector = this->m_res.try_get<Connector>(conn_json.at("connector").get<std::string_view>());
         }
 
         entry->second = edge;
     } catch(const std::exception& e) {
+        this->m_edges.erase(id);
         logger::error(
             "Failed to load a graph edge with id {}: {}",
-            uuids::to_string(id),
+            id,
             e.what()
         );
     }
 }
 
 BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_nodes{}, m_edges{}, m_path{path} {
+    this->m_res.register_loader(new ComponentLoader{});
+    this->m_res.register_loader(new ConnectorLoader{});
     if(std::filesystem::exists(path)) {
         std::ifstream json_file{path};
         json root_json;
         try {
             json_file >> root_json;
-            json_file.close();
             from_json(*this, root_json);
         } catch(const std::exception& e) {
             logger::error(
@@ -172,13 +164,12 @@ BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_nodes{}, m_edg
                 path.c_str(),
                 e.what()
             );
-            return;
+            std::exit(-1);
         }
     } else {
         try {
             std::filesystem::create_directories(path.parent_path());
             std::ofstream new_json_file{path};
-            new_json_file.close();
         } catch(const std::exception& e) {
             logger::error(
                 "Failed to create a new save file at {}: {}",
@@ -191,8 +182,8 @@ BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_nodes{}, m_edg
 
 BoardGraph::~BoardGraph() {
     try {
-        std::ofstream savefile{this->m_path};
-        savefile << std::setw(4) << this->to_json();
+        //std::ofstream savefile{this->m_path};
+        //savefile << std::setw(4) << this->to_json();
     } catch(const std::exception& e) {
         logger::error("Failed to save board graph to file {}: {}", this->m_path.c_str(), e.what());
     }
@@ -202,9 +193,13 @@ void BoardGraph::from_json(BoardGraph& self, const json& j) {
     json::object_t obj = j.get<json::object_t>();
     const auto& nodes = obj.at("nodes").get<json::object_t>();
     const auto& edges = obj.at("edges").get<json::object_t>();
-    std::for_each(nodes.begin(), nodes.end(), [&obj, &self](auto entry) { self.load_node(entry.first, obj); });
-    //std::for_each(edges.begin(), edges.end(), [&obj, &self](auto entry) { self.load_edge(entry.first, obj); });
-    (void)edges;
+    for(const auto& [id, node] : nodes) {
+        (void)id;
+        self.load_node(id, obj);
+    }
+    for(const auto& [id, edge] : edges) {
+        self.load_edge(id, obj);
+    }
 }
 
 json BoardGraph::to_json() const {
@@ -226,8 +221,8 @@ json BoardGraph::to_json() const {
             conns.push_back(std::move(conn_json));
         }
         node_json.emplace("conns", std::move(conns));
-
-        nodes.emplace(uuids::to_string(id), std::move(node_json));
+        
+        nodes.emplace(node->id(), std::move(node_json));
     }
 
     for(const auto& [id, edge] : this->m_edges) {
@@ -243,7 +238,7 @@ json BoardGraph::to_json() const {
             conn_json.emplace("connector", conn.connector()->id());
             edge_json.push_back(std::move(conn_json));
         }
-        edges.emplace(uuids::to_string(id), std::move(edge_json));
+        edges.emplace(edge->id(), std::move(edge_json));
     }
 
     obj.emplace("nodes", std::move(nodes));
