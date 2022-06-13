@@ -1,15 +1,17 @@
-#include "component.hpp"
-#include "ser/store.hpp"
-#include <filesystem>
+#include <iostream>
 #include <lib.hpp>
 #include <util/log.hpp>
-#include <iostream>
-#include <fstream>
+
+#include "args.hpp"
 
 
 int main(int argc, const char* argv[]) {
     logger::init("./log.txt");
+
+    Args args{};
+
     BoardGraph b{"./assets/boards/board.json"};    
     std::cout << std::setw(4) << b.to_json() << std::endl;
+
     return 0;
 }

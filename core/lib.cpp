@@ -2,7 +2,6 @@
 #include "component.hpp"
 #include "geom.hpp"
 #include "util/log.hpp"
-#include "uuid.h"
 #include "wire.hpp"
 #include <algorithm>
 #include <filesystem>
@@ -60,9 +59,8 @@ Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::p
 }
 
 Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string_view name) {
-    uuids::uuid id = uuids::uuid_system_generator{}();
     ComponentNode node{};
-    (void)name, (void)type, (void)id;
+    (void)name, (void)type;
     return {};
 }
 
