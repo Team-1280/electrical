@@ -28,6 +28,14 @@ int main(int argc, const char* argv[]) {
         .long_name{"version"},
         .short_help{"Display program version message"}
     });
+
+    auto input_file = args.arg(Arg {
+        .takes_arg = true,
+        .arg_name{"file"},
+        .short_name{'i'},
+        .long_name{"input"},
+        .short_help{"Specify a path to an input file that will be parsed and used for processing"}
+    });
     
     Args list_ids{"list", "List all node and edge IDs in the graph"};
     auto show_all = list_ids.arg(Arg {
@@ -42,6 +50,8 @@ int main(int argc, const char* argv[]) {
     try {
         auto matches = args.matches(argc, argv);
         if(matches.has(help)) {
+            args.print_usage();
+            fmt::print("\n\n");
             args.print_help();
         } else if(matches.has(version) && args.version().has_value()) {
             fmt::print("e1280 version {}\n", args.version()->get());

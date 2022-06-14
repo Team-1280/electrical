@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <functional>
 #include <stdexcept>
+#include <ranges>
 
 std::size_t Args::m_id_cnt = 0;
 
@@ -62,17 +63,22 @@ bool ArgMatches::add_opt(ArgId id, ArgMatch&& match) {
 
 //**MUST** be the same length as `write_arg`'s name is
 static std::size_t name_len(Arg const& arg) {
-    std::size_t len = 0;
     if(arg.short_name.has_value()) {
         if(arg.long_name.has_value()) {
-            len = fmt::formatted_size("-{}, --{}", *arg.short_name, *arg.long_name);
+            return fmt::formatted_size(
+                "-{}, --{} {}",
+                *arg.short_name,
+                *arg.long_name,
+                arg.arg_name.has_value() ? arg.arg_name->c_str() : ""
+            );
         } else {
-            len = fmt::formatted_size("-{}", *arg.short_name);
+            return fmt::formatted_size("-{} {}", *arg.short_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
         }
     } else if(arg.long_name.has_value()) {
-        len = fmt::formatted_size("--{}", *arg.long_name);
+        return fmt::formatted_size("--{} {}", *arg.long_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
     }
-    return len;
+
+    return 0;
 }
 
 static constexpr const char * BORDER_CHAR = "│";
@@ -81,17 +87,22 @@ static void write_arg(std::ostream& ostream, bool verbose, std::size_t longest_n
     std::string name;
     if(arg.short_name.has_value()) {
         if(arg.long_name.has_value()) {
-            name = fmt::format("-{}, --{}", *arg.short_name, *arg.long_name);
+            name = fmt::format(
+                "-{}, --{} {}",
+                *arg.short_name,
+                *arg.long_name,
+                arg.arg_name.has_value() ? arg.arg_name->c_str() : ""
+            );
         } else {
-            name = fmt::format("-{}", *arg.short_name);
+            name = fmt::format("-{} {}", *arg.short_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
         }
     } else if(arg.long_name.has_value()) {
-        name = fmt::format("--{}", *arg.long_name);
+        name = fmt::format("--{} {}", *arg.long_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
     }
     
     fmt::print(
         ostream,
-        "{1:>{0}} {3:>{2}}   {4}\n",
+        "{1:>{0}}  {3:>{2}}   {4}\n",
         space,
         BORDER_CHAR,
         longest_name,
@@ -139,6 +150,22 @@ void Args::print_help(std::ostream& ostream, bool verbose, std::size_t space) co
         for(const auto& subcmd : this->m_commands) {
             subcmd.print_help(ostream, verbose, space + 5);
         }
+    }
+}
+
+void Args::print_usage(std::ostream& ostream) {
+    fmt::print(ostream, "Usage: {} ", this->m_name);
+    if(std::any_of(this->m_args.begin(), this->m_args.end(), [](const auto& arg) { return !arg.arg_name.has_value() && arg.short_name.has_value(); })) {
+        fmt::print(ostream, "[-");
+        for(const auto& flag : this->m_args) {
+            if(flag.arg_name.has_value() || !flag.short_name.has_value()) { continue; }
+            fmt::print(ostream, "{}", *flag.short_name);
+        }
+        fmt::print(ostream, "] ");
+    }
+    for(const auto& opt : this->m_args) {
+        if(!opt.arg_name.has_value() || !opt.short_name.has_value()) { continue; }
+        fmt::print(ostream, "[-{} {}] ", *opt.short_name, *opt.arg_name);
     }
 }
 

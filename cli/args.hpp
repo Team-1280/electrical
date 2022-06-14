@@ -26,6 +26,8 @@ struct Arg {
 public:
     /** \brief If this option requires an argument to follow it */
     bool takes_arg = false;
+    /** \brief Name of the option's argument in help text */
+    Optional<std::string> arg_name{};
     /** \brief Single character used to give the command line option following a single dash character */
     Optional<char> short_name{};
     /** \brief Long name used after two dash characters */
@@ -113,6 +115,12 @@ public:
      * \param verbose If true, long descriptions and help messages will be printed
      */
     void print_help(std::ostream& ostream = std::cout, bool verbose = false, std::size_t space = 0) const;
+    
+    /**
+     * \brief Print a usage message to the given output stream 
+     * \param ostream The output stream to write a usage message to
+     */
+    void print_usage(std::ostream& ostream = std::cout);
     
     /**
      * \brief Builder-style method to set the version of this program
