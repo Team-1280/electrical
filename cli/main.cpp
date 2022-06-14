@@ -49,6 +49,7 @@ int main(int argc, const char* argv[]) {
     
     try {
         auto matches = args.matches(argc, argv);
+        fmt::print("{}\n", *matches.get(input_file)->get().arg);
         auto help_match = matches.get(help);
         if(help_match.has_value()) {
             args.print_usage();

@@ -33,6 +33,9 @@ class LazyResourceStore;
  * Effectively provides run-time type information for the LazyResourceStore class
  */
 struct TypeId {
+    /**
+     * \brief Get the unique type ID of a given type `T`
+     */
     template<typename T>
     static TypeId id() {
         static std::size_t ID = IDX++;
@@ -246,9 +249,9 @@ public:
      * \throws UnregisteredResourceException if `T` does not have a registered `LazyResourceLoader`
      */
     template<typename T>
-    inline Ref<T> try_get(std::string_view id) {
-        auto type_id = TypeId::id<T>();
-        return std::static_pointer_cast<T>(this->try_get_id(type_id, typeid(T).name(), id));
+    inline Ref<std::decay_t<T>> try_get(std::string_view id) {
+        auto type_id = TypeId::id<std::decay_t<T>>();
+        return std::static_pointer_cast<std::decay_t<T>>(this->try_get_id(type_id, typeid(T).name(), id));
     }
 
 private:

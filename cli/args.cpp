@@ -3,6 +3,7 @@
 #include <functional>
 #include <stdexcept>
 #include <ranges>
+#include <fmt/color.h>
 
 std::size_t Args::m_id_cnt = 0;
 
@@ -185,7 +186,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
 
                 std::size_t eq = arg.find('=');
                 if(eq != std::string_view::npos) {
-                    std::string_view long_name = arg.substr(2, eq);
+                    std::string_view long_name = arg.substr(2, eq - 2);
                     auto opt_found = root.find_arg([long_name](Arg const& a) { return a.long_name == long_name; });
                     if(!opt_found.has_value()) {
                         throw std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})};
@@ -201,7 +202,8 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
 
                     if(opt_found->first.takes_arg) {
                         if(i + 1 < argc) {
-                            optarg = std::string_view{argv[i + 1]};
+                            i += 1;
+                            optarg = std::string_view{argv[i]};
                         }
                     }
 
@@ -224,7 +226,8 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                         root.add_opt(opt->second, ArgMatch { .arg = arg.substr(2), .long_name = false }); 
                         continue;
                     } else if(i + 1 < argc) {
-                        root.add_opt(opt->second, ArgMatch { .arg{argv[i + 1]}, .long_name = false }); 
+                        i += 1;
+                        root.add_opt(opt->second, ArgMatch { .arg{argv[i]}, .long_name = false }); 
                         continue;
                     }
                 } //fallthrough if option takes an argument but none was found

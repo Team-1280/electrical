@@ -116,7 +116,7 @@ public:
      * \param ostream Output stream to write a help message to
      * \param verbose If true, long descriptions and help messages will be printed
      */
-    void print_help(std::ostream& ostream = std::cout, bool verbose = false, std::size_t space = 0) const;
+    void print_help(std::ostream& ostream, bool verbose = false, std::size_t space = 0) const;
     
     /**
      * \brief Print a usage message to the given output stream 
