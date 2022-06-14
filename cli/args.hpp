@@ -44,6 +44,8 @@ public:
 struct ArgMatch {
     /** The argument value passed by the user, shared with the argv array */
     Optional<std::string_view> arg{};
+    /** If the argument was passed by its long name */
+    bool long_name{};
 };
 
 class ArgMatches;

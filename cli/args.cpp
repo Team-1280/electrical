@@ -186,7 +186,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                 std::size_t eq = arg.find('=');
                 if(eq != std::string_view::npos) {
                     std::string_view long_name = arg.substr(2, eq);
-                    auto opt_found= root.find_arg([long_name](Arg const& a) { return a.long_name == long_name; });
+                    auto opt_found = root.find_arg([long_name](Arg const& a) { return a.long_name == long_name; });
                     if(!opt_found.has_value()) {
                         throw std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})};
                     }
@@ -210,7 +210,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
 
                 root.add_opt(
                     opt->second,
-                    ArgMatch{.arg = optarg}
+                    ArgMatch{ .arg = optarg, .long_name = true }
                 );
             } else if(arg.length() > 1) {
                 char first = arg.at(1);
@@ -221,10 +221,10 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
 
                 if(opt->first.takes_arg) {
                     if(arg.length() > 2) {
-                        root.add_opt(opt->second, ArgMatch {.arg = arg.substr(2)}); 
+                        root.add_opt(opt->second, ArgMatch { .arg = arg.substr(2), .long_name = false }); 
                         continue;
                     } else if(i + 1 < argc) {
-                        root.add_opt(opt->second, ArgMatch {.arg{argv[i + 1]}}); 
+                        root.add_opt(opt->second, ArgMatch { .arg{argv[i + 1]}, .long_name = false }); 
                         continue;
                     }
                 } //fallthrough if option takes an argument but none was found

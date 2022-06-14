@@ -49,20 +49,22 @@ int main(int argc, const char* argv[]) {
     
     try {
         auto matches = args.matches(argc, argv);
-        if(matches.has(help)) {
+        auto help_match = matches.get(help);
+        if(help_match.has_value()) {
             args.print_usage();
             fmt::print("\n\n");
-            args.print_help();
+            args.print_help(std::cout, help_match->get().long_name);
         } else if(matches.has(version) && args.version().has_value()) {
             fmt::print("e1280 version {}\n", args.version()->get());
         }
     } catch(const std::exception& e) {
         std::cerr << e.what() << std::endl;
-        std::cerr << "Run e1280 --help for more information" << std::endl;
+        args.print_usage();
+        std::cerr << "\n run e1280 --help for more information" << std::endl;
     }
 
     BoardGraph b{"./assets/boards/board.json"};    
-    std::cout << std::setw(4) << b.to_json() << std::endl;
+    //std::cout << std::setw(4) << b.to_json() << std::endl;
 
     return 0;
 }
