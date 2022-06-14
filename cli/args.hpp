@@ -113,6 +113,30 @@ public:
      * \param verbose If true, long descriptions and help messages will be printed
      */
     void print_help(std::ostream& ostream = std::cout, bool verbose = false, std::size_t space = 0) const;
+    
+    /**
+     * \brief Builder-style method to set the version of this program
+     * \param version A string containing the version number to display
+     * \return A reference to `this` for calling additional builder methods
+     */
+    inline constexpr Args& with_version(std::string&& version) {
+        this->m_version = version;
+        return *this;
+    }
+    
+    /**
+     * \brief Builder-style method to set the long description of this program
+     * \param desc The long description used when a verbose help message is printed
+     * \return A reference to `this` for calling additional builder methods
+     */
+    inline constexpr Args& with_long_desc(std::string&& desc) {
+        this->m_long_desc = desc;
+        return *this;
+    }
+    
+    /** \brief Get the version string of this program */
+    inline constexpr Optional<std::reference_wrapper<std::string const>> version() const noexcept { return this->m_version; }
+
 private:
     /** Name of the program */
     std::string m_name;
@@ -168,7 +192,7 @@ public:
      * \param arg The argument ID to check
      * \return true if the argument at the given ID was passed to the program 
      */
-    inline bool has(const ArgId arg) const { return this->get(arg).has_value(); }
+    inline bool has(const ArgId arg) const { return this->m_matches.contains(arg.idx); }
 private:
     /** Map of argument indices to their parsed options */
     Map<std::size_t, ArgMatch> m_matches{};
@@ -193,19 +217,21 @@ private:
      */
     template<typename Predicate>
     requires requires(Predicate&& p, Arg const& arg) {
-        {p(arg)} -> std::same_as<bool>;
+        {std::invoke(std::forward<Predicate>(p), arg)} -> std::same_as<bool>;
     }
     Optional<std::pair<Arg const&, ArgId>> find_arg(Predicate&& p) {
-        std::size_t idx = std::string::npos;
+        std::size_t idx = 0;
         Optional<std::reference_wrapper<Arg const>> found_arg{};
         for(std::size_t i = 0; const auto& arg : this->m_args.m_args) {
-            if(p(arg)) {
+            if(std::invoke(std::forward<Predicate>(p), arg)) {
                 idx = i;
-                found_arg = arg;
+                found_arg.emplace(arg);
                 break;
             }
+            i += 1;
         }
-        if(idx == std::string::npos) {
+
+        if(!found_arg.has_value()) {
             if(this->m_subcommand.has_value()) {
                 return (*this->m_subcommand)->find_arg(p);
             } else {

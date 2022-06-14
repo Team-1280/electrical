@@ -147,11 +147,11 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
     ArgMatches *tail{&root};
 
     //Populate all subcommands from root so we know what arguments should be parsed
-    for(int i = 0; i < argc; ++i) {
+    for(int i = 1; i < argc; ++i) {
         std::string_view arg{argv[i]};
-        if(arg.length() == 0) continue;
+        if(arg.length() < 1) continue;
         if(arg[0] == '-') {
-            if(arg.length() >= 2 && argv[i][1] == '-') {
+            if(arg.length() >= 2 && arg[1] == '-') {
                 if(arg.length() == 2) { break; }
                 Optional<std::pair<Arg const&, ArgId>> opt{};
                 Optional<std::string_view> optarg{};
@@ -185,7 +185,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                     opt->second,
                     ArgMatch{.arg = optarg}
                 );
-            } else if(arg.length() >= 1) {
+            } else if(arg.length() > 1) {
                 char first = arg.at(1);
                 auto opt = root.find_arg([first](Arg const& a) { return a.short_name.has_value() && a.short_name == first; });
                 if(!opt.has_value()) {
@@ -211,11 +211,18 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                 }
             }
         } else {
+            bool has_subcommand = false;
             for(const auto& subcommand : tail->m_args.m_commands) {
                 if(subcommand.m_name == arg) {
                     tail->m_subcommand = std::unique_ptr<ArgMatches>{new ArgMatches{subcommand}};
                     tail = tail->m_subcommand->get();
+                    has_subcommand = true;
+                    break;
                 }
+            }
+
+            if(!has_subcommand) {
+                throw std::runtime_error{fmt::format("Unknown subcommand {}", std::string{arg})};
             }
         }
     }

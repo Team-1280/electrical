@@ -121,8 +121,8 @@ private:
 };
 
 /**
- * \brief Class that can load a type-erased value from a file, derive from this type 
- * to register a new loader. Note that nobody should derive from this class, instead see `LazyResourceLoader`, which gurantees type safety
+ * \brief Class that can load a type-erased value from a file. Note that nobody should derive from this class, 
+ * instead see `LazyResourceLoader`, which gurantees type safety
  * \sa LazyResourceLoader
  */
 class ErasedLazyResourceLoader {

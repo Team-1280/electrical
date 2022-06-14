@@ -29,6 +29,8 @@ elseif(NOT "${CMAKE_BUILD_TYPE}" IN_LIST BUILD_TYPES)
 endif()
 
 
+configure_file("${CMAKE_SOURCE_DIR}/build/buildopts.h.in" "generated/buildopts.h")
+include_directories("${CMAKE_BINARY_DIR}/generated")
 include(FetchContent)
 
 set(JSON_ImplicitConversions CACHE BOOL OFF)

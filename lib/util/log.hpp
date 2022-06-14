@@ -8,7 +8,7 @@
 
 #include <cstdlib>
 
-#include <buildopts-e1280_lib.h>
+#include <buildopts.h>
 
 namespace logger {
 
@@ -51,7 +51,7 @@ template<> constexpr const char * const lvl_data<LogLevel::Trace>::LVL_STR = "[T
  */ 
 template<LogLevel lvl>
 inline void log(fmt::string_view fmt, fmt::format_args args) {
-    if (lvl != LogLevel::Trace || e1280_lib::BuildOpts::should_log_trace()) {
+    if (lvl != LogLevel::Trace || BuildOpts::should_log_trace()) {
         std::lock_guard lock{_detail::log_lock};
         fmt::print(_detail::log_stream.get(), _detail::lvl_data<lvl>::LVL_STR);
         fmt::vprint(_detail::log_stream.get(), fmt, args);

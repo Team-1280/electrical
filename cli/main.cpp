@@ -3,12 +3,17 @@
 #include <util/log.hpp>
 
 #include "args.hpp"
+#include "buildopts.h"
 
 
 int main(int argc, const char* argv[]) {
     logger::init("./log.txt");
 
     Args args{"e1280", "Electrical board creator"};
+    args
+        .with_long_desc("Program to read and manipulate an electrical board represented as an undirected graph")
+        .with_version(std::string{BuildOpts::version_str});
+    
 
     auto help = args.arg(Arg {
         .takes_arg = false,
@@ -38,6 +43,8 @@ int main(int argc, const char* argv[]) {
         auto matches = args.matches(argc, argv);
         if(matches.has(help)) {
             args.print_help();
+        } else if(matches.has(version) && args.version().has_value()) {
+            fmt::print("e1280 version {}\n", args.version()->get());
         }
     } catch(const std::exception& e) {
         std::cerr << e.what() << std::endl;
