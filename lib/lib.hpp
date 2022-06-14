@@ -118,12 +118,12 @@ public:
 private:
     /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
-    /** \brief Internal ID number of this wire edge */
+    /** \brief Internal ID string of this wire edge */
     std::string_view m_id;
     /** \brief User-placed points that this wire travels between on the workspace */
     std::vector<Point> m_wire_pts;
 
-    WireEdge() : m_conns{}, m_id{nullptr, 16} {};
+    WireEdge() : m_conns{}, m_id{}, m_wire_pts{} {};
 
     friend class BoardGraph;
 };
@@ -147,7 +147,7 @@ public:
        WireEdge::Side side;
     };
 
-    ComponentNode() : m_ty{}, m_id{nullptr, 16}, m_name{}, m_pos{} {}
+    ComponentNode() : m_ty{}, m_id{}, m_name{}, m_pos{} {}
     
     /** \brief Get the name of this component node */
     inline constexpr const std::string& name() const { return this->m_name; }
@@ -191,8 +191,7 @@ private:
     /** \brief What kind of component this is, shared with other components */
     Ref<Component> m_ty;
     /** 
-     * \brief The internal ID of this component node, it is not a string because it
-     * is never presented to the user and is stable between runs of the program
+     * \brief The user-assigned ID of this component node
      */
     std::string_view m_id;
     /** \brief User-assigned name of the placed part */
@@ -219,22 +218,15 @@ public:
      * \brief Initialize this board graph, loading or regenerating
      * cached resource files 
      */
-    BoardGraph() : m_res{} {}
+    BoardGraph() = default;
     
     /**
      * \brief Load a board graph from a saved JSON file, or create a new save file with the given file
      */
     BoardGraph(std::filesystem::path&&);
 
-    inline BoardGraph(BoardGraph&& other) : 
-        m_res{std::move(other.m_res)},
-        m_nodes{std::move(other.m_nodes)},
-        m_edges{std::move(other.m_edges)}
-    {}
-    inline BoardGraph& operator=(BoardGraph&& other) {
-        this->m_res = std::move(other.m_res);
-        return *this;
-    }
+    inline BoardGraph(BoardGraph&& other) = default; 
+    inline BoardGraph& operator=(BoardGraph&& other) = default;
     
     /**
      * \brief Create a new component node with the given type 

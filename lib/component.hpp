@@ -24,13 +24,8 @@ public:
     /** Get the offset from the component base of this connection port */
     constexpr inline const Point& pos() const { return this->m_pt; }
 
-    inline ConnectionPort(ConnectionPort&& other) : m_pt{std::move(other.m_pt)}, m_name{std::move(other.m_name)}, m_id{std::move(other.m_id)} {}
-    inline ConnectionPort& operator=(ConnectionPort&& other) {
-        this->m_pt = other.m_pt;
-        this->m_name = std::move(other.m_name);
-        this->m_id = std::move(other.m_id);
-        return *this;
-    }
+    inline ConnectionPort(ConnectionPort&& other) = default; 
+    inline ConnectionPort& operator=(ConnectionPort&& other) = default;
 
     ConnectionPort() : m_pt{}, m_name{}, m_id{} {}
 private:
@@ -55,12 +50,8 @@ using ConnectionPortRef = const ConnectionPort *;
 class Component {
 public:
     using port_map_type = std::unordered_map<std::string, ConnectionPort, StringHasher, std::equal_to<>>;
-    Component(Component&& other) : 
-        m_name{other.m_name},
-        m_id{other.m_id},
-        m_ports{std::move(other.m_ports)},
-        m_fp{std::move(other.m_fp)} {}
-    Component() : m_name{}, m_id{}, m_ports{}, m_fp{} {};
+    Component(Component&& other) = default; 
+    Component() = default;
     
     /** Get the name of this component */
     inline const std::string_view name() const { return this->m_name; }

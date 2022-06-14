@@ -14,7 +14,7 @@
  */
 class Connector {
 public:
-    Connector() : m_id{} {}
+    Connector() = default;
     
     /** \brief Get the string ID of this connector type */
     inline constexpr std::string_view id() const { return this->m_id; }

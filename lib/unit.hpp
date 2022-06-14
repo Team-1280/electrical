@@ -274,7 +274,7 @@ public:
     static constexpr size_t NUM = 5;
     constexpr LengthUnit(UnitVal u) : m_u{u} {}
     constexpr LengthUnit() : m_u{UnitVal::Meters} {}
-    constexpr LengthUnit(const LengthUnit& other) : m_u{other.m_u} {}
+    constexpr LengthUnit(const LengthUnit& other) = default;
     constexpr inline operator size_t() const { return static_cast<size_t>(this->m_u); }
     constexpr inline LengthUnit& operator=(const LengthUnit& other) {
         this->m_u = other.m_u;

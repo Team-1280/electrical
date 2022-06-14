@@ -12,7 +12,7 @@ struct Point {
 public:
     /** Create a new point from x and y coordinate */
     constexpr Point(const Length x, const Length y) : x{x}, y{y} {}
-    Point() : x{}, y{} {}; 
+    constexpr Point() = default; 
 
     /** 
      * Deserialize a point from a JSON value
@@ -21,9 +21,7 @@ public:
     /** Convert this point into a JSON value */
     json to_json() const;
 
-    constexpr bool operator==(const Point& other) const {
-        return other.x == this->x && other.y == this->y;
-    }
+    constexpr bool operator==(const Point& other) const = default;
 
     constexpr inline Point operator*(const Point& other) const {
         return Point{this->x * other.x, this->y * other.y};
@@ -97,7 +95,7 @@ static_assert(ser::JsonSerializable<Point>);
 class Footprint {
 public:
 
-    Footprint() : m_pts{} {};
+    Footprint() = default;
     
     /** \brief Create a new footprint from the JSON array */
     static void from_json(Footprint& self, const json& json);
