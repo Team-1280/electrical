@@ -58,6 +58,27 @@ concept StringSerializable = requires(const T v) {
 
 }
 
+namespace fmt {
+
+template <ser::StringSerializable T>
+struct formatter<T> {
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+      // Check if reached the end of the range:
+      if (ctx.begin() != ctx.end() && *ctx.begin() != '}') throw format_error("invalid format");
+      // Return an iterator past the end of the parsed range:
+      return ctx.end();
+    }
+    
+    // Formats the point p using the parsed format specification (presentation)
+    // stored in this formatter.
+    template <typename FormatContext>
+    auto format(const T& v, FormatContext& ctx) -> decltype(ctx.out()) {
+        format_to(ctx.out(), v.to_string());
+    }
+};
+
+}
+
 namespace nlohmann {
 
 template<ser::JsonSerializable T>
