@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <functional>
 #include <iomanip>
+#include <stdexcept>
 #include <unordered_set>
 #include <numeric>
 
@@ -109,7 +110,7 @@ void BoardGraph::load_node(const std::string& id, const json::object_t& root_val
         entry->second = node;
     } catch(const std::exception& e) {
         this->m_nodes.erase(id);
-        logger::error("Failed to load a graph node with id {}: {}", id, e.what());
+        throw std::runtime_error{fmt::format("Failed to load graph edge with ID {}: {}", id, e.what())}; 
     }
 
 }
@@ -139,15 +140,11 @@ void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val
         entry->second = edge;
     } catch(const std::exception& e) {
         this->m_edges.erase(id);
-        logger::error(
-            "Failed to load a graph edge with id {}: {}",
-            id,
-            e.what()
-        );
+        throw std::runtime_error{fmt::format("Failed to load graph edge with ID {}: {}", id, e.what())}; 
     }
 }
 
-BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_nodes{}, m_edges{}, m_path{path} {
+BoardGraph::BoardGraph(std::filesystem::path&& path, bool create, bool save) : m_res{}, m_nodes{}, m_edges{}, m_path{path}, m_save{save} {
     this->m_res.register_loader(new ComponentLoader{});
     this->m_res.register_loader(new ConnectorLoader{});
     if(std::filesystem::exists(path)) {
@@ -157,14 +154,13 @@ BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_nodes{}, m_edg
             json_file >> root_json;
             from_json(*this, root_json);
         } catch(const std::exception& e) {
-            logger::error(
+            throw std::runtime_error{fmt::format(
                 "Failed to read board JSON from {}: {}",
                 path.c_str(),
                 e.what()
-            );
-            std::exit(-1);
+            )};
         }
-    } else {
+    } else if(create) {
         try {
             std::filesystem::create_directories(path.parent_path());
             std::ofstream new_json_file{path};
@@ -175,15 +171,19 @@ BoardGraph::BoardGraph(std::filesystem::path&& path) : m_res{}, m_nodes{}, m_edg
                 e.what()
             );
         }
+    } else {
+        throw std::runtime_error{fmt::format("The graph file at {} does not exist", path.c_str())};
     }
 }
 
 BoardGraph::~BoardGraph() {
-    try {
-        //std::ofstream savefile{this->m_path};
-        //savefile << std::setw(4) << this->to_json();
-    } catch(const std::exception& e) {
-        logger::error("Failed to save board graph to file {}: {}", this->m_path.c_str(), e.what());
+    if(this->m_save) {
+        try {
+            std::ofstream savefile{this->m_path};
+            savefile << std::setw(4) << this->to_json();
+        } catch(const std::exception& e) {
+            logger::error("Failed to save board graph to file {}: {}", this->m_path.c_str(), e.what());
+        }
     }
 }
 

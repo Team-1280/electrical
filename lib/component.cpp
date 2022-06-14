@@ -24,18 +24,6 @@ std::optional<ConnectionPortRef> Component::get_port_ref(const std::string_view 
     }
 }
 
-constexpr const std::uint64_t FNV_PRIME = 1099511628211ULL;
-constexpr const std::uint64_t FNV_OFFSET = 14695981039346656037ULL;
-
-constexpr std::uint64_t fnv1a(const std::string_view str) {
-    std::uint64_t hash = FNV_OFFSET;
-    for(const std::uint8_t c : str) {
-        hash = (hash ^ c) * FNV_PRIME;
-    }
-
-    return hash;
-}
-
 std::filesystem::path ComponentLoader::DIR = "./assets/components";
 
 Ref<Component> ComponentLoader::load(std::string_view id, const json &json_val, LazyResourceStore &store) {

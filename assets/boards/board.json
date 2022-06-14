@@ -2,10 +2,13 @@
     "edges": {},
     "nodes": {
         "roborio": {
+            "conns": [],
             "name": "Test",
-            "type": "1280.test",
-            "pos": ["12", "16 in"],
-            "conns": []
+            "pos": [
+                "12.000000m",
+                "16.000000 inches "
+            ],
+            "type": "1280.test"
         }
     }
 }

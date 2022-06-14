@@ -4,6 +4,7 @@
 
 #include "args.hpp"
 #include "buildopts.h"
+#include "fmt/color.h"
 
 
 int main(int argc, const char* argv[]) {
@@ -15,21 +16,21 @@ int main(int argc, const char* argv[]) {
         .with_version(std::string{BuildOpts::version_str});
     
 
-    auto help = args.arg(Arg {
+    auto help_flag = args.arg(Arg {
         .takes_arg = false,
         .short_name{'h'},
         .long_name{"help"},
-        .short_help{"Display a help message"}
+        .short_help{"Display extended program usage"}
     });
 
-    auto version = args.arg(Arg {
+    auto version_flag = args.arg(Arg {
         .takes_arg = false,
         .short_name{'v'},
         .long_name{"version"},
-        .short_help{"Display program version message"}
+        .short_help{"Display version message"}
     });
 
-    auto input_file = args.arg(Arg {
+    auto input_file_opt = args.arg(Arg {
         .takes_arg = true,
         .arg_name{"file"},
         .short_name{'i'},
@@ -37,35 +38,34 @@ int main(int argc, const char* argv[]) {
         .short_help{"Specify a path to an input file that will be parsed and used for processing"}
     });
     
-    Args list_ids{"list", "List all node and edge IDs in the graph"};
-    auto show_all = list_ids.arg(Arg {
-        .takes_arg = false,
-        .short_name{'a'},
-        .long_name{"all-id"},
-        .short_help{"Display all IDs"}
-    });
-
-    args.command(std::move(list_ids));
-    
     try {
         auto matches = args.matches(argc, argv);
-        fmt::print("{}\n", *matches.get(input_file)->get().arg);
-        auto help_match = matches.get(help);
+        auto help_match = matches.get(help_flag);
         if(help_match.has_value()) {
             args.print_usage();
             fmt::print("\n\n");
             args.print_help(std::cout, help_match->get().long_name);
-        } else if(matches.has(version) && args.version().has_value()) {
+            return 0;
+        } else if(matches.has(version_flag) && args.version().has_value()) {
             fmt::print("e1280 version {}\n", args.version()->get());
+            return 0;
         }
+
+        auto input_file = matches.get_arg(input_file_opt);
+        if(!input_file.has_value()) {
+            throw std::runtime_error{"No input file given"};
+        }
+
+        BoardGraph graph{*input_file, false, false};
+        std::cout << std::setw(2) << graph.to_json() << std::endl;
+         
     } catch(const std::exception& e) {
-        std::cerr << e.what() << std::endl;
+        fmt::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), "Error: ");
+        fmt::print("{}\n", e.what());
         args.print_usage();
         std::cerr << "\n run e1280 --help for more information" << std::endl;
+        return -1;
     }
-
-    BoardGraph b{"./assets/boards/board.json"};    
-    //std::cout << std::setw(4) << b.to_json() << std::endl;
 
     return 0;
 }

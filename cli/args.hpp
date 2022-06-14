@@ -183,7 +183,7 @@ public:
     ArgMatches(Args const& args);
 
     /** 
-     * \brief Get a parsed argument match for the given argument
+     * \brief Get a parsed argument match for the given argument to this or any subcommands
      * \param arg The ID of the argument to look up (get an argument ID from the `Args` class)
      * \return An empty Optional if there were no parsed options for the argument, or an `ArgMatch` structure with 
      * the parsed argument data
@@ -191,18 +191,26 @@ public:
     Optional<std::reference_wrapper<ArgMatch const>> get(const ArgId arg) const;
     
     /**
-     * \brief Get subcommand argument matches, if the given subcommand was was passed
+     * \brief Get the argument passed to the given command-line option to this or any subcommands
+     * \param arg The ID of a command-line option to get the value of
+     * \return An empty optional if either the given option was not passed at all or the 
+     *  option was passed but has no value
+     */
+    Optional<std::string_view const> get_arg(const ArgId arg) const; 
+    
+    /**
+     * \brief Get subcommand argument matches, if the given subcommand was passed
      * \param command ID of the subcommand
      * \return An empty Optional if the given subcommand was not passed, or argument matches for the given subcommand
      */
     Optional<std::reference_wrapper<ArgMatches const>> get_subcommand(const ArgsId command) const;
     
     /**
-     * \brief Check if the given argument ID is present in this ArgMatches structure
+     * \brief Check if the given argument ID is present in this ArgMatches structure or any subcommands
      * \param arg The argument ID to check
      * \return true if the argument at the given ID was passed to the program 
      */
-    inline bool has(const ArgId arg) const { return this->m_matches.contains(arg.idx); }
+    inline bool has(const ArgId arg) const { return this->get(arg).has_value(); }
 private:
     /** Map of argument indices to their parsed options */
     Map<std::size_t, ArgMatch> m_matches{};

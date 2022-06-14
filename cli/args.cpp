@@ -34,10 +34,23 @@ ArgMatches::ArgMatches(Args const& args) : m_args{args} {}
 
 Optional<std::reference_wrapper<ArgMatch const>> ArgMatches::get(const ArgId arg) const {
     auto match = this->m_matches.find(arg.idx);
-    if(match == this->m_matches.end()) {
-        return {};
+    if(match == this->m_matches.end() || arg.parent != this->m_args.m_id) {
+        if(this->m_subcommand.has_value()) {
+            return (*this->m_subcommand)->get(arg);
+        } else {
+            return {};
+        }
     } else {
         return std::cref(match->second);
+    }
+}
+
+Optional<std::string_view const> ArgMatches::get_arg(const ArgId arg) const {
+    auto match = this->get(arg);
+    if(match.has_value() && match->get().arg.has_value()) {
+        return match->get().arg;
+    } else {
+        return {};
     }
 }
 

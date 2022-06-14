@@ -222,8 +222,13 @@ public:
     
     /**
      * \brief Load a board graph from a saved JSON file, or create a new save file with the given file
+     * \param path Path to a JSON save file that the board graph is stored in
+     * \param create If the file at the given path does not exist, should we create it?
+     * \param save Wether this board graph should write itself to the save file when the destructor runs
+     * \throws std::runtime_error if `create` is false and the file does not exist
+     * \throws std::runtime_error if the file at the given path exists but could not be parsed
      */
-    BoardGraph(std::filesystem::path&&);
+    BoardGraph(std::filesystem::path&& path, bool create = false, bool save = true);
 
     inline BoardGraph(BoardGraph&& other) = default; 
     inline BoardGraph& operator=(BoardGraph&& other) = default;
@@ -281,6 +286,9 @@ private:
     void load_edge(const std::string& id, const json::object_t& obj);
     
     /** \brief Path to a file used for saving and loading this board graph */
-    std::filesystem::path m_path; 
+    std::filesystem::path m_path;
+    
+    /** \brief If we should serialize this board to our stored save file on destruction */
+    bool m_save{false};
 };
 

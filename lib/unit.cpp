@@ -1,71 +1,75 @@
+#include <stdexcept>
 #include <unit.hpp>
 
-static bool equal_ignore_case(const std::string_view a, const std::string_view b) {
-    return std::equal(
-        a.begin(), a.end(),
-        b.begin(), b.end(),
-        [](char a, char b) {
-            return std::tolower(a) == std::tolower(b);
-        }
-    );
+constexpr const std::uint64_t FNV_PRIME = 1099511628211ULL;
+constexpr const std::uint64_t FNV_OFFSET = 14695981039346656037ULL;
+
+constexpr std::uint64_t fnv1a_lowercase(const std::string_view str) {
+    std::uint64_t hash = FNV_OFFSET;
+    for(const std::uint8_t c : str) {
+        hash = (hash ^ std::tolower(c)) * FNV_PRIME;
+    }
+
+    return hash;
+}
+
+/** Generate a compile-time constant hash, input must be lowercase */
+static consteval std::uint64_t operator""_h(const char *str, std::size_t len) {
+    std::uint64_t hash = FNV_OFFSET;
+    for(std::size_t i = 0; i < len; ++i) {
+        hash = (hash ^ str[i]) * FNV_PRIME;
+    }
+    return hash;
 }
 
 void LengthUnit::from_string(LengthUnit& self, std::string_view unit_str) {
     self.m_u = LengthUnit::Meters;
 
-    while(!unit_str.empty()) {
-        if(std::isspace(unit_str[0])) {
-            unit_str.remove_prefix(1);
-        } else {
-            break;
-        }
+    while(unit_str.starts_with(' ')) {
+        unit_str.remove_prefix(1);
     }
-
+    while(unit_str.ends_with(' ')) {
+        unit_str.remove_suffix(1);
+    }
     if(unit_str.empty()) {
         return;
     }
     
-    const auto metric = [&self, &unit_str](const char * const prefix, UnitVal unit) {
-        if(unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'm') {
-            self.m_u = unit;
-        } else if(unit_str.length() >= 6 && equal_ignore_case(unit_str.substr(0, 4), prefix)) {
-            if((unit_str.length() == 6 && std::tolower(unit_str.at(5)) == 'm') ||
-                (unit_str.length() >= 10 && equal_ignore_case(unit_str.substr(5, 5), "meter"))
-            ) {
-                self.m_u = unit;
-            }
-        } else {
-            throw std::invalid_argument(fmt::format("LengthUnit#LengthUnit called with invalid string \"{}\"", unit_str));
-        }
-    };
+    std::uint64_t hash = fnv1a_lowercase(unit_str);
 
+    switch(hash) {
+        case "meter"_h:
+        case "m"_h:
+        case "meters"_h: {
+            self.m_u = LengthUnit::Meters;
+        } return;
 
-    char first = std::tolower(unit_str.at(0));
-    switch(first) {
-        case 'c': metric("centi", UnitVal::Centimeters); break;
-        case 'm': {
-            if(unit_str.length() == 1 || (unit_str.length() >= 6 && equal_ignore_case(unit_str, "meter"))) {
-                self.m_u = UnitVal::Meters;
-                break;
-            }
-            metric("milli", UnitVal::Millimeters); 
-        } break;
-        case 'i': {
-            if((unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 'n') ||
-                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 4), "inch"))
-            ) {
-                self.m_u = UnitVal::Inches;
-            }
-        } break;
-        case 'f': {
-            if((unit_str.length() == 2 && std::tolower(unit_str.at(1)) == 't') ||
-                (unit_str.length() >= 4 && equal_ignore_case(unit_str.substr(0, 4), "feet"))
-            ) {
-                self.m_u = UnitVal::Feet;
-            }
-        } break;
-        default: throw std::invalid_argument(fmt::format("LengthUnit#LengthUnit(string) called with invalid string \"{}\"", unit_str));
-    }
+        case "centimeter"_h:
+        case "centimeters"_h:
+        case "cm"_h: {
+            self.m_u = LengthUnit::Centimeters;
+        } return;
+
+        case "millimeter"_h:
+        case "millimeters"_h:
+        case "mm"_h: {
+            self.m_u = LengthUnit::Millimeters;
+        } return;
+
+        case "inch"_h:
+        case "inches"_h:
+        case "in"_h: {
+            self.m_u = LengthUnit::Inches;
+        } return;
+
+        case "foot"_h:
+        case "feet"_h:
+        case "ft"_h: {
+            self.m_u = LengthUnit::Feet;
+        } return;
+
+        default: throw std::runtime_error{fmt::format("Invalid length unit {}", std::string{unit_str})};
+    }    
 }
 
 std::string LengthUnit::to_string() const noexcept {
