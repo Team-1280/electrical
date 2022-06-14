@@ -110,8 +110,9 @@ public:
     /**
      * \brief Print a generated help message for this argument program to the given output stream
      * \param ostream Output stream to write a help message to
+     * \param verbose If true, long descriptions and help messages will be printed
      */
-    void print_help(std::ostream& ostream = std::cout, bool verbose = false) const;
+    void print_help(std::ostream& ostream = std::cout, bool verbose = false, std::size_t space = 0) const;
 private:
     /** Name of the program */
     std::string m_name;

@@ -16,9 +16,19 @@ int main(int argc, const char* argv[]) {
         .long_name{"help"},
         .short_help{"Display a help message"}
     });
+
+    auto version = args.arg(Arg {
+        .takes_arg = false,
+        .short_name{'v'},
+        .long_name{"version"},
+        .short_help{"Display program version message"}
+    });
     
     try {
         auto matches = args.matches(argc, argv);
+        if(matches.has(help)) {
+            args.print_help();
+        }
     } catch(const std::exception& e) {
         std::cerr << e.what() << std::endl;
         std::cerr << "Run e1280 --help for more information" << std::endl;

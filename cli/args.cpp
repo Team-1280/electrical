@@ -1,4 +1,5 @@
 #include "args.hpp"
+#include <algorithm>
 #include <functional>
 #include <stdexcept>
 
@@ -59,7 +60,42 @@ bool ArgMatches::add_opt(ArgId id, ArgMatch&& match) {
     }
 }
 
-void Args::print_help(std::ostream& ostream, bool verbose) const {
+//**MUST** be the same length as `write_arg`'s name is
+static std::size_t name_len(Arg const& arg) {
+    std::size_t len = 0;
+    if(arg.short_name.has_value()) {
+        if(arg.long_name.has_value()) {
+            len = fmt::formatted_size("-{}, --{}", *arg.short_name, *arg.long_name);
+        } else {
+            len = fmt::formatted_size("-{}", *arg.short_name);
+        }
+    } else if(arg.long_name.has_value()) {
+        len = fmt::formatted_size("--{}", *arg.long_name);
+    }
+    return len;
+}
+
+static void write_arg(std::ostream& ostream, bool verbose, std::size_t longest_name, std::size_t space, Arg const& arg) {
+    std::string name;
+    if(arg.short_name.has_value()) {
+        if(arg.long_name.has_value()) {
+            name = fmt::format("-{}, --{}", *arg.short_name, *arg.long_name);
+        } else {
+            name = fmt::format("-{}", *arg.short_name);
+        }
+    } else if(arg.long_name.has_value()) {
+        name = fmt::format("--{}", *arg.long_name);
+    }
+    
+    fmt::print(ostream, "{:>{}}   {}\n", name, longest_name + space, (verbose && arg.long_help.has_value()) ? *arg.long_help : arg.short_help);
+
+    //ostream << std::left << "   " << (verbose ? (arg.long_help.has_value() ? *arg.long_help : arg.short_help) : arg.short_help) << std::endl;
+
+}
+
+void Args::print_help(std::ostream& ostream, bool verbose, std::size_t space) const {
+    std::size_t old_width = ostream.width();
+
     ostream << this->m_name;
     if(this->m_version.has_value()) {
         ostream << " (" << *this->m_version << ")" << std::endl;
@@ -68,8 +104,30 @@ void Args::print_help(std::ostream& ostream, bool verbose) const {
     }
 
     if(verbose) {
-        ostream << this->m_long_desc.has_value() ? 
+        ostream << (this->m_long_desc.has_value() ? *this->m_long_desc : this->m_short_desc) << std::endl;
+    } else {
+        ostream << this->m_short_desc << std::endl;
     }
+    
+    std::size_t longest = 0;
+    auto longest_elem = std::max_element(
+        this->m_args.begin(),
+        this->m_args.end(),
+        [](Arg const& lhs, Arg const& rhs) { return name_len(lhs) < name_len(rhs); }
+    );
+    if(longest_elem != this->m_args.end()) {
+        longest = name_len(*longest_elem);
+    }
+
+    if(std::any_of(this->m_args.begin(), this->m_args.end(), [](Arg const& arg) { return !arg.takes_arg; })) {
+        ostream << "[Flags]" << std::endl;
+        for(const auto& arg : this->m_args) {
+            if(arg.takes_arg) { continue; }
+            write_arg(ostream, verbose, longest, space + 2, arg); 
+        }
+
+        
+    } 
 }
 
 ArgMatches Args::matches(int argc, const char *argv[]) {
