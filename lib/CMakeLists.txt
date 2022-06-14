@@ -11,7 +11,7 @@ set(
 
 set(
     NAME
-    "e1280-core"
+    "e1280"
 )
 
 set(CMAKE_CXX_STANDARD 20)
@@ -32,6 +32,9 @@ if(DOXYGEN_FOUND AND BUILD_CORE_DOCS)
 elseif(BUILD_CORE_DOCS)
     message("Install doxygen to build documentation")
 endif()
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/buildopts-${NAME}.h.in" "generated/buildopts-${NAME}.h")
+message("${CMAKE_CURRENT_BINARY_DIR}")
+target_include_directories(${NAME} PUBLIC "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
 target_compile_options(${NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>

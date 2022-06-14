@@ -5,7 +5,7 @@ set(
 )
 
 set(NAME
-    "e1280-gui"
+    "e1280_gui"
     
 )
 
@@ -52,7 +52,7 @@ pkg_check_modules(GTKMM REQUIRED IMPORTED_TARGET gtkmm-4.0)
 
 target_link_directories(${NAME} PRIVATE ${GTKMM_LIBRARY_DIRS})
 target_include_directories(${NAME} PRIVATE ${GTKMM_INCLUDE_DIRS})
-target_link_libraries(${NAME} PRIVATE ${GTKMM_LIBRARIES} e1280-core)
+target_link_libraries(${NAME} PRIVATE ${GTKMM_LIBRARIES} e1280_lib)
 
 get_target_property(MY_PROJECT_SOURCES ${NAME} SOURCES)
 message("SOURCES ${MY_PROJECT_SOURCES}")

@@ -6,6 +6,8 @@ project(
     LANGUAGES CXX
 )
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 if(MSVC)
     set(CMAKE_CXX20_STANDARD_COMPILE_OPTION "/std:c++20")
 endif()
@@ -25,8 +27,7 @@ if("${CMAKE_BUILD_TYPE}" STREQUAL "${CMAKE_DEFAULT_BUILD_TYPE}")
 elseif(NOT "${CMAKE_BUILD_TYPE}" IN_LIST BUILD_TYPES)
     message(FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TYPE}, available build types are: ${BUILD_TYPES}")
 endif()
-configure_file("build/buildopts.h.in" "generated/buildopts.h")
-include_directories("${CMAKE_CURRENT_BINARY_DIR}/generated")
+
 
 include(FetchContent)
 
@@ -44,7 +45,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(fmt)
 
-add_subdirectory(core)
+add_subdirectory(lib)
 
 set(FRONTEND_TYPES cli gui)
 if(NOT "${FRONTEND}" IN_LIST FRONTEND_TYPES)
