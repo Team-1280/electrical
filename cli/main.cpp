@@ -24,6 +24,16 @@ int main(int argc, const char* argv[]) {
         .short_help{"Display program version message"}
     });
     
+    Args list_ids{"list", "List all node and edge IDs in the graph"};
+    auto show_all = list_ids.arg(Arg {
+        .takes_arg = false,
+        .short_name{'a'},
+        .long_name{"all-id"},
+        .short_help{"Display all IDs"}
+    });
+
+    args.command(std::move(list_ids));
+    
     try {
         auto matches = args.matches(argc, argv);
         if(matches.has(help)) {

@@ -75,6 +75,8 @@ static std::size_t name_len(Arg const& arg) {
     return len;
 }
 
+static constexpr const char * BORDER_CHAR = "│";
+
 static void write_arg(std::ostream& ostream, bool verbose, std::size_t longest_name, std::size_t space, Arg const& arg) {
     std::string name;
     if(arg.short_name.has_value()) {
@@ -87,27 +89,25 @@ static void write_arg(std::ostream& ostream, bool verbose, std::size_t longest_n
         name = fmt::format("--{}", *arg.long_name);
     }
     
-    fmt::print(ostream, "{:>{}}   {}\n", name, longest_name + space, (verbose && arg.long_help.has_value()) ? *arg.long_help : arg.short_help);
-
-    //ostream << std::left << "   " << (verbose ? (arg.long_help.has_value() ? *arg.long_help : arg.short_help) : arg.short_help) << std::endl;
-
+    fmt::print(
+        ostream,
+        "{1:>{0}} {3:>{2}}   {4}\n",
+        space,
+        BORDER_CHAR,
+        longest_name,
+        name,
+        (verbose && arg.long_help.has_value()) ? *arg.long_help : arg.short_help
+    );
 }
 
 void Args::print_help(std::ostream& ostream, bool verbose, std::size_t space) const {
-    std::size_t old_width = ostream.width();
-
-    ostream << this->m_name;
     if(this->m_version.has_value()) {
-        ostream << " (" << *this->m_version << ")" << std::endl;
+        fmt::print(ostream, "{1:>{0}} {2} (v{3})\n", space, BORDER_CHAR, this->m_name, *this->m_version);
     } else {
-        ostream << std::endl;
+        fmt::print(ostream, "{1:>{0}} {2}\n", space, BORDER_CHAR, this->m_name);
     }
 
-    if(verbose) {
-        ostream << (this->m_long_desc.has_value() ? *this->m_long_desc : this->m_short_desc) << std::endl;
-    } else {
-        ostream << this->m_short_desc << std::endl;
-    }
+    fmt::print(ostream, "{1:>{0}} {2}\n", space, BORDER_CHAR, (verbose && this->m_long_desc.has_value()) ? *this->m_long_desc : this->m_short_desc); 
     
     std::size_t longest = 0;
     auto longest_elem = std::max_element(
@@ -120,14 +120,26 @@ void Args::print_help(std::ostream& ostream, bool verbose, std::size_t space) co
     }
 
     if(std::any_of(this->m_args.begin(), this->m_args.end(), [](Arg const& arg) { return !arg.takes_arg; })) {
-        ostream << "[Flags]" << std::endl;
+        fmt::print(ostream, "{1:>{0}} [Flags]\n", space, BORDER_CHAR);
         for(const auto& arg : this->m_args) {
             if(arg.takes_arg) { continue; }
-            write_arg(ostream, verbose, longest, space + 2, arg); 
+            write_arg(ostream, verbose, longest, space, arg); 
         }
+    }
+    if(std::any_of(this->m_args.begin(), this->m_args.end(), [](Arg const& arg) { return arg.takes_arg; })) {
+        fmt::print(ostream, "{1:>{0}} [Options]\n", space, BORDER_CHAR);
+        for(const auto& arg : this->m_args) {
+            if(!arg.takes_arg) { continue; }
+            write_arg(ostream, verbose, longest, space, arg);
+        }
+    }
 
-        
-    } 
+    if(!this->m_commands.empty()) {
+        fmt::print(ostream, "{1:>{0}} [Subcommands]\n", space, BORDER_CHAR);
+        for(const auto& subcmd : this->m_commands) {
+            subcmd.print_help(ostream, verbose, space + 5);
+        }
+    }
 }
 
 ArgMatches Args::matches(int argc, const char *argv[]) {
