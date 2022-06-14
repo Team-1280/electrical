@@ -34,7 +34,7 @@ public:
     };
 
     /** 
-     * A \brief single end of a wire, that may be free-floating (not connected to any component node)
+     * \brief A single end of a wire, that may be free-floating (not connected to any component node)
      * or connected to a specific port on a component node
      */
     struct Connection {
