@@ -96,9 +96,9 @@ public:
     };
     
     /** \brief Get the ID of this wire edge */
-    constexpr inline const std::string_view id() const { return this->m_id; }
+    constexpr inline const std::string_view id() const noexcept { return this->m_id; }
     /** \brief Get the pair of Connection structures representing the ends of this wire edge */
-    inline const std::array<Connection, 2>& connections() const { return this->m_conns; }
+    inline std::array<Connection, 2> const& connections() const noexcept { return this->m_conns; }
     /** 
      * \brief Check if this edge connects to the given node in the graph
      * \return true if this edge attaches to the given node
@@ -262,6 +262,41 @@ public:
     
     /** Save this graph to a file */
     virtual ~BoardGraph();
+    
+    /**
+     * \brief structure with `begin` and `end` methods to allow an iteration over nodes in a board graph
+     * using an enhanced for loop
+     */
+    struct NodeIterator {
+    public:
+        using iterator_type = Map<std::string, Ref<ComponentNode>>::iterator;
+
+        constexpr NodeIterator(BoardGraph& graph) : m_graph{graph} {}
+        inline iterator_type begin() { return this->m_graph.m_nodes.begin(); }
+        inline iterator_type end() { return this->m_graph.m_nodes.end(); }
+    private:
+        BoardGraph& m_graph;
+    };
+    
+    /**
+     * \brief Structure referencing a `BoardGraph` that allows iteration over edges in the graph
+     * using an enhanced for loop
+     */
+    struct EdgeIterator {
+    public:
+        using iterator_type = Map<std::string, Ref<WireEdge>>::iterator;
+        constexpr EdgeIterator(BoardGraph& graph) : m_graph{graph} {}
+        inline iterator_type begin() { return this->m_graph.m_edges.begin(); }
+        inline iterator_type end() { return this->m_graph.m_edges.end(); }
+    private:
+        BoardGraph& m_graph;
+    };
+    
+    /** \brief Get an iterator over all nodes stored in this graph */
+    inline constexpr NodeIterator nodes() noexcept { return NodeIterator{*this}; }
+    
+    /** \brief Get an iterator over all edges stored in the graph */
+    inline constexpr EdgeIterator edges() noexcept { return EdgeIterator{*this}; }
 
 private:
     /** \brief Collection of all loaded component types */
@@ -291,4 +326,3 @@ private:
     /** \brief If we should serialize this board to our stored save file on destruction */
     bool m_save{false};
 };
-

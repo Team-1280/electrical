@@ -75,5 +75,3 @@ private:
     /** \brief The graph to modify */
     BoardGraph m_graph;
 };
-
-
