@@ -133,7 +133,7 @@ void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val
 
     try {
         const auto json_val = root_val.at("edges").at(id).get<json::object_t>();
-        Ref<WireEdge> edge{};
+        Ref<WireEdge> edge{new WireEdge()};
         edge->m_id = entry->first;
         for(std::size_t i = 0; const auto& conn_json : json_val.at("conns")) {
             if(i >= 2) {
@@ -149,6 +149,7 @@ void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val
             } else {
                 throw std::runtime_error{"Wire edge connection JSON must have either a 'pos' field if the edge is floating or a 'node' and 'port' ID field"};
             }
+            i += 1;
         }
 
         entry->second = edge;
@@ -238,17 +239,19 @@ json BoardGraph::to_json() const {
     }
 
     for(const auto& [id, edge] : this->m_edges) {
-        json::array_t edge_json{};
+        json::object_t edge_json{};
+        edge_json.emplace("conns", json::array_t{});
         for(const auto& conn : edge->connections()) {
-            if(conn.is_floating()) {
-                edge_json.push_back(json{nullptr});
-                continue;
-            }
             json::object_t conn_json{};
-            conn_json.emplace("node", conn.component().lock()->id());
-            conn_json.emplace("port", (*conn.port()).get().id());
             conn_json.emplace("connector", conn.connector()->id());
-            edge_json.push_back(std::move(conn_json));
+            if(conn.is_floating()) {
+                conn_json.emplace("pos", conn.pos());
+            } else {
+                conn_json.emplace("node", conn.component().lock()->id());
+                conn_json.emplace("port", (*conn.port()).get().id());
+            }
+
+            edge_json.at("conns").push_back(std::move(conn_json));
         }
         edges.emplace(edge->id(), std::move(edge_json));
     }

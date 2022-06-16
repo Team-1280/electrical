@@ -118,6 +118,7 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     }
 
     for(const auto& [id, edge] : this->graph.edges()) {
+        fmt::print("rendering {}\n", id);
         cairo->save();
         cairo->set_line_cap(Cairo::Context::LineCap::ROUND);
         cairo->set_line_join(Cairo::Context::LineJoin::ROUND);

@@ -1,5 +1,22 @@
 {
-    "edges": {},
+    "edges": {
+        "e1": {
+            "conns": [
+                {
+                    "connector": "1280.bare",
+                    "node": "roborio",
+                    "port": "pwm0"
+                },
+                {
+                    "connector": "1280.bare",
+                    "pos": [
+                        "12.000000in",
+                        "12.000000in"
+                    ]
+                }
+            ]
+        }
+    },
     "nodes": {
         "roborio": {
             "conns": [],

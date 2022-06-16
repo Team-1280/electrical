@@ -38,6 +38,5 @@ target_compile_options(${NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
 )
-target_compile_definitions(${NAME} PRIVATE UUID_SYSTEM_GENERATOR)
 target_include_directories(${NAME} PUBLIC ./)
 target_link_libraries(${NAME} PUBLIC nlohmann_json::nlohmann_json fmt::fmt)
