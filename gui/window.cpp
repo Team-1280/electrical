@@ -1,4 +1,5 @@
 #include "window.hpp"
+#include "cairomm/context.h"
 #include "geom.hpp"
 #include "lib.hpp"
 #include "unit.hpp"
@@ -97,7 +98,7 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
 
     cairo->save();
     cairo->set_line_width(0.001);
-    cairo->set_source_rgba(0., 0., 0., 0.5);
+    cairo->set_source_rgba(0., 0., 0., 0.3);
     for(double i = 0; i < this->meters_wide(); i += 0.01) {
         cairo->move_to(i, 0.);
         cairo->line_to(i, this->m_pxpmeter);
@@ -114,6 +115,18 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     cairo->translate(this->m_campos.x.normalized(), this->m_campos.y.normalized());
     for(const auto& [id, node] : this->graph.nodes()) {
         this->draw_node(cairo, node);
+    }
+
+    for(const auto& [id, edge] : this->graph.edges()) {
+        cairo->save();
+        cairo->set_line_cap(Cairo::Context::LineCap::ROUND);
+        cairo->set_line_join(Cairo::Context::LineJoin::ROUND);
+        cairo->set_line_width(0.001);
+        cairo->set_source_rgb(0., 0., 0.);
+        
+        auto left = edge->side(WireEdge::Side::LEFT);
+        
+        cairo->restore();
     }
     cairo->restore();
 }

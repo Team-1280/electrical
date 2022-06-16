@@ -13,10 +13,18 @@
 
 
 std::optional<std::reference_wrapper<const ConnectionPort>> WireEdge::Connection::port() const {
-    if(!this->m_component.expired()) {
+    if(!this->is_floating()) {
         return std::cref(*this->m_port);
     } else {
         return {};
+    }
+}
+
+Point const& WireEdge::Connection::pos() const {
+    if(!this->is_floating()) {
+        return this->m_port->pos();
+    } else {
+        return this->m_pos;
     }
 }
 
@@ -128,13 +136,19 @@ void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val
         Ref<WireEdge> edge{};
         edge->m_id = entry->first;
         for(std::size_t i = 0; const auto& conn_json : json_val.at("conns")) {
-            if(conn_json.is_null() || i >= 2) {
-                continue;
+            if(i >= 2) {
+                throw std::runtime_error{"Too many connections for edge, must have exactly two"};
             }
-            
-            edge->m_conns[i].m_component = *this->get_node(conn_json.at("node").get<std::string_view>());
-            edge->m_conns[i].m_port = *edge->m_conns[i].m_component.lock()->type()->get_port_ref(conn_json.at("port").get<std::string_view>());
             edge->m_conns[i].m_connector = this->m_res.try_get<Connector>(conn_json.at("connector").get<std::string_view>());
+            
+            if(conn_json.contains("node") && conn_json.contains("port")) {
+                edge->m_conns[i].m_component = *this->get_node(conn_json.at("node").get<std::string_view>());
+                edge->m_conns[i].m_port = *edge->m_conns[i].m_component.lock()->type()->get_port_ref(conn_json.at("port").get<std::string_view>());
+            } else if(conn_json.contains("pos")) {
+                conn_json.at("pos").get_to<Point>(edge->m_conns[i].m_pos);
+            } else {
+                throw std::runtime_error{"Wire edge connection JSON must have either a 'pos' field if the edge is floating or a 'node' and 'port' ID field"};
+            }
         }
 
         entry->second = edge;

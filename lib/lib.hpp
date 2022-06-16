@@ -50,6 +50,13 @@ public:
          * or a reference to the connection port on the attached component this is attached to
          */
         std::optional<std::reference_wrapper<const ConnectionPort>> port() const;
+    
+        /**
+         * \brief Get the position of this connector, fetched either from the port that this is connected to
+         * or the stored position
+         * \return Position that this end occupies
+         */
+        Point const& pos() const;
         /** \brief Get the graph node that this connection is attached to */ 
         inline WeakRef<ComponentNode> component() const noexcept { return this->m_component; }
         /** \brief Get the connector type of this connection point */
