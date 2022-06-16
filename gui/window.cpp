@@ -124,7 +124,16 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
         cairo->set_line_width(0.001);
         cairo->set_source_rgb(0., 0., 0.);
         
-        auto left = edge->side(WireEdge::Side::LEFT);
+        const auto& left = edge->side(WireEdge::Side::LEFT);
+        cairo->move_to(left.pos().x.normalized(), left.pos().y.normalized());
+        for(const auto& point : *edge) {
+            cairo->line_to(point.x.normalized(), point.y.normalized());
+        }
+
+        const auto& right = edge->side(WireEdge::Side::RIGHT);
+        cairo->line_to(right.pos().x.normalized(), right.pos().y.normalized());
+
+        cairo->stroke();
         
         cairo->restore();
     }

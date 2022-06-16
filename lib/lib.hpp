@@ -122,6 +122,9 @@ public:
      * \brief Convenience method to fetch a wire end by side 
      */
     inline constexpr Connection& side(const Side side) { return this->m_conns[side]; }
+
+    std::vector<Point>::const_iterator begin() const { return this->m_wire_pts.begin(); }
+    std::vector<Point>::const_iterator end() const { return this->m_wire_pts.end(); }
 private:
     /** \brief Components that this wire connects between*/
     std::array<Connection, 2> m_conns;
