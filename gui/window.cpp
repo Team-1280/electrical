@@ -51,7 +51,7 @@ GraphRender::GraphRender(BoardGraph& graph) :
     this->m_drag_event->signal_drag_update().connect([this](double x, double y) {
         x = this->px_to_meters(x);
         y = this->px_to_meters(y);
-        auto newdragpos = Point{Length{x}, Length{y}};
+        auto newdragpos = Point{Length{static_cast<float>(x)}, Length{static_cast<float>(y)}};
         this->m_campos += newdragpos - this->m_dragoffset;
         this->m_dragoffset = newdragpos;
         this->queue_draw();
@@ -118,7 +118,6 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     }
 
     for(const auto& [id, edge] : this->graph.edges()) {
-        fmt::print("rendering {}\n", id);
         cairo->save();
         cairo->set_line_cap(Cairo::Context::LineCap::ROUND);
         cairo->set_line_join(Cairo::Context::LineJoin::ROUND);

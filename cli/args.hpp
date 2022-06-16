@@ -218,7 +218,6 @@ private:
     Optional<std::unique_ptr<ArgMatches>> m_subcommand{}; 
     /** Reference to the arguments structure this represents */
     Args const& m_args;
-        
     
     /**
      * \brief Add an option match to this `ArgMatches` structure or the subcommands of this structure
