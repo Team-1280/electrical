@@ -279,7 +279,7 @@ public:
 
     static constexpr size_t NUM = 5;
     constexpr LengthUnit(UnitVal u) : m_u{u} {}
-    constexpr LengthUnit() : m_u{UnitVal::Meters} {}
+    constexpr LengthUnit() : m_u{DEFAULT} {}
     constexpr LengthUnit(const LengthUnit& other) = default;
     constexpr inline operator size_t() const { return static_cast<size_t>(this->m_u); }
     constexpr inline LengthUnit& operator=(const LengthUnit& other) {
@@ -310,10 +310,60 @@ private:
     UnitVal m_u;
 };
 
+/**
+ * \brief Enumeration representing all supported units of mass
+ * \implements Unit
+ */
+class MassUnit {
+public:
+    enum UnitVal: uint8_t {
+        Grams = 0,
+        Milligrams = 1,
+        Kilograms = 2,
+        Pounds = 3,
+        Ounces = 4,
+    };
+
+    static constexpr size_t NUM = 5;
+    constexpr MassUnit(UnitVal u) : m_u{u} {}
+    constexpr MassUnit() : m_u{DEFAULT} {}
+    constexpr MassUnit(const MassUnit& other) = default;
+    constexpr inline operator size_t() const { return static_cast<size_t>(this->m_u); }
+    constexpr inline MassUnit& operator=(const MassUnit& other) {
+        this->m_u = other.m_u;
+        return *this;
+    } 
+    
+    /**
+     * \brief Convert a unit string into a corresponding mass unit value
+     * \throws std::invalid_argument if the passed unit string does not match any expected 
+     * units
+     */
+    static void from_string(MassUnit& self, const std::string_view unit_str);
+    static constexpr std::array<float, NUM> CONV_FACTORS = {
+        1.,
+        0.001,
+        1000.,
+        453.592,
+        28.3495
+    };
+    
+    /** \brief Convert this unit to a string */
+    std::string to_string() const noexcept;
+
+    static constexpr const UnitVal DEFAULT = UnitVal::Grams;
+
+private:
+    UnitVal m_u;
+};
+
 
 using Length = Quantity<LengthUnit, float>;
 
 static_assert(ser::StringSerializable<Length>);
+
+using Mass = Quantity<MassUnit, float>;
+static_assert(ser::StringSerializable<Mass>);
 
 
 /** \brief Custom suffix operator for creating a new length in meters */
