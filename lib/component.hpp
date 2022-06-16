@@ -7,6 +7,7 @@
 #include <ser/ser.hpp>
 #include <geom.hpp>
 #include "ser/store.hpp"
+#include "unit.hpp"
 #include "util/hash.hpp"
 
 
@@ -45,7 +46,6 @@ using ConnectionPortRef = const ConnectionPort *;
 /**
  * \brief A component in the board design with required parameters like
  * footprint
- *
  */ 
 class Component {
 public:
@@ -59,6 +59,8 @@ public:
     inline constexpr const std::string_view id() const { return this->m_id; }
     /** Get a reference to this component's footprint */
     constexpr inline const Footprint& footprint() const { return this->m_fp; }
+    /** Get the mass of this component, if it exists */
+    constexpr inline const Optional<std::reference_wrapper<Mass const>> mass() const { return this->m_mass; }
     
     /** Get a port by name, O(1) lookup time */
     std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
@@ -82,7 +84,9 @@ private:
     port_map_type m_ports;
     /* Shape of the component in the workspace */ 
     Footprint m_fp;
-    
+    /** Mass of the component, if any is given */
+    Optional<Mass> m_mass;
+
     friend class BoardGraph;
     friend class ComponentLoader;
 };

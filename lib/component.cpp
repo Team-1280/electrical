@@ -32,6 +32,9 @@ Ref<Component> ComponentLoader::load(std::string_view id, const json &json_val, 
     component->m_id = id;
     json_val.at("name").get_to<std::string>(component->m_name);
     json_val.at("footprint").get_to<Footprint>(component->m_fp);
+    if(json_val.contains("mass")) {
+        component->m_mass.emplace(json_val.at("mass").get<Mass>());
+    }
     for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
         auto elem = component->m_ports.emplace(port_id, ConnectionPort{}).first;
             
