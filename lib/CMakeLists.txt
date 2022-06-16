@@ -7,6 +7,7 @@ set(
     "component.cpp"
     "wire.cpp"
     "ser/store.cpp"
+    "data.cpp"
 )
 
 set(

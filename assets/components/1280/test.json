@@ -1,13 +1,13 @@
 {
     "name": "Test",
     "footprint": [
-        ["100cm", "10 inches"],
-        ["10ft", "5mm"],
-        ["4m", "61cm"]
+        ["10cm", "10 cm"],
+        ["5cm", "5cm"],
+        ["-5 cm", "6cm"]
     ],
     "ports": {
         "pwm0": {
-            "pos": ["100 cm", "10 inches"],
+            "pos": ["0cm", "0 inches"],
             "name": "PWM0"
         }
     }

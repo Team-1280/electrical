@@ -198,6 +198,12 @@ public:
         return *this;
     }
 
+    constexpr inline Quantity<U, V> operator-() const requires requires(V v) {
+        {-v}->std::convertible_to<V>;
+    }{
+        return Quantity::raw(this->m_unit, -this->m_val);
+    }
+
 
     /** \brief Compare two quantities */
     constexpr inline auto operator<=>(const Quantity<U, V>& other) const requires requires {

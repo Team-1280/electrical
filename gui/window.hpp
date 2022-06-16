@@ -2,6 +2,7 @@
 
 #include "geom.hpp"
 #include "lib.hpp"
+#include "ser/store.hpp"
 #include <gtkmm/eventcontrollermotion.h>
 #include <gtkmm/eventcontrollerscroll.h>
 #include <gtkmm/gesturedrag.h>
@@ -45,8 +46,8 @@ private:
     /** \brief Camera position in the workspace*/
     Point m_campos;
     
-    /** \brief Used while dragging to store the original camera postition */
-    Point m_oldcampos;
+    /** \brief Stores the last drag offset from the beginning, used for panning the view */
+    Point m_dragoffset;
     
     /** \brief Last recorded position of the mouse */
     Point m_mousepos;

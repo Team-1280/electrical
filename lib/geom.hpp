@@ -75,6 +75,10 @@ public:
         return *this;
     }
 
+    constexpr inline Point operator-() const {
+        return Point(-this->x, -this->y);
+    }
+
     /**
      * \brief Get the distance between two points, returning a distance in the units
      * of this's x coordinate
