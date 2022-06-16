@@ -25,13 +25,16 @@ protected:
     void on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int h);
     
 private:
-    void draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<ComponentNode> fp);
+    void draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<ComponentNode> node);
     
     inline double px_to_meters(double px) const noexcept { return px / this->m_pxpmeter; }
     inline double meters_to_px(double m) const noexcept { return m * this->m_pxpmeter; }
 
     /** \brief Get the smallest dimension of this drawing area */
     inline int smallest_dim() const { return std::min(this->get_width(), this->get_height()); }
+
+    inline double meters_wide() const { return this->get_width() / this->m_pxpmeter; }
+    inline double meters_tall() const { return this->get_height() / this->m_pxpmeter; }
 
     /** \brief Receive events when the user pans the view around */
     Glib::RefPtr<Gtk::GestureDrag> m_drag_event;

@@ -73,7 +73,6 @@ GraphRender::GraphRender(BoardGraph& graph) :
     this->m_motion_event->signal_motion().connect([this](double x, double y) { 
         this->m_mousepos.x.normalized() = this->px_to_meters(x - this->get_width() / 2.);
         this->m_mousepos.y.normalized() = this->px_to_meters(y - this->get_height() / 2.);
-        fmt::print("Mouse is ({}, {})\n", this->m_mousepos.x.normalized(), this->m_mousepos.y.normalized());
     });
 
     this->add_controller(this->m_drag_event);
@@ -95,14 +94,27 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     
     cairo->save();
     cairo->scale(this->m_pxpmeter, this->m_pxpmeter);
-    cairo->translate(this->get_width() / 2. / this->m_pxpmeter, this->get_height() / 2. / this->m_pxpmeter);
+
+    cairo->save();
+    cairo->set_line_width(0.001);
+    cairo->set_source_rgba(0., 0., 0., 0.5);
+    for(double i = 0; i < this->meters_wide(); i += 0.01) {
+        cairo->move_to(i, 0.);
+        cairo->line_to(i, this->m_pxpmeter);
+        cairo->stroke();
+    }
+    for(double i = 0; i < this->meters_tall(); i += 0.01) {
+        cairo->move_to(0., i);
+        cairo->line_to(this->m_pxpmeter, i);
+        cairo->stroke();
+    }
+    cairo->restore();
+
+    cairo->translate(w / 2. / this->m_pxpmeter, h / 2. / this->m_pxpmeter);
     cairo->translate(this->m_campos.x.normalized(), this->m_campos.y.normalized());
     for(const auto& [id, node] : this->graph.nodes()) {
-        fmt::print("Drew {}, pos ({}, {})\n", id, this->m_campos.x, this->m_campos.y);
         this->draw_node(cairo, node);
     }
-    //this->draw_node(cairo, fp);
-
     cairo->restore();
 }
 
@@ -110,7 +122,8 @@ void GraphRender::draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<Comp
     cairo->save();
     
     cairo->set_line_cap(Cairo::Context::LineCap::ROUND);
-    cairo->set_line_width(0.1);
+    cairo->set_line_join(Cairo::Context::LineJoin::ROUND);
+    cairo->set_line_width(0.01);
     cairo->set_source_rgba(.0, .0, 0.0, 1.);
 
     const auto& fp = node->type()->footprint();
