@@ -116,12 +116,19 @@ public:
     /**
      * \brief Create a new footprint from a list of connected points
      */
-    Footprint(const std::vector<Point>& pts) : m_pts{pts} {}
-    Footprint(std::vector<Point>&& pts) : m_pts{std::move(pts)} {}
+    Footprint(const std::vector<Point>& pts) : Footprint(std::vector{pts}) {}
+    Footprint(std::vector<Point>&& pts);
     
-    constexpr operator std::vector<Point>&() {
+    constexpr operator std::vector<Point> const&() const noexcept {
         return this->m_pts;
     }
+    
+    /**
+     * \brief Check if this footprint's axis aligned bounding box contains the given point
+     * \param p Point to check for collision
+     * \return true if the given point is contained or intersects our axis aligned bounding box
+     */
+    bool contains_aabb(Point const& p) const;
 
     std::vector<Point>::const_iterator begin() const { return this->m_pts.begin(); }
     std::vector<Point>::const_iterator end() const { return this->m_pts.end(); }
@@ -129,6 +136,11 @@ public:
 private:
     /** \brief A vector of points that each connect to the prior one, must have at least one point */
     std::vector<Point> m_pts;
+    
+    /** \brief Maximum x and y coordinate of this footprint, used to make an axis aligned bounding box */
+    Point m_max;
+    /** \brief Minimum x and y coordinate of this footprint used to make an axis aligned bounding box */
+    Point m_min;
 };
 
 static_assert(ser::JsonSerializable<Footprint>);
