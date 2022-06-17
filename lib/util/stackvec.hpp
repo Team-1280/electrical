@@ -1,9 +1,9 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <concepts>
 #include <cstdlib>
+#include <iterator>
 
 /**
  * \brief Vector structure that stores up to `MAX_STACK` elements on the stack before allocating heap space
@@ -13,9 +13,42 @@
 template<typename T, std::size_t MAX_STACK = 1024 / sizeof(T)>
 class StackVec {
 public:
+    using value_type = T;
     using size_type = std::uint32_t;
     using reference = T&;
     using const_reference = T const&;
+    
+    /** \brief Iterator over elements of a StackVec */
+    struct Iterator {
+    public:
+        /** \brief Construct a new Iterator over elements of a `StackVec`, starting with the given index */
+        Iterator(StackVec<T>& ref, size_type idx = 0) : m_vec{ref}, m_idx{idx} {}
+        Iterator(const Iterator& other) = default;
+    
+
+        using iterator_category = std::random_access_iterator_tag;
+        using difference_type = ssize_t;
+        using value_type = value_type;
+        using pointer = value_type*;
+        using reference = reference;
+
+        reference operator*() const { return this->m_vec[this->m_idx]; }
+        pointer operator->() const { return &this->m_vec[this->m_idx]; }
+        Iterator& operator++() { this->m_idx += 1; return *this; }
+        Iterator operator++(int) { Iterator tmp = *this; this->operator++(); return tmp; }
+
+        bool operator==(const Iterator& other) const = default;
+        bool operator!=(const Iterator& other) const = default;
+
+
+    private:
+        /** \brief Index of the currently accessed element */
+        size_type m_idx{0};
+        /** \brief Reference to the StackVec that we access */
+        StackVec<T>& m_vec;
+    };
+
+    using iterator = Iterator;
     
     StackVec() = default;
     
@@ -23,27 +56,38 @@ public:
      * \brief Add an element to the end of this vector
      * \param val Value to append by calling the copy constructor
      */
-    constexpr void push_back(const T& val) requires(std::copy_constructible<T>){
+    inline constexpr reference push_back(const T& val) requires(std::copy_constructible<T>){
+        return this->emplace_back(val); 
+    }
+    /**
+     * \brief Move an instance of T into this vector
+     */
+    inline constexpr reference push_back(T&& val) requires(std::move_constructible<T>) {
+        return this->emplace_back(std::move(val));
+    }
+    
+    /**
+     * \brief Push an element to the end of this vector by constructing it from the given arguments
+     * \tparam Args Argument types that T will be constructed from
+     * \param Args Argument values to construct an instance of T from
+     */
+    template<typename... Args>
+    requires(std::constructible_from<T, Args...>)
+    constexpr reference emplace_back(Args&&... args) {
         if(this->m_len >= MAX_STACK) {
             if(this->m_len >= this->m_cap) {
                 //Either allocate another MAX_STACK elements on the heap or double the capacity
                 this->m_cap = (this->m_cap == 0) ? MAX_STACK : this->m_cap * 2;
                 this->m_heap = std::realloc(this->m_heap, sizeof(T) * this->m_cap);
             }
-            new (this->m_heap + this->m_len) T(val);
+            new (this->m_heap + this->m_len) T(std::forward<Args>(args)...);
+            this->m_len += 1;
+            return this->m_heap[this->m_len - 1];
         } else {
-            new (&this->m_stack[this->m_len]) T(val);
+            new (&this->m_stack[this->m_len]) T(std::forward<Args>(args)...);
+            this->m_len += 1;
+            return this->m_stack[this->m_len - 1];
         }
-        this->m_len += 1;
-    }
-    
-    /**
-     *
-     */
-    template<typename... Args>
-    requires(std::constructible_from<T, Args...>)
-    constexpr reference emplace_back(Args&&... args) {
-
     }
     
     /**
@@ -71,6 +115,9 @@ public:
     /** \brief Return true if this `StackVec` has begun allocating elements on the heap */
     inline constexpr bool is_heap() const noexcept { return this->m_len >= MAX_STACK; }
 
+    iterator begin() { return iterator(*this); }
+    iterator end() { return iterator(*this, this->m_len); }
+
     ~StackVec() {
         size_type i = 0;
         while(i < MAX_STACK && i < this->m_len) {
@@ -92,3 +139,5 @@ private:
     /** \brief Length of the vector, includes stack space */
     size_type m_len{0};
 };
+
+extern StackVec<int> i;
