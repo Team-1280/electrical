@@ -1,8 +1,10 @@
 #pragma once
 
+#include "ser/store.hpp"
 #include <limits>
 #include <unit.hpp>
 #include <ser/ser.hpp>
+#include <variant>
 
 
 /**
@@ -134,6 +136,14 @@ struct AABB {
         return this->min.x <= point.x && this->min.y <= point.y &&
             this->max.x >= point.x && this->max.y >= point.y;
     }
+    
+    /** 
+     * \brief Check if this AABB can contain another AABB
+     */
+    inline constexpr bool contains(const AABB& other) const noexcept {
+        return this->min.x <= other.min.x && this->min.y <= other.min.y &&
+            this->max.x >= other.max.x && this->max.y >= other.max.y;
+    }
 };
 
 /**
@@ -187,13 +197,44 @@ private:
 
 static_assert(ser::JsonSerializable<Footprint>);
 
+class ComponentNode;
+
 /**
  * \brief Data structure that contains multiple `Footprint`'s efficiently divided into
- * subtrees, providing performant operations like nearest neighbor an Point In Polygon
+ * subtrees, providing performant operations like nearest neighbor and Point In Polygon
  */
 class RTree {
 public:
-    
-private:
+    struct Internal;
+    struct Leaf;
 
+    using Node = std::variant<std::unique_ptr<Internal>, Leaf>;
+    
+    /**
+     * \brief A leaf node in the R Tree containing data with its own Axis Aligned Bounding Box
+     */
+    struct Leaf {
+    public:
+        /** \brief Shared reference to the graph node */
+        WeakRef<ComponentNode> component; 
+    };
+
+    /**
+     * \brief Internal tree node containing only further children and the Axis-Aligned Bounding Box
+     * that all child nodes must contain
+     */
+    struct Internal {
+    public:
+
+    private:
+        /** \brief Axis-aligned bounding box that must be able to contain all of child nodes */
+        AABB m_aabb;
+        std::array<Node, 4> m_children;
+    };
+
+    
+
+private:
+    /** \brief Root node of this tree */
+    Internal root; 
 };
