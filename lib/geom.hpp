@@ -300,4 +300,6 @@ public:
 private:
     /** \brief Root node of this tree */
     Node root;
+    /** \brief */
+    FreeList<Ref<ComponentNode>> m_elems;
 };
