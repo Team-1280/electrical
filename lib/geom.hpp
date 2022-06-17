@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ser/store.hpp"
+#include "util/stackvec.hpp"
+#include "util/freelist.hpp"
 #include <limits>
 #include <type_traits>
 #include <unit.hpp>

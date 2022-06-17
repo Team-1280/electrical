@@ -28,9 +28,9 @@ public:
 
         using iterator_category = std::random_access_iterator_tag;
         using difference_type = ssize_t;
-        using value_type = value_type;
-        using pointer = value_type*;
-        using reference = reference;
+        using value_type = T;
+        using pointer = T*;
+        using reference = T&;
 
         reference operator*() const { return this->m_vec[this->m_idx]; }
         pointer operator->() const { return &this->m_vec[this->m_idx]; }
@@ -48,9 +48,40 @@ public:
         StackVec<T>& m_vec;
     };
 
+    /** \brief Iterator over constant elements of a StackVec */
+    struct ConstIterator {
+    public:
+        /** \brief Construct a new Iterator over elements of a `StackVec`, starting with the given index */
+        ConstIterator(StackVec<T>& ref, size_type idx = 0) : m_vec{ref}, m_idx{idx} {}
+        ConstIterator(const Iterator& other) = default;
+    
+
+        using iterator_category = std::random_access_iterator_tag;
+        using difference_type = ssize_t;
+        using value_type = T;
+        using pointer = const T *;
+        using reference = T const&;
+
+        reference operator*() const { return this->m_vec[this->m_idx]; }
+        pointer operator->() const { return &this->m_vec[this->m_idx]; }
+        Iterator& operator++() { this->m_idx += 1; return *this; }
+        Iterator operator++(int) { Iterator tmp = *this; this->operator++(); return tmp; }
+
+        bool operator==(const Iterator& other) const = default;
+        bool operator!=(const Iterator& other) const = default;
+    private:
+        /** \brief Index of the currently accessed element */
+        size_type m_idx{0};
+        /** \brief Reference to the StackVec that we access */
+        StackVec<T> const& m_vec;
+    };
+
     using iterator = Iterator;
+    using const_iterator = ConstIterator;
     
     StackVec() = default;
+    StackVec(const StackVec& other) = default;
+    StackVec(StackVec&& other) = default;
     
     /**
      * \brief Add an element to the end of this vector
@@ -78,7 +109,7 @@ public:
             if(this->m_len >= this->m_cap) {
                 //Either allocate another MAX_STACK elements on the heap or double the capacity
                 this->m_cap = (this->m_cap == 0) ? MAX_STACK : this->m_cap * 2;
-                this->m_heap = std::realloc(this->m_heap, sizeof(T) * this->m_cap);
+                this->m_heap = static_cast<T*>(std::realloc(this->m_heap, sizeof(T) * this->m_cap));
             }
             new (this->m_heap + this->m_len) T(std::forward<Args>(args)...);
             this->m_len += 1;
@@ -88,6 +119,35 @@ public:
             this->m_len += 1;
             return this->m_stack[this->m_len - 1];
         }
+    }
+    
+    /**
+     * \brief Remove the last element of this vector
+     */
+    constexpr void pop_back() {
+        const size_type removed = this->m_len - 1;
+        if(removed >= MAX_STACK) {
+            this->m_heap[removed].~T();
+        } else {
+            this->m_stack[removed].~T();
+        }
+        this->m_len = removed;
+    }
+    
+    /**
+     * \brief Clear all elements from this `StackVec`, invalidating all iterators, references, and pointers
+     * into this vector
+     */
+    constexpr void clear() {
+        size_type i = 0;
+        while(i < MAX_STACK && i < this->m_len) {
+            this->m_stack[i].~T();
+        }
+        i = 0;
+        while(i < this->m_len - MAX_STACK) {
+            this->m_heap[i].~T();
+        }
+        this->m_len = 0;
     }
     
     /**
@@ -117,16 +177,11 @@ public:
 
     iterator begin() { return iterator(*this); }
     iterator end() { return iterator(*this, this->m_len); }
+    const_iterator begin() const { return const_iterator(*this); }
+    const_iterator end() const { return const_iterator(*this, this->m_len); }
 
     ~StackVec() {
-        size_type i = 0;
-        while(i < MAX_STACK && i < this->m_len) {
-            this->m_stack[i].~T();
-        }
-        i = 0;
-        while(i < this->m_len - MAX_STACK) {
-            this->m_heap[i].~T();
-        }
+        this->clear();
         std::free(this->m_heap);
     }
 private:

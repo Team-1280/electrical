@@ -8,7 +8,6 @@ set(
     "wire.cpp"
     "ser/store.cpp"
     "data.cpp"
-    "util/stackvec.cpp"
 )
 
 set(
