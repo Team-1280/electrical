@@ -16,26 +16,16 @@ json Footprint::to_json() const {
     return arr;
 }
 
-bool Footprint::contains_aabb(const Point &p) const {
-    return 
-        (this->m_min.x <= p.x && this->m_min.y <= p.y) &&
-        (this->m_max.x >= p.x && this->m_max.y >= p.y);
-}
-
 Footprint::Footprint(std::vector<Point>&& pts) :
     m_pts{std::move(pts)},
-    m_max{Length{std::numeric_limits<float>::min()}, Length{std::numeric_limits<float>::min()}},
-    m_min{Length{std::numeric_limits<float>::max()}, Length{std::numeric_limits<float>::max()}}
+    m_aabb{}
 {
     this->get_minmax();
 }
 
 void Footprint::get_minmax() {
     for(const auto& pt : this->m_pts) {
-        if(pt.x < this->m_min.x) { this->m_min.x = pt.x; }
-        if(pt.y < this->m_min.y) { this->m_min.y = pt.y; }
-        if(pt.x > this->m_max.x) { this->m_max.x = pt.x; }
-        if(pt.y > this->m_max.y) { this->m_max.y = pt.y; }
+        this->m_aabb.expand(pt);
     }
 
 }

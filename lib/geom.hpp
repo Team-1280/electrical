@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <unit.hpp>
 #include <ser/ser.hpp>
 
@@ -92,13 +93,56 @@ public:
 static_assert(ser::JsonSerializable<Point>);
 
 /**
+ * \brief Axis-aligned bounding box that contains a minimum and maximum point, required for storage in an 
+ * R-Tree and for optimizing intersection queries
+ */
+struct AABB {
+    /**
+     * Minimum x and y coordinate of the box
+     * **MUST** be less than `max`
+     */
+    Point min;
+    Point max;
+
+    AABB() : 
+        min{Length(std::numeric_limits<float>::max()), Length(std::numeric_limits<float>::max())},
+        max{Length(std::numeric_limits<float>::min()), Length(std::numeric_limits<float>::min())} {}
+    
+    /**
+     * \brief Create a new axis-aligned bounding box from minimum and maximum points
+     * \param min Minimum x and y coordinate, must be less than `max`
+     */
+    AABB(Point&& min, Point&& max) : min{min}, max{max} {
+        assert(min.x < max.x && min.y < max.y);
+    }
+    
+    /**
+     * \brief Expand this axis-aligned bounding box to contain the given point, modifyuing `min` and `max` respectively
+     * \param p The point that we must be able to contain
+     */
+    inline constexpr void expand(const Point& p) {
+        if(p.x > this->max.x) { this->max.x = p.x; }
+        else if(p.x < this->min.x) { this->min.x = p.x; }
+        if(p.y > this->max.y) { this->max.y = p.y; }
+        else if(p.y < this->min.y) { this->min.y = p.y; }
+    }
+    
+    /**
+     * \brief Check if a point is contained inside this bounding box
+     */
+    inline constexpr bool contains(const Point& point) const noexcept {
+        return this->min.x <= point.x && this->min.y <= point.y &&
+            this->max.x >= point.x && this->max.y >= point.y;
+    }
+};
+
+/**
  * \brief Description of a component's footprint on the 
  * workspace
  * \implements ser::JsonSerializable
  */
 class Footprint {
 public:
-
     Footprint() = default;
     
     /** \brief Create a new footprint from the JSON array */
@@ -124,11 +168,9 @@ public:
     }
     
     /**
-     * \brief Check if this footprint's axis aligned bounding box contains the given point
-     * \param p Point to check for collision
-     * \return true if the given point is contained or intersects our axis aligned bounding box
+     * \brief Get the axis-aligned bounding box of this footprint
      */
-    bool contains_aabb(Point const& p) const;
+    inline constexpr AABB const& aabb() const noexcept { return this->m_aabb; }
 
     std::vector<Point>::const_iterator begin() const { return this->m_pts.begin(); }
     std::vector<Point>::const_iterator end() const { return this->m_pts.end(); }
@@ -136,14 +178,22 @@ public:
 private:
     /** \brief A vector of points that each connect to the prior one, must have at least one point */
     std::vector<Point> m_pts;
-    
-    /** \brief Maximum x and y coordinate of this footprint, used to make an axis aligned bounding box */
-    Point m_max;
-    /** \brief Minimum x and y coordinate of this footprint used to make an axis aligned bounding box */
-    Point m_min;
-    
+    /** \brief Axis-aligned bounding box for the footprint */
+    AABB m_aabb;
+        
     /** \brief Get the minimum and maximum x and y values of m_pts */
     void get_minmax();
 };
 
 static_assert(ser::JsonSerializable<Footprint>);
+
+/**
+ * \brief Data structure that contains multiple `Footprint`'s efficiently divided into
+ * subtrees, providing performant operations like nearest neighbor an Point In Polygon
+ */
+class RTree {
+public:
+    
+private:
+
+};
