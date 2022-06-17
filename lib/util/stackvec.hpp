@@ -26,7 +26,7 @@ public:
         Iterator(const Iterator& other) = default;
     
 
-        using iterator_category = std::random_access_iterator_tag;
+        using iterator_category = std::forward_iterator_tag;
         using difference_type = ssize_t;
         using value_type = T;
         using pointer = T*;
@@ -53,10 +53,10 @@ public:
     public:
         /** \brief Construct a new Iterator over elements of a `StackVec`, starting with the given index */
         ConstIterator(StackVec<T>& ref, size_type idx = 0) : m_vec{ref}, m_idx{idx} {}
-        ConstIterator(const Iterator& other) = default;
+        ConstIterator(const ConstIterator& other) = default;
     
 
-        using iterator_category = std::random_access_iterator_tag;
+        using iterator_category = std::input_iterator_tag;
         using difference_type = ssize_t;
         using value_type = T;
         using pointer = const T *;
@@ -64,11 +64,11 @@ public:
 
         reference operator*() const { return this->m_vec[this->m_idx]; }
         pointer operator->() const { return &this->m_vec[this->m_idx]; }
-        Iterator& operator++() { this->m_idx += 1; return *this; }
-        Iterator operator++(int) { Iterator tmp = *this; this->operator++(); return tmp; }
+        ConstIterator& operator++() { this->m_idx += 1; return *this; }
+        ConstIterator operator++(int) { ConstIterator tmp = *this; this->operator++(); return tmp; }
 
-        bool operator==(const Iterator& other) const = default;
-        bool operator!=(const Iterator& other) const = default;
+        bool operator==(const ConstIterator& other) const = default;
+        bool operator!=(const ConstIterator& other) const = default;
     private:
         /** \brief Index of the currently accessed element */
         size_type m_idx{0};

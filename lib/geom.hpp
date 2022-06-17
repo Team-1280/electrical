@@ -205,101 +205,53 @@ class ComponentNode;
 
 /**
  * \brief Data structure that contains multiple `Footprint`'s efficiently divided into
- * subtrees, providing performant operations like nearest neighbor and Point In Polygon
+ * two subtrees, providing performant operations like nearest neighbor and Point In Polygon
+ * \sa https://stackoverflow.com/questions/41946007/efficient-and-well-explained-implementation-of-a-quadtree-for-2d-collision-det
  */
-class QuadTree {
+class BSPTree {
 public:
-    struct Leaf;
-    struct Internal;
-
+    /** Using 16 bit IDs for nodes reduces their size to 8 bytes, and limits our maximum depth to 16 */
+    using size_type = std::uint16_t;
+    /** Index value representing an invalid index */
+    static constexpr const size_type npos = std::numeric_limits<size_type>::max();
+    /** \brief The maximum depth of recursion for this BSP tree */
+    static constexpr const std::size_t MAX_DEPTH = 16;
+        
     /**
-     * \brief A leaf node in the R Tree containing data with its own Axis Aligned Bounding Box
+     * \brief A single element in the FreeList of elements, containing an index to the next 
+     * element and the element data
      */
-    struct Leaf {
-    public:
-        /** \brief Shared reference to the graph node */
-        Ref<ComponentNode> component; 
+    struct Element {
+        /** \brief Reference to the node in the board graph */
+        WeakRef<ComponentNode> data;
+        /** \brief Index of the next element in this linked list of elements */
+        FreeList<Element>::size_type next{FreeList<Element>::npos};
     };
 
+    using ElementList = FreeList<Element>;
+
     /**
-     * \brief Tagged union structure that may be either a `Leaf` or `Internal` node
+     * \brief A node that may contain either an index to 4 more child nodes or an index to 
      */
     struct Node {
-    public:
-        Node(std::unique_ptr<Internal>&& i) : m_union{std::move(i)} {}
-        
-        /**
-         * \brief Execute a function based on the type of this node
-         * \tparam R Result type of the functions to execute
-         * \tparam IfInternal Type of the function to call if this node is an `Internal` node
-         * \tparam IfLeaf Type of the function to call if this node is a `Leaf` node
-         * \param internal Function to execute when this is an `Internal` node
-         * \param leaf Function to execute when this is a `Leaf` node
-         * \return The result of either `internal` or `leaf`, depending on the type of this node
-         */
-        template<typename R, typename IfInternal, typename IfLeaf>
-        requires requires {
-            requires std::invocable<IfInternal, Internal&>;
-            requires std::invocable<IfLeaf, Leaf&>;
-            requires std::same_as<std::invoke_result_t<IfInternal, Internal&>, R>;
-            requires std::same_as<std::invoke_result_t<IfLeaf, Leaf&>, R>;
-        } R match(IfInternal&& internal, IfLeaf&& leaf) {
-            auto i = std::get_if<std::unique_ptr<Internal>>(&this->m_union);
-            if(i != nullptr) {
-                return std::invoke(std::forward<IfInternal>(internal), **i);
-            } else {
-                return std::invoke(std::forward<IfLeaf>(leaf), *std::get_if<Leaf>(&this->m_union));
-            }
-        }
-        template<typename R, typename IfInternal, typename IfLeaf>
-        requires requires {
-            requires std::invocable<IfInternal, Internal const&>;
-            requires std::invocable<IfLeaf, Leaf const&>;
-            requires std::same_as<std::invoke_result_t<IfInternal, Internal const&>, R>;
-            requires std::same_as<std::invoke_result_t<IfLeaf, Leaf const&>, R>;
-        } R match(IfInternal&& internal, IfLeaf&& leaf) const {
-            auto i = std::get_if<std::unique_ptr<Internal>>(&this->m_union);
-            if(i != nullptr) {
-                return std::invoke(std::forward<IfInternal>(internal), **i);
-            } else {
-                return std::invoke(std::forward<IfLeaf>(leaf), *std::get_if<Leaf>(&this->m_union));
-            }
-        }
-
-        /**
-         * \brief Get the Axis Aligned Bounding Box of this node
-         */
-        AABB const& aabb() const;
-        
-        /**
-         * \brief Insert the given node into this RTree
-         */
-        void insert(Ref<ComponentNode> node, Internal& parent);
-    private:
-        std::variant<std::unique_ptr<Internal>, Leaf> m_union;
+        /** \brief Index of the left node, or `npos` if it doesn't exist */
+        size_type left{npos};
+        /** \brief Index of the right node, or `npos` if it doesn't exist */
+        size_type right{npos};
+        /** \brief Index of the first element stored in this node */
+        ElementList::size_type elems{npos};
     };
 
+    BSPTree();
+    
     /**
-     * \brief Internal tree node containing only further children and the Axis-Aligned Bounding Box
-     * that all child nodes must contain
+     * \brief Insert node into this BSP tree, using its component's footprint offset by
+     * the position of the node
      */
-    struct Internal {
-    public:
-        using ChildContainer = std::array<Optional<Node>, 4>; 
-
-        inline ChildContainer::iterator begin() { return this->m_children.begin(); }
-        inline ChildContainer::iterator end() { return this->m_children.end(); }
-    private:
-        /** \brief Axis-aligned bounding box that must be able to contain all child nodes */
-        AABB m_aabb;
-        ChildContainer m_children;
-
-        friend struct Node;
-    };
-
+    void insert(const Ref<ComponentNode>& node);
 private:
-    /** \brief Root node of this tree */
-    Node root;
-    /** \brief */
-    FreeList<Ref<ComponentNode>> m_elems;
+    /** \brief List of all nodes in this tree, stored as a flat vector with indices instead of pointers */
+    FreeList<Node> m_nodes{};
+    /** \brief List of all elements in this tree, stored indices in nodes point to this */
+    FreeList<Element> m_elems{};
 };

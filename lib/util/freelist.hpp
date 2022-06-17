@@ -3,10 +3,16 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 #include <concepts>
 
+namespace _detail {
+template<typename... Ts>
+struct Visitor : Ts... { using Ts::operator()...; };
+}
 
 /**
  * \brief Linked list data structure that allows removal of elements while preserving indices into the list
@@ -21,7 +27,13 @@ public:
     using size_type = std::uint32_t;
     /** \brief An index value reserved for indicating an invalid index */
     static constexpr const size_type npos = std::numeric_limits<size_type>::max();
-    
+
+private:
+
+    /** \brief Extra struct for using an std::variant with a separate type to T */
+    struct Next { size_type next; };
+
+public:
     FreeList() = default;
     FreeList(const FreeList& other) = default;
     FreeList(FreeList&& other) = default;
@@ -32,7 +44,7 @@ public:
         size_type next = this->free;
         while(next != npos) {
             count += 1;
-            next = this->m_vec[next].next;
+            next = std::get<Next>(this->m_vec[next]).next;
         }
         return count;
     }
@@ -61,11 +73,11 @@ public:
     reference emplace(Args&&... args) {
         if(this->free != npos) {
             size_t free_pos = this->free;
-            this->free = this->m_vec[this->free].next;
+            this->free = std::get<Next>(this->m_vec[this->free]).next;
             new (&this->m_vec[free_pos]) T(std::forward<Args>(args)...);
-            return this->m_vec[free_pos];
+            return std::get<T>(this->m_vec[free_pos]);
         } else {
-            return this->m_vec.emplace_back(std::forward<Args>(args)...);
+            return std::get<T>(this->m_vec.emplace_back(std::forward<Args>(args)...));
         }
     }
     /** \brief Copy the given value into this list, returning a reference to the inserted element */
@@ -75,41 +87,29 @@ public:
     
     /**
      * \brief Remove the element at the given position 
-     * **WARNING:** Erasing the same index twice is undefined behavior
+     * \throws std::runtime_error if the element at `pos` was already deleted
      */
     inline void erase(size_type pos) {
-        this->m_vec[pos].~T();
+        std::visit(_detail::Visitor {
+                [this, pos](T&) { this->m_vec[pos].emplace(Next(this->free)); },
+                [](auto) { throw std::runtime_error{"Attempt to erase element from FreeList twice"}; }
+            },
+            this->m_vec[pos]
+        );
         this->m_vec[pos].next = this->free;
         this->free = pos;
     }
 
-    ~FreeList() {
-        std::unordered_set<size_type> empty{};
-        size_type next = this->free;
-        while(next != npos) {
-            empty.emplace(next);
-            next = this->m_vec[next].next;
-        }
-        
-        for(size_type i = this->m_vec.size() - 1; i >= 0; i--) {
-            if(!empty.contains(i)) {
-                this->m_vec[i].~T();
-            }
-        }
-    }
+    ~FreeList() = default;
 private:
+
     /**
      * \brief Elements in the `FreeList` may be either real elements or a single index pointing to the next 
      * element that is free, forming a kind of second linked list that records data about what slots in the vector 
      * are empty
      */
-    union ListElem {
-        /** An element of type T */
-        T data;
-        /** An index to the next free element, or `npos` */
-        size_type next;
-    };
-
+    using ListElem = std::variant<T, Next>;
+      
     /** \brief Backing container of the list */
     std::vector<ListElem> m_vec;
     /** \brief Index of the first free element */
