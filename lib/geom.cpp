@@ -1,5 +1,6 @@
 #include "geom.hpp"
 #include <limits>
+#include <lib.hpp>
 
 void Footprint::from_json(Footprint& self, const json& val) {
     for(const json& v : val) {
@@ -52,3 +53,11 @@ constexpr Length Point::distance(const Point &other) const {
         )
     );
 }
+
+AABB& RTree::Node::aabb() {
+    return this->match<AABB const&>(
+        [](Internal const& i) { return i.m_aabb; },
+        [](Leaf const& l) { return l.component->type()->footprint().aabb(); }
+    );
+}
+

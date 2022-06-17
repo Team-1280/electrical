@@ -73,6 +73,11 @@ public:
          */
         void detach();
 
+        ~Connection() {
+            if(this->is_floating()) {
+                this->m_pos.~Point();
+            }
+        }
     private:
         /** \brief Node in the graph that this edge connects to */
         WeakRef<ComponentNode> m_component;

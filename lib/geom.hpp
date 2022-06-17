@@ -2,8 +2,10 @@
 
 #include "ser/store.hpp"
 #include <limits>
+#include <type_traits>
 #include <unit.hpp>
 #include <ser/ser.hpp>
+#include <utility>
 #include <variant>
 
 
@@ -205,18 +207,47 @@ class ComponentNode;
  */
 class RTree {
 public:
-    struct Internal;
     struct Leaf;
+    struct Internal;
 
-    using Node = std::variant<std::unique_ptr<Internal>, Leaf>;
-    
     /**
      * \brief A leaf node in the R Tree containing data with its own Axis Aligned Bounding Box
      */
     struct Leaf {
     public:
         /** \brief Shared reference to the graph node */
-        WeakRef<ComponentNode> component; 
+        Ref<ComponentNode> component; 
+    };
+
+    /**
+     * \brief Tagged union structure that may be either a `Leaf` or `Internal` node
+     */
+    struct Node {
+    public:
+        Node(std::unique_ptr<Internal>&& i) : m_union{std::move(i)} {}
+
+        template<typename R, typename IfInternal, typename IfLeaf>
+        requires requires {
+            requires std::invocable<IfInternal, Internal&>;
+            requires std::invocable<IfLeaf, Leaf&>;
+            requires std::same_as<
+                std::decay_t<std::invoke_result_t<IfInternal, Internal&>>,
+                std::decay_t<std::invoke_result_t<IfLeaf, Leaf&>>
+            >;
+        } R match(IfInternal&& internal, IfLeaf&& leaf) {
+            return std::visit<R>([internal, leaf](auto&& a) {
+                if constexpr(std::is_same_v<std::decay_t<decltype(a)>, std::unique_ptr<Internal>>) {
+                    return std::invoke(std::forward<IfInternal>(internal), *a);
+                } else {
+                    return std::invoke(std::forward<IfLeaf>(leaf), a);
+                }
+            }, this->m_union);
+        }
+    
+        AABB& aabb();
+
+    private:
+        std::variant<std::unique_ptr<Internal>, Leaf> m_union;
     };
 
     /**
@@ -225,16 +256,19 @@ public:
      */
     struct Internal {
     public:
+        using ChildContainer = std::array<Node, 4>; 
 
+        inline ChildContainer::iterator begin() { return this->m_children.begin(); }
+        inline ChildContainer::iterator end() { return this->m_children.end(); }
     private:
-        /** \brief Axis-aligned bounding box that must be able to contain all of child nodes */
+        /** \brief Axis-aligned bounding box that must be able to contain all child nodes */
         AABB m_aabb;
-        std::array<Node, 4> m_children;
-    };
+        ChildContainer m_children;
 
-    
+        friend struct Node;
+    };
 
 private:
     /** \brief Root node of this tree */
-    Internal root; 
+    Node root;
 };
