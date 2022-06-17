@@ -205,7 +205,7 @@ class ComponentNode;
  * \brief Data structure that contains multiple `Footprint`'s efficiently divided into
  * subtrees, providing performant operations like nearest neighbor and Point In Polygon
  */
-class RTree {
+class QuadTree {
 public:
     struct Leaf;
     struct Internal;
@@ -225,12 +225,6 @@ public:
     struct Node {
     public:
         Node(std::unique_ptr<Internal>&& i) : m_union{std::move(i)} {}
-
-        template<typename IfInternal, typename IfLeaf>
-        struct Visitor : IfInternal, IfLeaf {
-            using IfInternal::operator();
-            using IfLeaf::operator();
-        };
         
         /**
          * \brief Execute a function based on the type of this node
@@ -274,7 +268,11 @@ public:
          * \brief Get the Axis Aligned Bounding Box of this node
          */
         AABB const& aabb() const;
-
+        
+        /**
+         * \brief Insert the given node into this RTree
+         */
+        void insert(Ref<ComponentNode> node, Internal& parent);
     private:
         std::variant<std::unique_ptr<Internal>, Leaf> m_union;
     };
@@ -285,7 +283,7 @@ public:
      */
     struct Internal {
     public:
-        using ChildContainer = std::array<Node, 4>; 
+        using ChildContainer = std::array<Optional<Node>, 4>; 
 
         inline ChildContainer::iterator begin() { return this->m_children.begin(); }
         inline ChildContainer::iterator end() { return this->m_children.end(); }
