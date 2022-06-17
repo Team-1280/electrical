@@ -54,10 +54,10 @@ constexpr Length Point::distance(const Point &other) const {
     );
 }
 
-AABB& RTree::Node::aabb() {
+AABB const& RTree::Node::aabb() const {
     return this->match<AABB const&>(
-        [](Internal const& i) { return i.m_aabb; },
-        [](Leaf const& l) { return l.component->type()->footprint().aabb(); }
+        [](Internal const& i) -> AABB const& { return i.m_aabb; },
+        [](Leaf const& l) -> AABB const& { return l.component->type()->footprint().aabb(); }
     );
 }
 

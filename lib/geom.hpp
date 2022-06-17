@@ -226,25 +226,54 @@ public:
     public:
         Node(std::unique_ptr<Internal>&& i) : m_union{std::move(i)} {}
 
+        template<typename IfInternal, typename IfLeaf>
+        struct Visitor : IfInternal, IfLeaf {
+            using IfInternal::operator();
+            using IfLeaf::operator();
+        };
+        
+        /**
+         * \brief Execute a function based on the type of this node
+         * \tparam R Result type of the functions to execute
+         * \tparam IfInternal Type of the function to call if this node is an `Internal` node
+         * \tparam IfLeaf Type of the function to call if this node is a `Leaf` node
+         * \param internal Function to execute when this is an `Internal` node
+         * \param leaf Function to execute when this is a `Leaf` node
+         * \return The result of either `internal` or `leaf`, depending on the type of this node
+         */
         template<typename R, typename IfInternal, typename IfLeaf>
         requires requires {
             requires std::invocable<IfInternal, Internal&>;
             requires std::invocable<IfLeaf, Leaf&>;
-            requires std::same_as<
-                std::decay_t<std::invoke_result_t<IfInternal, Internal&>>,
-                std::decay_t<std::invoke_result_t<IfLeaf, Leaf&>>
-            >;
+            requires std::same_as<std::invoke_result_t<IfInternal, Internal&>, R>;
+            requires std::same_as<std::invoke_result_t<IfLeaf, Leaf&>, R>;
         } R match(IfInternal&& internal, IfLeaf&& leaf) {
-            return std::visit<R>([internal, leaf](auto&& a) {
-                if constexpr(std::is_same_v<std::decay_t<decltype(a)>, std::unique_ptr<Internal>>) {
-                    return std::invoke(std::forward<IfInternal>(internal), *a);
-                } else {
-                    return std::invoke(std::forward<IfLeaf>(leaf), a);
-                }
-            }, this->m_union);
+            auto i = std::get_if<std::unique_ptr<Internal>>(&this->m_union);
+            if(i != nullptr) {
+                return std::invoke(std::forward<IfInternal>(internal), **i);
+            } else {
+                return std::invoke(std::forward<IfLeaf>(leaf), *std::get_if<Leaf>(&this->m_union));
+            }
         }
-    
-        AABB& aabb();
+        template<typename R, typename IfInternal, typename IfLeaf>
+        requires requires {
+            requires std::invocable<IfInternal, Internal const&>;
+            requires std::invocable<IfLeaf, Leaf const&>;
+            requires std::same_as<std::invoke_result_t<IfInternal, Internal const&>, R>;
+            requires std::same_as<std::invoke_result_t<IfLeaf, Leaf const&>, R>;
+        } R match(IfInternal&& internal, IfLeaf&& leaf) const {
+            auto i = std::get_if<std::unique_ptr<Internal>>(&this->m_union);
+            if(i != nullptr) {
+                return std::invoke(std::forward<IfInternal>(internal), **i);
+            } else {
+                return std::invoke(std::forward<IfLeaf>(leaf), *std::get_if<Leaf>(&this->m_union));
+            }
+        }
+
+        /**
+         * \brief Get the Axis Aligned Bounding Box of this node
+         */
+        AABB const& aabb() const;
 
     private:
         std::variant<std::unique_ptr<Internal>, Leaf> m_union;
