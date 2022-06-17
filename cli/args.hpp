@@ -40,6 +40,7 @@ public:
 
 /** 
  * \brief Structure constructed when the user passes an option on the command line, recording the argument (if any)
+ * \sa ArgMatches
  */
 struct ArgMatch {
     /** The argument value passed by the user, shared with the argv array */

@@ -95,24 +95,43 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     
     cairo->save();
     cairo->scale(this->m_pxpmeter, this->m_pxpmeter);
+    cairo->translate(this->m_campos.x.normalized(), this->m_campos.y.normalized());
+    cairo->translate(w / 2. / this->m_pxpmeter, h / 2. / this->m_pxpmeter);
+
 
     cairo->save();
-    cairo->set_line_width(0.001);
+
+    cairo->set_line_width(0.0001);
     cairo->set_source_rgba(0., 0., 0., 0.3);
-    for(double i = 0; i < this->meters_wide(); i += 0.01) {
-        cairo->move_to(i, 0.);
-        cairo->line_to(i, this->m_pxpmeter);
+    
+    double startx = -this->m_campos.x.normalized() - this->meters_wide() / 2.;
+    double starty = -this->m_campos.y.normalized() - this->meters_tall() / 2.;
+    double h_m = starty + this->meters_tall();
+    double w_m = startx + this->meters_wide();
+ 
+    for(
+        double i = std::round(startx / 0.01) * 0.01;
+        i < w_m;
+        i += 0.01
+    ) {
+        cairo->move_to(i, starty);
+        cairo->line_to(i, h_m);
         cairo->stroke();
     }
-    for(double i = 0; i < this->meters_tall(); i += 0.01) {
-        cairo->move_to(0., i);
-        cairo->line_to(this->m_pxpmeter, i);
+
+    for(
+        double i = std::round(starty / 0.01) * 0.01;
+        i < h_m;
+        i += 0.01
+    ) {
+        cairo->move_to(startx, i);
+        cairo->line_to(w_m, i);
         cairo->stroke();
     }
+
     cairo->restore();
 
-    cairo->translate(w / 2. / this->m_pxpmeter, h / 2. / this->m_pxpmeter);
-    cairo->translate(this->m_campos.x.normalized(), this->m_campos.y.normalized());
+    
     for(const auto& [id, node] : this->graph.nodes()) {
         this->draw_node(cairo, node);
     }
@@ -175,4 +194,3 @@ void GraphRender::draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<Comp
 
     cairo->restore();
 }
-
