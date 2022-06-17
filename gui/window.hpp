@@ -43,6 +43,9 @@ private:
     /** \brief Receive mouse motion events to draw cursor position text */
     Glib::RefPtr<Gtk::EventControllerMotion> m_motion_event;
     
+    /** \brief If a component is being hovered over, highlight it */
+    WeakRef<ComponentNode> m_hovered;
+    
     /** \brief Pixels per meter */
     double m_pxpmeter;
 

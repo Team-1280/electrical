@@ -5,6 +5,7 @@ void Footprint::from_json(Footprint& self, const json& val) {
     for(const json& v : val) {
         self.m_pts.push_back(v.get<Point>());
     }
+    self.get_minmax();
 }
 
 json Footprint::to_json() const {
@@ -26,12 +27,17 @@ Footprint::Footprint(std::vector<Point>&& pts) :
     m_max{Length{std::numeric_limits<float>::min()}, Length{std::numeric_limits<float>::min()}},
     m_min{Length{std::numeric_limits<float>::max()}, Length{std::numeric_limits<float>::max()}}
 {
-    for(const auto& pt : pts) {
+    this->get_minmax();
+}
+
+void Footprint::get_minmax() {
+    for(const auto& pt : this->m_pts) {
         if(pt.x < this->m_min.x) { this->m_min.x = pt.x; }
-        else if(pt.y < this->m_min.y) { this->m_min.y = pt.y; }
-        else if(pt.x > this->m_max.x) { this->m_max.x = pt.x; }
-        else if(pt.y > this->m_max.y) { this->m_max.y = pt.y; }
+        if(pt.y < this->m_min.y) { this->m_min.y = pt.y; }
+        if(pt.x > this->m_max.x) { this->m_max.x = pt.x; }
+        if(pt.y > this->m_max.y) { this->m_max.y = pt.y; }
     }
+
 }
 
 void Point::from_json(Point& self, const json& val) {

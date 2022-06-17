@@ -74,6 +74,17 @@ GraphRender::GraphRender(BoardGraph& graph) :
     this->m_motion_event->signal_motion().connect([this](double x, double y) { 
         this->m_mousepos.x.normalized() = this->px_to_meters(x - this->get_width() / 2.);
         this->m_mousepos.y.normalized() = this->px_to_meters(y - this->get_height() / 2.);
+        for(const auto& [_, node] : this->graph.nodes()) {
+            if(node->type()->footprint().contains_aabb(this->m_mousepos + this->m_campos)) {
+                this->m_hovered = WeakRef<ComponentNode>{node};
+                fmt::print("Highlighting {}", node->type()->id());
+                this->queue_draw();
+                return;
+            }
+        }
+
+        this->m_hovered = WeakRef<ComponentNode>{};
+        this->queue_draw();
     });
 
     this->add_controller(this->m_drag_event);
@@ -165,7 +176,11 @@ void GraphRender::draw_node(const Cairo::RefPtr<Cairo::Context>& cairo, Ref<Comp
     cairo->set_line_cap(Cairo::Context::LineCap::ROUND);
     cairo->set_line_join(Cairo::Context::LineJoin::ROUND);
     cairo->set_line_width(0.01);
-    cairo->set_source_rgba(.0, .0, 0.0, 1.);
+    if(!this->m_hovered.expired() && this->m_hovered.lock().get() == node.get()) {
+        cairo->set_source_rgb(0., 0., 0.5);
+    } else {
+        cairo->set_source_rgb(.0, .0, 0.0);
+    }
 
     const auto& fp = node->type()->footprint();
     const auto& pos = node->pos();

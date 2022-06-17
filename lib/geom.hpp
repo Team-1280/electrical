@@ -141,6 +141,9 @@ private:
     Point m_max;
     /** \brief Minimum x and y coordinate of this footprint used to make an axis aligned bounding box */
     Point m_min;
+    
+    /** \brief Get the minimum and maximum x and y values of m_pts */
+    void get_minmax();
 };
 
 static_assert(ser::JsonSerializable<Footprint>);
