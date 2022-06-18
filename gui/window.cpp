@@ -62,6 +62,15 @@ GraphRender::GraphRender(BoardGraph& graph) :
     this->m_scroll_event->signal_scroll().connect([this](double dx, double dy) {
             dy = std::exp((dy < 0) ? 0.1 : -0.2);
             this->m_pxpmeter *= dy;
+            const double max_pxpmeter = static_cast<double>(this->smallest_dim()) / MIN_ZOOM;
+            const double min_pxpmeter = static_cast<double>(this->smallest_dim()) * MIN_ZOOM;
+            if(this->m_pxpmeter >= max_pxpmeter) {
+                this->m_pxpmeter = max_pxpmeter;
+                return true;                                          
+            } else if(this->m_pxpmeter <= min_pxpmeter) {
+                this->m_pxpmeter = min_pxpmeter;
+                return true;
+            }
             auto newpos = this->m_mousepos / dy;
             this->m_campos -= this->m_mousepos - newpos;
             this->m_mousepos = newpos;
@@ -75,8 +84,9 @@ GraphRender::GraphRender(BoardGraph& graph) :
     this->m_motion_event->signal_motion().connect([this](double x, double y) { 
         this->m_mousepos.x.normalized() = this->px_to_meters(x - this->get_width() / 2.);
         this->m_mousepos.y.normalized() = this->px_to_meters(y - this->get_height() / 2.);
+        this->m_absmousepos = this->m_mousepos - this->m_campos;
         for(const auto& [_, node] : this->graph.nodes()) {
-            if(node->aabb().contains(this->m_mousepos - this->m_campos)) {
+            if(node->aabb().contains(this->m_campos)) {
                 this->m_hovered = WeakRef<ComponentNode>{node};
                 this->queue_draw();
                 return;

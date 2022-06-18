@@ -57,9 +57,14 @@ private:
     
     /** \brief Last recorded position of the mouse */
     Point m_mousepos;
+    /** \brief Mouse coordinates in world coordinates */
+    Point m_absmousepos;
     
     /** \brief Board graph, shared with the MainWindow */
     BoardGraph& graph;
+
+    /** \brief Lower limit for how many pixels onscreen may represent one meter */
+    static constexpr const double MIN_ZOOM = 0.01;
 };
 
 class MainWindow : public Gtk::Window {
