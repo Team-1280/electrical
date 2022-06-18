@@ -35,8 +35,10 @@ private:
 
 public:
     FreeList() = default;
-    FreeList(const FreeList& other) = default;
-    FreeList(FreeList&& other) = default;
+    FreeList(const FreeList<T>& other) = default;
+    FreeList(FreeList<T>&& other) = default;
+    FreeList<T>& operator=(FreeList<T>&& other) = default;
+    FreeList<T>& operator=(const FreeList<T>& other) = default;
     
     /** \brief Get the number of free slots in this list */
     constexpr size_type free_slots() const {
@@ -74,10 +76,11 @@ public:
         if(this->free != npos) {
             size_t free_pos = this->free;
             this->free = std::get<Next>(this->m_vec[this->free]).next;
-            new (&this->m_vec[free_pos]) T(std::forward<Args>(args)...);
+            //new (&this->m_vec[free_pos]) T(std::forward<Args>(args)...);
+            this->m_vec[free_pos].template emplace<T>(std::forward<Args>(args)...);
             return free_pos;
         } else {
-            this->m_vec.emplace_back(std::forward<Args>(args)...);
+            this->m_vec.emplace_back(std::in_place_type<T>, std::forward<Args>(args)...);
             return this->m_vec.size() - 1;
         }
     }

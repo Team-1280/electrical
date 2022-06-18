@@ -1,4 +1,5 @@
 #include "geom.hpp"
+#include <cstddef>
 #include <limits>
 #include <lib.hpp>
 
@@ -54,7 +55,10 @@ constexpr Length Point::distance(const Point &other) const {
     );
 }
 
-BSPTree::BSPTree() {
+BSPTree::BSPTree(const AABB& aabb) : 
+    m_sizex{(aabb.max.x - aabb.min.x).normalized()},
+    m_sizey{(aabb.max.y - aabb.min.y).normalized()}
+{
     this->m_nodes.emplace(Node {
         .left = npos,
         .right = npos,
@@ -62,22 +66,81 @@ BSPTree::BSPTree() {
     }); 
 }
 
-void BSPTree::insert(const Ref<ComponentNode>& node) {
-    (void)node;
-    
+
+/** Enumeration of how an AABB may be contained in a BSP tree node */
+enum class Contained {
+    Left,
+    Right,
+    Across
+};
+
+void BSPTree::insert(const Ref<ComponentNode> &node) {
+    this->insert(
+        this->m_elems.emplace(node),
+        this->m_nodes[0],
+        this->m_sizex / 2.,
+        this->m_sizey / 2.,
+        1
+    );
 }
 
-void BSPTree::insert(Ref<ComponentNode>& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth) {
+void BSPTree::insert(ElementList::size_type elem, Node node, Length::Raw midx, Length::Raw midy, size_type depth) {
     if(depth >= MAX_DEPTH) {
-        this->add_elem(std::move(val), node);
+        this->add_elem(elem, node);
+        return;
+    }
+    
+    const auto& val = this->m_elems[elem].data.lock();
+    Contained contained;
+    if(depth & 1) {
+        if(val->aabb().min.x.normalized() < midx) {
+            if(val->aabb().max.x.normalized() < midx) { contained = Contained::Left; }
+            else { contained = Contained::Across; }
+        } else if(val->aabb().max.x.normalized() >= midx) { contained = Contained::Right; }
+        else { contained = Contained::Across; }
+    } else {
+        if(val->aabb().min.y.normalized() < midy) {
+            if(val->aabb().max.y.normalized() < midy) { contained = Contained::Left; }
+            else { contained = Contained::Across; } 
+        } else if(val->aabb().max.y.normalized() >= midy) { contained = Contained::Right; }
+        else { contained = Contained::Across; }
+    }
+    
+    if(contained == Contained::Across) {
+        this->add_elem(elem, node);
         return;
     }
 
-    //if(val->aabb().max.)
+    size_type& insert_node = (contained == Contained::Right) ? node.right : node.left;
+
+    if(insert_node != npos) {
+        this->insert(
+            elem,
+            this->m_nodes[insert_node],
+            (depth & 1) ? midx : midx / 2.,
+            (depth & 1) ? midy / 2. : midy,
+            depth + 1
+        );
+    } else if(node_elems(node) >= MAX_ELEMS) {
+        insert_node = this->m_nodes.emplace();
+        ElementList::size_type child = node.elems;
+        node.elems = ElementList::npos;
+        while(child != ElementList::npos) {
+            if(this->m_elems[child].data.expired()) {
+                child = this->m_elems[child].next;
+                continue;
+            }
+            this->insert(child, node, midx, midy, depth);
+            child = this->m_elems[child].next;
+        }
+        this->insert(elem, node, midx, midy, depth);
+    } else {
+        this->add_elem(elem, node);
+    }
 }
 
-void BSPTree::add_elem(WeakRef<ComponentNode>&& val, Node node) {
-    if(node.elems == ElementList::npos) {
+void BSPTree::add_elem(ElementList::size_type val, Node node) {
+    if(node.elems != ElementList::npos) {
         ElementList::size_type next_open = node.elems;
         for(;;) {
             auto next = this->m_elems[next_open].next;
@@ -87,9 +150,18 @@ void BSPTree::add_elem(WeakRef<ComponentNode>&& val, Node node) {
                 next_open = next;
             }
         }
-        auto elem = this->m_elems.emplace(Element{std::move(val)});
-        this->m_elems[next_open].next = elem;
+        this->m_elems[next_open].next = val;
     } else {
-
+        node.elems = val;
     }
+}
+
+std::size_t BSPTree::node_elems(Node node) const {
+    std::size_t count = 0;
+    auto next = node.elems;
+    while(next != ElementList::npos) {
+        next = this->m_elems[next].next;
+        count += 1;
+    }
+    return count;
 }

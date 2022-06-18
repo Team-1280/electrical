@@ -324,6 +324,8 @@ private:
     Map<std::string, Ref<ComponentNode>> m_nodes;
     /** \brief Map of internal node IDs to shared node references */
     Map<std::string, Ref<WireEdge>> m_edges;
+    /** \brief Structure used to map locations to graph nodes */
+    BSPTree m_tree{AABB(10._m, 10._m)};
     
     /**
      * \brief Ensure that a node with the given ID has been loaded from the root object

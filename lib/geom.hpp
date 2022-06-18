@@ -121,6 +121,11 @@ struct AABB {
     AABB(Point&& min, Point&& max) : min{min}, max{max} {
         assert(min.x < max.x && min.y < max.y);
     }
+        
+    /**
+     * \brief Create a new AABB with the minimum point at (0, 0) and the maximum at (width, height)
+     */
+    AABB(const Length& width, const Length& height) : min{Point(0._m, 0._m)}, max{Point(width, height)} {}
     
     /**
      * \brief Expand this axis-aligned bounding box to contain the given point, modifyuing `min` and `max` respectively
@@ -216,6 +221,8 @@ public:
     static constexpr const size_type npos = std::numeric_limits<size_type>::max();
     /** \brief The maximum depth of recursion for this BSP tree */
     static constexpr const std::size_t MAX_DEPTH = 16;
+    /** \brief Maximum number of elements to insert into a single node before splitting it */
+    static constexpr const std::size_t MAX_ELEMS = 32;
         
     /**
      * \brief A single element in the FreeList of elements, containing an index to the next 
@@ -241,10 +248,14 @@ public:
         /** \brief Index of the right node, or `npos` if it doesn't exist */
         size_type right{npos};
         /** \brief Index of the first element stored in this node */
-        ElementList::size_type elems{npos};
+        ElementList::size_type elems{ElementList::npos};
     };
-
-    BSPTree();
+    
+    /** \brief Create a new BSP tree with the given maximum size */
+    BSPTree(const AABB& sz);
+    BSPTree(const BSPTree& other) = default;
+    BSPTree(BSPTree&& other) = default;
+    BSPTree& operator=(BSPTree&& other) = default;
     
     /**
      * \brief Insert node into this BSP tree, using its component's footprint offset by
@@ -259,6 +270,8 @@ private:
     FreeList<Node> m_nodes{};
     /** \brief List of all elements in this tree, stored indices in nodes point to this */
     FreeList<Element> m_elems{};
+    /** \brief Size of this tree, changing this requires rebuilding the tree */
+    Length::Raw m_sizex, m_sizey{};
     
     /** 
      * \brief Insert a value into this tree
@@ -268,10 +281,17 @@ private:
      * \param midy Y midpoint of the node to insert
      * \param depth The current recursion depth
      */
-    void insert(Ref<ComponentNode>& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth);
+    void insert(ElementList::size_type val, Node node, Length::Raw midx, Length::Raw midy, size_type depth);
     
     /**
      * \brief Add an element to the given node
      */
-    void add_elem(WeakRef<ComponentNode>&& val, Node node);
+    void add_elem(ElementList::size_type val, Node node);
+
+    void remove_elem(ElementList::size_type val, Node node);
+    
+    /**
+     * \brief Get the number of elements that a given node contains
+     */
+    std::size_t node_elems(Node node) const;
 };

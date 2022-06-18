@@ -37,6 +37,7 @@ int main(int argc, const char* argv[]) {
         .long_name{"input"},
         .short_help{"Specify a path to an input file that will be parsed and used for processing"}
     });
+
     
     try {
         auto matches = args.matches(argc, argv);

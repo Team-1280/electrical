@@ -118,7 +118,8 @@ void BoardGraph::load_node(const std::string& id, const json::object_t& root_val
         node->m_aabb = node->m_ty->m_fp.aabb();
         node->m_aabb.max += node->m_pos;
         node->m_aabb.min += node->m_pos;
-
+        
+        this->m_tree.insert(node);
         entry->second = node;
     } catch(const std::exception& e) {
         this->m_nodes.erase(id);
