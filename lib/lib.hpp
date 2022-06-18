@@ -167,6 +167,7 @@ public:
     /** \brief Get the name of this component node */
     inline constexpr const std::string& name() const { return this->m_name; }
     inline constexpr const std::string_view id() const { return this->m_id; }
+    inline constexpr const AABB& aabb() const { return this->m_aabb; }
     
     /** \brief Fetch the underlying component type of this node */
     inline Ref<Component> type() const noexcept { return this->m_ty; }
@@ -213,6 +214,8 @@ private:
     std::string m_name;
     /** \brief Offset in the workspace from center */
     Point m_pos;
+    /** \brief Cached axis-aligned bounding box that is offset by `m_pos` */
+    AABB m_aabb;
     
     /** \brief All graph edges connecting this component node to others */
     std::map<ConnectionPortRef, EdgeConnection> m_edges;

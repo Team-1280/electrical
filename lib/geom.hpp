@@ -250,8 +250,26 @@ public:
      */
     void insert(const Ref<ComponentNode>& node);
 private:
-    /** \brief List of all nodes in this tree, stored as a flat vector with indices instead of pointers */
+    /** 
+     * \brief List of all nodes in this tree, stored as a flat vector with indices instead of pointers.
+     * The first element is always the root element
+     */
     FreeList<Node> m_nodes{};
     /** \brief List of all elements in this tree, stored indices in nodes point to this */
     FreeList<Element> m_elems{};
+    
+    /** 
+     * \brief Insert a value into this tree
+     * \param value The value to insert
+     * \param node The node to insert a value into
+     * \param midx X midpoint of the node to insert
+     * \param midy Y midpoint of the node to insert
+     * \param depth The current recursion depth
+     */
+    void insert(WeakRef<ComponentNode>&& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth);
+    
+    /**
+     * \brief Add an element to the given node
+     */
+    void add_elem(WeakRef<ComponentNode>&& val, Node node);
 };

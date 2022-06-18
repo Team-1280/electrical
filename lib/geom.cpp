@@ -55,10 +55,25 @@ constexpr Length Point::distance(const Point &other) const {
 }
 
 BSPTree::BSPTree() {
-    
+    this->m_nodes.emplace(Node {
+        .left = npos,
+        .right = npos,
+        .elems = ElementList::npos,
+    }); 
 }
 
 void BSPTree::insert(const Ref<ComponentNode>& node) {
     (void)node;
     
+}
+
+void BSPTree::insert(WeakRef<ComponentNode>&& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth) {
+    if(depth >= MAX_DEPTH) {
+        this->add_elem(std::move(val), node);
+        return;
+    }
+}
+
+void BSPTree::add_elem(WeakRef<ComponentNode>&& val, Node node) {
+
 }

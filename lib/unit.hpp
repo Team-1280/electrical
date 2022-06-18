@@ -40,6 +40,12 @@ template<Unit U, QuantityVal V>
 struct Quantity {
 public:
     /**
+     * \brief A raw measurement, assumed to be in the base unit. Useful when storing measurements that 
+     * will never use unit data to avoid the overhead of storing units
+     */
+    using Raw = V;
+
+    /**
      * \brief Construct a new quantity value from unit and value
      * \param unit The unit that val is in
      * \param val A measurement in the given units
