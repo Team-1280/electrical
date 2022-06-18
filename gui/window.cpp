@@ -75,7 +75,7 @@ GraphRender::GraphRender(BoardGraph& graph) :
         this->m_mousepos.x.normalized() = this->px_to_meters(x - this->get_width() / 2.);
         this->m_mousepos.y.normalized() = this->px_to_meters(y - this->get_height() / 2.);
         for(const auto& [_, node] : this->graph.nodes()) {
-            if(node->type()->footprint().aabb().contains(this->m_mousepos + this->m_campos)) {
+            if(node->aabb().contains(this->m_mousepos - this->m_campos)) {
                 this->m_hovered = WeakRef<ComponentNode>{node};
                 this->queue_draw();
                 return;
