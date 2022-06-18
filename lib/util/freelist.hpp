@@ -52,8 +52,8 @@ public:
     /**
      * \brief Get the element at the given position, if the element at `pos` has already been freed this is UB
      */
-    inline constexpr reference at(size_type pos) { return this->m_vec[pos].data; }
-    inline constexpr const_reference at(size_type pos) const { return this->m_vec[pos].data; }
+    inline constexpr reference at(size_type pos) { return std::get<T>(this->m_vec[pos]); }
+    inline constexpr const_reference at(size_type pos) const { return std::get<T>(this->m_vec[pos]); }
     inline constexpr reference operator[](size_type pos) { return this->at(pos); }
     inline constexpr const_reference operator[](size_type pos) const { return this->at(pos); }
         
@@ -66,18 +66,19 @@ public:
      * \brief Construct an instance of `T` in place from the given arguments
      * \tparam Args Argument types that `T` can be constructed from
      * \param args Argument values to construct an instance of `T` with
-     * \return A reference to the added element
+     * \return Index of the added element
      */
     template<typename... Args>
     requires(std::constructible_from<T, Args...>)
-    reference emplace(Args&&... args) {
+    size_type emplace(Args&&... args) {
         if(this->free != npos) {
             size_t free_pos = this->free;
             this->free = std::get<Next>(this->m_vec[this->free]).next;
             new (&this->m_vec[free_pos]) T(std::forward<Args>(args)...);
-            return std::get<T>(this->m_vec[free_pos]);
+            return free_pos;
         } else {
-            return std::get<T>(this->m_vec.emplace_back(std::forward<Args>(args)...));
+            this->m_vec.emplace_back(std::forward<Args>(args)...);
+            return this->m_vec.size() - 1;
         }
     }
     /** \brief Copy the given value into this list, returning a reference to the inserted element */

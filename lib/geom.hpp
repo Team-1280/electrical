@@ -226,6 +226,8 @@ public:
         WeakRef<ComponentNode> data;
         /** \brief Index of the next element in this linked list of elements */
         FreeList<Element>::size_type next{FreeList<Element>::npos};
+
+        Element(WeakRef<ComponentNode>&& d) : data{d} {}
     };
 
     using ElementList = FreeList<Element>;
@@ -266,7 +268,7 @@ private:
      * \param midy Y midpoint of the node to insert
      * \param depth The current recursion depth
      */
-    void insert(WeakRef<ComponentNode>&& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth);
+    void insert(Ref<ComponentNode>& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth);
     
     /**
      * \brief Add an element to the given node

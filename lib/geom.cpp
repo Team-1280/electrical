@@ -67,13 +67,29 @@ void BSPTree::insert(const Ref<ComponentNode>& node) {
     
 }
 
-void BSPTree::insert(WeakRef<ComponentNode>&& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth) {
+void BSPTree::insert(Ref<ComponentNode>& val, Node node, Length::Raw midx, Length::Raw midy, size_type depth) {
     if(depth >= MAX_DEPTH) {
         this->add_elem(std::move(val), node);
         return;
     }
+
+    //if(val->aabb().max.)
 }
 
 void BSPTree::add_elem(WeakRef<ComponentNode>&& val, Node node) {
+    if(node.elems == ElementList::npos) {
+        ElementList::size_type next_open = node.elems;
+        for(;;) {
+            auto next = this->m_elems[next_open].next;
+            if(next == ElementList::npos) {
+                break;
+            } else {
+                next_open = next;
+            }
+        }
+        auto elem = this->m_elems.emplace(Element{std::move(val)});
+        this->m_elems[next_open].next = elem;
+    } else {
 
+    }
 }
