@@ -22,6 +22,8 @@ execute_process(
     OUTPUT_VARIABLE GRES_DEPENDS
 )
 
+
+string(REPLACE "\n" ";" GRES_DEPENDS ${GRES_DEPENDS})
 list(TRANSFORM GRES_DEPENDS PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/res/")
 message("Resources: ${GRES_DEPENDS}")
 
@@ -38,6 +40,7 @@ add_custom_command(
     MAIN_DEPENDENCY ${GRES_IN}
     DEPENDS ${GRES_DEPENDS} ${GRES_IN}
 )
+
 
 add_custom_target(resources DEPENDS ${GRES_OUT})
 

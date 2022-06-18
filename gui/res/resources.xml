@@ -3,4 +3,7 @@
     <gresource prefix="/img">
         <file>img/new-component.png</file>
     </gresource>
+    <gresource prefix="/ui">
+        <file>ui/toolbar.xml</file>
+    </gresource>
 </gresources>

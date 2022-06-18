@@ -2,6 +2,8 @@
 #include "cairomm/context.h"
 #include "cairomm/matrix.h"
 #include "geom.hpp"
+#include "giomm/menu.h"
+#include "gtkmm/object.h"
 #include "lib.hpp"
 #include "unit.hpp"
 
@@ -17,6 +19,9 @@ MainWindow::MainWindow() :
     m_graph{"./assets/boards/board.json"},
     m_render{this->m_graph}
 {
+    auto builder = Gtk::Builder::create_from_resource("/img/new-component.png");
+    //builder->add_from_resource("/ui/toolbar.xml");
+
     this->set_title("Electrical");
     this->set_default_size(1280, 720);
     this->set_resizable();
@@ -24,6 +29,9 @@ MainWindow::MainWindow() :
     this->m_button.set_margin(5);
     this->m_button.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_click));
     this->m_button.set_size_request(-1, 50);
+    
+    auto menu = Glib::RefPtr<Gtk::Box>{builder->get_widget<Gtk::Box>("/ui/toolbar.xml")};
+    this->m_layout.append(*menu);
     
     this->m_toolbar.append(this->m_button);
     this->m_render.set_expand();
@@ -86,7 +94,7 @@ GraphRender::GraphRender(BoardGraph& graph) :
         this->m_mousepos.y.normalized() = this->px_to_meters(y - this->get_height() / 2.);
         this->m_absmousepos = this->m_mousepos - this->m_campos;
         for(const auto& [_, node] : this->graph.nodes()) {
-            if(node->aabb().contains(this->m_campos)) {
+            if(node->aabb().contains(this->m_absmousepos)) {
                 this->m_hovered = WeakRef<ComponentNode>{node};
                 this->queue_draw();
                 return;
