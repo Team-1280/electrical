@@ -1,5 +1,6 @@
 #include "window.hpp"
 #include "cairomm/context.h"
+#include "cairomm/matrix.h"
 #include "geom.hpp"
 #include "lib.hpp"
 #include "unit.hpp"
@@ -104,8 +105,11 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     cairo->restore();
     
     cairo->save();
+    cairo->scale(1., -1.);
+    cairo->translate(0., -h);
     cairo->scale(this->m_pxpmeter, this->m_pxpmeter);
-    cairo->translate(this->m_campos.x.normalized(), this->m_campos.y.normalized());
+
+    cairo->translate(this->m_campos.x.normalized(), -this->m_campos.y.normalized());
     cairo->translate(w / 2. / this->m_pxpmeter, h / 2. / this->m_pxpmeter);
 
 
@@ -115,7 +119,7 @@ void GraphRender::on_draw(const Cairo::RefPtr<Cairo::Context>& cairo, int w, int
     cairo->set_source_rgba(0., 0., 0., 0.3);
     
     double startx = -this->m_campos.x.normalized() - this->meters_wide() / 2.;
-    double starty = -this->m_campos.y.normalized() - this->meters_tall() / 2.;
+    double starty = this->m_campos.y.normalized() - this->meters_tall() / 2.;
     double h_m = starty + this->meters_tall();
     double w_m = startx + this->meters_wide();
  
