@@ -5,6 +5,8 @@
 #include "args.hpp"
 #include "buildopts.h"
 #include "fmt/color.h"
+#include "geom.hpp"
+#include "util/freelist.hpp"
 
 
 int main(int argc, const char* argv[]) {
@@ -55,6 +57,19 @@ int main(int argc, const char* argv[]) {
         auto input_file = matches.get_arg(input_file_opt);
         if(!input_file.has_value()) {
             throw std::runtime_error{"No input file given"};
+        }
+        
+        {
+        FreeList<int> test{};
+        for(int i = 0; i < 1500; ++i) {
+            test.emplace(i);
+        }
+        for(int i = 1499; i >= 0; --i) {
+            test[i] = 3;
+        }
+        for(int i = 0; i < 1500; ++i) {
+            fmt::print("{}\n", test[i]);
+        }
         }
 
         BoardGraph graph{*input_file, false, false};

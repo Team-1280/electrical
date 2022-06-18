@@ -46,6 +46,7 @@ public:
         size_type next = this->free;
         while(next != npos) {
             count += 1;
+            assert(next < this->m_vec.size());
             next = std::get<Next>(this->m_vec[next]).next;
         }
         return count;
@@ -54,8 +55,8 @@ public:
     /**
      * \brief Get the element at the given position, if the element at `pos` has already been freed this is UB
      */
-    inline constexpr reference at(size_type pos) { return std::get<T>(this->m_vec[pos]); }
-    inline constexpr const_reference at(size_type pos) const { return std::get<T>(this->m_vec[pos]); }
+    inline constexpr reference at(size_type pos) { assert(pos < this->m_vec.size()); return std::get<T>(this->m_vec[pos]); }
+    inline constexpr const_reference at(size_type pos) const { assert(pos < this->m_vec.size()); return std::get<T>(this->m_vec[pos]); }
     inline constexpr reference operator[](size_type pos) { return this->at(pos); }
     inline constexpr const_reference operator[](size_type pos) const { return this->at(pos); }
         
@@ -75,12 +76,13 @@ public:
     size_type emplace(Args&&... args) {
         if(this->free != npos) {
             size_t free_pos = this->free;
+            assert(free_pos < this->size());
             this->free = std::get<Next>(this->m_vec[this->free]).next;
             //new (&this->m_vec[free_pos]) T(std::forward<Args>(args)...);
             this->m_vec[free_pos].template emplace<T>(std::forward<Args>(args)...);
             return free_pos;
         } else {
-            this->m_vec.emplace_back(std::in_place_type<T>, std::forward<Args>(args)...);
+            this->m_vec.push_back(ListElem{std::in_place_type<T>, std::forward<Args>(args)...});
             return this->m_vec.size() - 1;
         }
     }
@@ -94,6 +96,7 @@ public:
      * \throws std::runtime_error if the element at `pos` was already deleted
      */
     inline void erase(size_type pos) {
+        assert(pos < this->m_vec.size());
         std::visit(_detail::Visitor {
                 [this, pos](T&) { this->m_vec[pos].template emplace<Next>(Next(this->free)); },
                 [](auto) { throw std::runtime_error{"Attempt to erase element from FreeList twice"}; }

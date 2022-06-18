@@ -72,14 +72,12 @@ Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string&
     node->m_ty = type;
     node->m_pos = pos;
     node->m_aabb = type->footprint().aabb() + pos;
-    auto [elem, _] = this->m_nodes.insert_or_assign(id, node);
+    auto [elem, _] = this->m_nodes.emplace(id, node);
     node->m_id = std::string_view{elem->first};
     if(!name.empty()) {
         node->m_name = name;
     }
-    this->m_tree.insert(node);
-
-    return elem->second;
+    return node;
 }
 
 Optional<Ref<ComponentNode>> BoardGraph::get_node(const std::string_view id) const {
@@ -128,7 +126,6 @@ void BoardGraph::load_node(const std::string& id, const json::object_t& root_val
         node->m_aabb.max += node->m_pos;
         node->m_aabb.min += node->m_pos;
         
-        this->m_tree.insert(node);
         entry->second = node;
     } catch(const std::exception& e) {
         this->m_nodes.erase(id);

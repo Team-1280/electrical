@@ -30,7 +30,7 @@ enum class LogLevel: uint8_t {
 
 namespace _detail {
 
-extern std::unique_ptr<std::FILE> log_stream;
+extern std::unique_ptr<std::FILE, void(*)(std::FILE*)> log_stream;
 extern std::mutex log_lock;
 
 template<LogLevel LVL>
