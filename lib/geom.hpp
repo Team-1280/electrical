@@ -153,6 +153,16 @@ struct AABB {
         return this->min.x <= other.min.x && this->min.y <= other.min.y &&
             this->max.x >= other.max.x && this->max.y >= other.max.y;
     }
+    
+    /**
+     * \brief Offset this AABB by the given x and y values
+     */
+    inline AABB operator+(const Point& offset) const noexcept {
+        return AABB{
+            Point(this->min.x + offset.x, this->min.y + offset.y),
+            Point(this->max.x + offset.x, this->max.y + offset.y)
+        };
+    }
 };
 
 /**
@@ -281,14 +291,14 @@ private:
      * \param midy Y midpoint of the node to insert
      * \param depth The current recursion depth
      */
-    void insert(ElementList::size_type val, Node node, Length::Raw midx, Length::Raw midy, size_type depth);
+    void insert(ElementList::size_type val, Node& node, Length::Raw midx, Length::Raw midy, size_type depth, size_type id);
     
     /**
      * \brief Add an element to the given node
      */
-    void add_elem(ElementList::size_type val, Node node);
+    void add_elem(ElementList::size_type val, Node& node);
 
-    void remove_elem(ElementList::size_type val, Node node);
+    void remove_elem(ElementList::size_type val, Node& node);
     
     /**
      * \brief Get the number of elements that a given node contains

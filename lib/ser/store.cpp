@@ -87,7 +87,7 @@ Ref<void> LazyResourceStore::try_get_id(TypeId type_id, const char *type_name, c
     
     auto cached = elem->second.cache.find(id_str);
     if(cached != elem->second.cache.end() && !cached->second.expired()) {
-        logger::trace("Found cached resource {}", id_str);
+        //logger::trace("Found cached resource {}", id_str);
         return cached->second.lock();
     }
     
@@ -104,6 +104,5 @@ Ref<void> LazyResourceStore::try_get_id(TypeId type_id, const char *type_name, c
     auto [loaded, ins] = elem->second.cache.insert_or_assign(std::string{id_str}, WeakRef<void>{});
     Ref<void> load = elem->second.loader->load_untyped(loaded->first, j, *this);
     elem->second.cache.insert_or_assign(std::string{id_str}, WeakRef<void>{load});
-    //loaded->second = WeakRef<void>{load};
     return load;
 }

@@ -95,12 +95,11 @@ public:
      */
     inline void erase(size_type pos) {
         std::visit(_detail::Visitor {
-                [this, pos](T&) { this->m_vec[pos].emplace(Next(this->free)); },
+                [this, pos](T&) { this->m_vec[pos].template emplace<Next>(Next(this->free)); },
                 [](auto) { throw std::runtime_error{"Attempt to erase element from FreeList twice"}; }
             },
             this->m_vec[pos]
         );
-        this->m_vec[pos].next = this->free;
         this->free = pos;
     }
 

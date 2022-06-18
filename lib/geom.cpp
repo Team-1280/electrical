@@ -75,21 +75,23 @@ enum class Contained {
 };
 
 void BSPTree::insert(const Ref<ComponentNode> &node) {
+    fmt::print("STARTED INSERTION\n");
     this->insert(
         this->m_elems.emplace(node),
         this->m_nodes[0],
         this->m_sizex / 2.,
         this->m_sizey / 2.,
-        1
+        1,
+        0
     );
 }
 
-void BSPTree::insert(ElementList::size_type elem, Node node, Length::Raw midx, Length::Raw midy, size_type depth) {
+void BSPTree::insert(ElementList::size_type elem, Node& node, Length::Raw midx, Length::Raw midy, size_type depth, size_type id) {
+    fmt::print("Node 0 has l={}, r={}\n", this->m_nodes[0].left, this->m_nodes[0].right);
     if(depth >= MAX_DEPTH) {
         this->add_elem(elem, node);
         return;
     }
-    
     const auto& val = this->m_elems[elem].data.lock();
     Contained contained;
     if(depth & 1) {
@@ -112,34 +114,53 @@ void BSPTree::insert(ElementList::size_type elem, Node node, Length::Raw midx, L
     }
 
     size_type& insert_node = (contained == Contained::Right) ? node.right : node.left;
-
+    fmt::print("insert element {}, node {} from {} (with r={}, l={}), right: {}\n", elem, insert_node, id, node.right, node.left, contained == Contained::Right);
     if(insert_node != npos) {
+        fmt::print("Descending to node {} from {}, depth={}\n", insert_node, id, depth);
         this->insert(
             elem,
             this->m_nodes[insert_node],
             (depth & 1) ? midx : midx / 2.,
             (depth & 1) ? midy / 2. : midy,
-            depth + 1
+            depth + 1,
+            insert_node
         );
     } else if(node_elems(node) >= MAX_ELEMS) {
+        fmt::print("Splitting {}\n", node.elems);
         insert_node = this->m_nodes.emplace();
+        fmt::print("new node has id {}, left={}, right={}\n", insert_node, node.left, node.right);
         ElementList::size_type child = node.elems;
         node.elems = ElementList::npos;
         while(child != ElementList::npos) {
             if(this->m_elems[child].data.expired()) {
-                child = this->m_elems[child].next;
+                auto next = this->m_elems[child].next;
+                this->m_elems.erase(child);
+                child = next;
                 continue;
             }
-            this->insert(child, node, midx, midy, depth);
-            child = this->m_elems[child].next;
+            fmt::print("INSERTING AFTER SPLIT, next={}\n", this->m_elems[child].next);
+            auto next = this->m_elems[child].next;
+            this->m_elems[child].next = ElementList::npos;
+            this->insert(child, node, midx, midy, depth, id);
+            child = next;
         }
-        this->insert(elem, node, midx, midy, depth);
+
+        fmt::print("DONE\n");
+        this->insert(
+            elem,
+            node,
+            midx,
+            midy,
+            depth,
+            id
+        );
     } else {
+        fmt::print("Adding to node {}\n", node.elems);
         this->add_elem(elem, node);
     }
 }
 
-void BSPTree::add_elem(ElementList::size_type val, Node node) {
+void BSPTree::add_elem(ElementList::size_type val, Node& node) {
     if(node.elems != ElementList::npos) {
         ElementList::size_type next_open = node.elems;
         for(;;) {

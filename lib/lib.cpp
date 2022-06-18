@@ -67,10 +67,19 @@ Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::p
     return std::ref(elem->second);
 }
 
-Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string_view name) {
-    ComponentNode node{};
-    (void)name, (void)type;
-    return {};
+Ref<ComponentNode> BoardGraph::component(Ref<Component> type, const std::string& id, Point pos, const std::string_view name) {
+    Ref<ComponentNode> node{new ComponentNode()};
+    node->m_ty = type;
+    node->m_pos = pos;
+    node->m_aabb = type->footprint().aabb() + pos;
+    auto [elem, _] = this->m_nodes.insert_or_assign(id, node);
+    node->m_id = std::string_view{elem->first};
+    if(!name.empty()) {
+        node->m_name = name;
+    }
+    this->m_tree.insert(node);
+
+    return elem->second;
 }
 
 Optional<Ref<ComponentNode>> BoardGraph::get_node(const std::string_view id) const {

@@ -256,7 +256,13 @@ public:
      * \param type The type of component to create
      * \return A reference to the created graph node
      */
-    Ref<ComponentNode> component(Ref<Component> type, std::string_view name); 
+    Ref<ComponentNode> component(Ref<Component> type, const std::string& id, Point pos = Point{}, const std::string_view name = std::string_view{});
+    
+    /**
+     * \brief Get a reference to the lazy resource loader that this graph loads
+     * shared data from
+     */
+    inline constexpr LazyResourceStore& resources() noexcept { return this->m_res; };
     
     /**
      * \brief Load a board graph from a JSON file

@@ -58,6 +58,9 @@ int main(int argc, const char* argv[]) {
         }
 
         BoardGraph graph{*input_file, false, false};
+        for(int i = 0; i < 100; ++i) {
+            graph.component(graph.resources().try_get<Component>("1280.test"), fmt::format("test-{}", i), Point(Length{LengthUnit::Inches, static_cast<float>(i)}, 0._m));
+        }
         std::cout << std::setw(2) << graph.to_json() << std::endl;
          
     } catch(const std::exception& e) {
