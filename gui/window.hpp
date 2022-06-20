@@ -1,6 +1,8 @@
 #pragma once
 
 #include "geom.hpp"
+#include "glibmm/refptr.h"
+#include "gtkmm/application.h"
 #include "lib.hpp"
 #include "ser/store.hpp"
 #include <gtkmm/eventcontrollermotion.h>
@@ -12,6 +14,7 @@
 #include <gtkmm/box.h>
 #include <gtkmm/button.h>
 #include <gtkmm/window.h>
+#include <gtkmm.h>
 
 /** 
  * \brief Class that is responsible for rendering a board graph, storing all 
@@ -76,10 +79,6 @@ private:
     
     /** \brief Top level layout of this window */
     Gtk::Box m_layout;
-    /** \brief A toolbar containing multiple buttons for editing */
-    Gtk::Box m_toolbar; 
-
-    Gtk::Button m_button;
     
     /** \brief Widget to draw the board graph in */
     GraphRender m_render;

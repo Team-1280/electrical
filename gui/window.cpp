@@ -3,40 +3,25 @@
 #include "cairomm/matrix.h"
 #include "geom.hpp"
 #include "giomm/menu.h"
+#include "giomm/resource.h"
 #include "gtkmm/object.h"
 #include "lib.hpp"
 #include "unit.hpp"
 
 #include <gtkmm/enums.h>
 #include <gtkmm/builder.h>
-
+#include <glibmm/main.h>
 #include <iostream>
 
 MainWindow::MainWindow() : 
     m_layout{Gtk::Orientation::VERTICAL},
-    m_toolbar{Gtk::Orientation::HORIZONTAL},
-    m_button{"Button"},
     m_graph{"./assets/boards/board.json"},
     m_render{this->m_graph}
 {
-    auto builder = Gtk::Builder::create_from_resource("/img/new-component.png");
-    //builder->add_from_resource("/ui/toolbar.xml");
-
     this->set_title("Electrical");
     this->set_default_size(1280, 720);
     this->set_resizable();
-
-    this->m_button.set_margin(5);
-    this->m_button.signal_clicked().connect(sigc::mem_fun(*this, &MainWindow::on_click));
-    this->m_button.set_size_request(-1, 50);
-    
-    auto menu = Glib::RefPtr<Gtk::Box>{builder->get_widget<Gtk::Box>("/ui/toolbar.xml")};
-    this->m_layout.append(*menu);
-    
-    this->m_toolbar.append(this->m_button);
     this->m_render.set_expand();
-
-    this->m_layout.append(this->m_toolbar);
 
     this->m_layout.append(this->m_render);
     this->set_child(this->m_layout);
