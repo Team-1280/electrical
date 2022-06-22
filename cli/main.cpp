@@ -16,7 +16,6 @@ int main(int argc, const char* argv[]) {
     args
         .with_long_desc("Program to read and manipulate an electrical board represented as an undirected graph")
         .with_version(std::string{BuildOpts::version_str});
-    
 
     auto help_flag = args.arg(Arg {
         .takes_arg = false,
@@ -58,24 +57,8 @@ int main(int argc, const char* argv[]) {
         if(!input_file.has_value()) {
             throw std::runtime_error{"No input file given"};
         }
-        
-        {
-        FreeList<int> test{};
-        for(int i = 0; i < 1500; ++i) {
-            test.emplace(i);
-        }
-        for(int i = 1499; i >= 0; --i) {
-            test[i] = 3;
-        }
-        for(int i = 0; i < 1500; ++i) {
-            fmt::print("{}\n", test[i]);
-        }
-        }
 
         BoardGraph graph{*input_file, false, false};
-        for(int i = 0; i < 100; ++i) {
-            graph.component(graph.resources().try_get<Component>("1280.test"), fmt::format("test-{}", i), Point(Length{LengthUnit::Inches, static_cast<float>(i)}, 0._m));
-        }
         std::cout << std::setw(2) << graph.to_json() << std::endl;
          
     } catch(const std::exception& e) {

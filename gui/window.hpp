@@ -3,6 +3,8 @@
 #include "geom.hpp"
 #include "glibmm/refptr.h"
 #include "gtkmm/application.h"
+#include "gtkmm/enums.h"
+#include "gtkmm/popover.h"
 #include "lib.hpp"
 #include "ser/store.hpp"
 #include <gtkmm/eventcontrollermotion.h>
@@ -15,6 +17,20 @@
 #include <gtkmm/button.h>
 #include <gtkmm/window.h>
 #include <gtkmm.h>
+
+class GraphRender;
+
+/**
+ * \brief Context menu that appears when a user right clicks the workspace
+ */
+class ContextMenu : public Gtk::Box {
+public:
+    ContextMenu(GraphRender& p) : Gtk::Box{Gtk::Orientation::VERTICAL}, parent{p} {}
+
+    virtual ~ContextMenu() = default;
+private:
+    GraphRender& parent;
+};
 
 /** 
  * \brief Class that is responsible for rendering a board graph, storing all 
@@ -68,6 +84,8 @@ private:
 
     /** \brief Lower limit for how many pixels onscreen may represent one meter */
     static constexpr const double MIN_ZOOM = 0.01;
+
+    friend class MainWindow;
 };
 
 class MainWindow : public Gtk::Window {
@@ -75,7 +93,13 @@ public:
     MainWindow();
 private:
 
-    void on_click();
+    /** \brief Signal on mouse clicks in this graph */
+    Glib::RefPtr<Gtk::GestureClick> m_click_event;
+
+    /** \brief Popup that appears when the user right-clicks the workspace */
+    Gtk::Popover m_ctxpopup;
+    /** \brief Context menu widgets */
+    ContextMenu m_ctxmenu;
     
     /** \brief Top level layout of this window */
     Gtk::Box m_layout;

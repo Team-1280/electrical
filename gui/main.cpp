@@ -9,7 +9,7 @@
 
 int main(int argc, char * argv[]) {
     logger::init("./log.txt");
-    auto application = Gtk::Application::create("com.1280.electrical");
+    auto application = Gtk::Application::create();//"com.1280.electrical");
     
     return application->make_window_and_run<MainWindow>(argc, argv);
 }

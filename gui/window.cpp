@@ -14,22 +14,36 @@
 #include <iostream>
 
 MainWindow::MainWindow() : 
+    m_click_event{Gtk::GestureClick::create()},
     m_layout{Gtk::Orientation::VERTICAL},
     m_graph{"./assets/boards/board.json"},
-    m_render{this->m_graph}
+    m_render{this->m_graph},
+    m_ctxpopup{},
+    m_ctxmenu{this->m_render}
 {
     this->set_title("Electrical");
     this->set_default_size(1280, 720);
     this->set_resizable();
     this->m_render.set_expand();
+    
+    this->m_ctxpopup.set_parent(*this);
+    this->m_ctxpopup.set_child(this->m_ctxmenu);
+    this->m_ctxpopup.set_autohide();
+    this->m_ctxpopup.set_has_arrow(false);
+    this->m_ctxpopup.set_pointing_to(Gdk::Rectangle{0, 0, 0, 0});
+    this->m_ctxpopup.hide();
+
+    this->add_controller(this->m_click_event);
+    
+    this->m_click_event->signal_released().connect([this](int,double x,double y) {
+        this->m_ctxpopup.set_offset(x, y);
+        this->m_ctxpopup.popup();
+    });
 
     this->m_layout.append(this->m_render);
     this->set_child(this->m_layout);
 }
 
-void MainWindow::on_click() {
-
-}
 
 GraphRender::GraphRender(BoardGraph& graph) : 
         Gtk::DrawingArea{},
@@ -39,7 +53,7 @@ GraphRender::GraphRender(BoardGraph& graph) :
         m_pxpmeter{static_cast<double>(this->smallest_dim())},
         m_campos{0._m, 0._m},
         graph{graph}
-    {
+{
     this->set_draw_func(sigc::mem_fun(*this, &GraphRender::on_draw));
     this->m_drag_event->signal_drag_begin().connect([this](double,double){ this->m_dragoffset = Point{};});
     this->m_drag_event->signal_drag_update().connect([this](double x, double y) {
@@ -97,7 +111,7 @@ GraphRender::GraphRender(BoardGraph& graph) :
     this->signal_resize().connect([this](int w, int h) {
         this->m_pxpmeter = this->smallest_dim();
     });
-
+        
     this->queue_draw();
 }
 
