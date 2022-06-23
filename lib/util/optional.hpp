@@ -56,6 +56,68 @@ private:
     std::optional<T> opt;
 };
 
+/**
+ * \brief Concept specifying that a type `T` can be either a none or some value based on 
+ * conditions stored in the instance of `T`, allowing for an optimization eliminating the overhead of an std::optional<T>
+ */
+template<typename T>
+concept Noneable = requires(T v) {
+    {v.is_none()} -> std::same_as<bool>;
+    {v.make_none()};
+    std::is_move_assignable_v<T>;
+};
+
+/**
+ * \brief Template specialization of `OptionalInternal` for types that satisfy the `Noneable` concept, used to
+ * eliminate the overhead of an `std::optional`
+ * \sa Noneable
+ */
+template<Noneable T>
+struct OptionalInternal<T> {
+public:
+    /** \brief Create an empty optional */
+    constexpr OptionalInternal() : opt{} {}
+
+    /** \brief If this value is present in `Internal` */
+    inline constexpr bool has_value() const noexcept {
+        return !this->opt.is_none();
+    }
+    
+    /** 
+     * \brief Get a pointer to the value stored in this `OptionalInternal`, or a nullptr 
+     */
+    constexpr inline T& get() & { return this->opt; }
+    constexpr inline T const& get() const& { return this->opt; }
+    constexpr inline T&& get() && { return std::move(this->opt); }
+    constexpr inline T const&& get() const&& { return std::move(this->opt); }
+    
+    /** \brief Erase the value, if any, currently held in this `OptionalInternal` */
+    constexpr inline void reset() noexcept { this->opt.make_none(); }
+    /**
+     * \brief Construct a value inside this `OptionalInternal` using the given arguments 
+     * \tparam Args Argument types that `T` must be constructible from
+     */
+    template<typename... Args>
+    requires(std::constructible_from<T, Args...>)
+    constexpr inline void emplace(Args&&... args) {
+        this->opt = T{std::forward<Args>(args)...};
+    }
+
+    static void from_json(OptionalInternal<T>& self, json const& json) requires(ser::JsonSerializable<T>) {
+        if(json.is_null()) { self.reset(); }
+        else {
+            self.emplace();
+            json.get_to<T>(self.get());
+        }
+    }
+
+    json to_json() const requires(ser::JsonSerializable<T>) { return this->has_value() ? this->get().to_json() : nullptr; }
+
+    virtual ~OptionalInternal() = default;
+private:
+    T opt;
+};
+
 
 /**
  * \brief Wrapper around an `std::optional` that allows easier template specialization for types that 

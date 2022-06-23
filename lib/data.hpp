@@ -4,11 +4,13 @@
 #include <string>
 
 #include "ser/ser.hpp"
+#include "util/optional.hpp"
 
 
 /** 
  * \brief Wrapper over a list of links that a part can be purchased from
  * \implements ser::JsonSerializable
+ * \implements Noneable
  */
 struct PurchaseData {
 public:
@@ -42,6 +44,11 @@ public:
     inline constexpr operator std::vector<Item> const&() const { return this->m_items; }
     inline constexpr operator std::vector<Item>&() { return this->m_items; }
     
+    /** \brief Implementing the `Noneable` concept, check if this `PurchaseData` is none */
+    inline constexpr bool is_none() const noexcept { return this->m_items.empty(); }
+    /** \brief Implementing the `Noneable` concept, clear all `Item`s from this `PurchaseData` */
+    inline constexpr void make_none() { this->m_items.clear(); }
+    
     /** \brief Deserialize a list of `Item`s from the given JSON value */
     static void from_json(PurchaseData& self, json const& json);
     /** \brief Serialize this `PurchaseData` to a JSON value */
@@ -53,3 +60,4 @@ private:
 
 static_assert(ser::JsonSerializable<PurchaseData::Item>);
 static_assert(ser::JsonSerializable<PurchaseData>);
+static_assert(Noneable<PurchaseData>);
