@@ -16,20 +16,7 @@ template<typename T>
 struct OptionalInternal {
 public:
     /** \brief Create an empty optional */
-    OptionalInternal() : opt{} {}
-
-    inline constexpr OptionalInternal(OptionalInternal<T>&& other) requires(std::move_constructible<T>) = default;
-    inline constexpr OptionalInternal(OptionalInternal const& other) requires(std::copy_constructible<T>) = default;
-    
-    template<typename U = T>
-    constexpr OptionalInternal(U&& val) requires(std::constructible_from<T, U&&>) : opt{std::move(val)} {}
-
-    /** 
-     * \brief Construct this optional internal from the given arguments, constructing a value in place
-     */
-    template<typename... Args>
-    requires(std::constructible_from<T, Args...>)
-    constexpr explicit OptionalInternal(std::in_place_t, Args&&... args) : opt{std::forward<Args>(args)...} {}
+    constexpr OptionalInternal() : opt{} {}
 
     /** \brief If this value is present in `Internal` */
     inline constexpr bool has_value() const noexcept {
@@ -40,19 +27,19 @@ public:
      * \brief Get a pointer to the value stored in this `OptionalInternal`, or a nullptr 
      */
     constexpr inline T& get() & { return this->opt.value(); }
-    constexpr inline T const& get() const& { return this->opt.value(); }
+    constexpr inline T const& get() const& { return static_cast<std::optional<T> const&>(this->opt).value(); }
     constexpr inline T&& get() && { return std::move(this->opt).value(); }
-    constexpr inline T const&& get() const&& { return std::move(this->opt).value(); }
+    constexpr inline T const&& get() const&& { return static_cast<std::optional<T> const&&>(std::move(this->opt)).value(); }
     
     /** \brief Erase the value, if any, currently held in this `OptionalInternal` */
-    inline void reset() noexcept { this->opt.reset(); }
+    constexpr inline void reset() noexcept { this->opt.reset(); }
     /**
      * \brief Construct a value inside this `OptionalInternal` using the given arguments 
      * \tparam Args Argument types that `T` must be constructible from
      */
     template<typename... Args>
     requires(std::constructible_from<T, Args...>)
-    inline void emplace(Args&&... args) { this->opt.emplace(std::forward<Args>(args)...); }
+    constexpr inline void emplace(Args&&... args) { this->opt.emplace(std::forward<Args>(args)...); }
 
     static void from_json(OptionalInternal<T>& self, json const& json) requires(ser::JsonSerializable<T>) {
         if(json.is_null()) { self.reset(); }
@@ -75,37 +62,43 @@ private:
  * have an invariant that means they should be considered none, and allows for JSON serialization
  */
 template<typename T>
-class Optional {
+class Optional final {
 public:
     /** \brief Create a new empty Optional */
     inline constexpr Optional() : m_opt{} {}
-    /** \brief Move the optional's value into this ones */
-    inline constexpr Optional(Optional<T>&& other) requires(std::move_constructible<OptionalInternal<T>>) = default;
-    inline constexpr Optional(const Optional<T>& other) requires(std::copy_constructible<OptionalInternal<T>>) = default;
     
     /** Move the given value into this optional */
     template<typename U = T>
-    constexpr Optional(U&& val) requires(std::constructible_from<OptionalInternal<T>, U>) : m_opt{std::forward<U>(val)} {}
-
+    constexpr inline Optional(U&& val) requires(std::constructible_from<T, U>) : m_opt{} {
+        this->emplace(std::forward<U>(val));
+    }
+    
+    /** \brief Move the optional of an optionally different type into this Optional */
     template<typename U = T>
-    constexpr Optional(Optional<U>&& val) requires(std::constructible_from<OptionalInternal<T>, U&&>) : m_opt{} {
+    constexpr Optional(Optional<U>&& val) requires(std::constructible_from<T, U&&>) : m_opt{} {
         if(val.has_value()) {
-            this->template emplace<U&&>(val.unwrap());   
+            this->template emplace<U&&>(std::move(val).unwrap());   
         }
     }
-
+    
+    /** \brief Copy-construct this `Optional` from another `Optional` containing an optionally different type */
     template<typename U = T>
-    constexpr Optional(const Optional<U>& other) requires(std::constructible_from<OptionalInternal<T>, T const&>) : m_opt{} {
+    constexpr Optional(const Optional<U>& other) requires(std::constructible_from<T, U const&>) : m_opt{} {
         if(other.has_value()) {
             this->emplace<T const&>(other.unwrap());
         }
     }
-
+    
+    /** \brief Clear the value from this `Optional` */
     constexpr inline Optional<T>& operator=(std::nullopt_t) noexcept {
         this->reset();
         return *this;
     }
-
+    
+    /**
+     * \brief Assign the given value to this Optional
+     * \param val The value to emplace into this Optional
+     */
     template<typename U = T>
     requires(std::constructible_from<T, U>)
     constexpr Optional<T>& operator=(U&& val) noexcept {
@@ -133,7 +126,7 @@ public:
     constexpr inline T& unwrap() & { return this->m_opt.get(); }
     constexpr inline T const& unwrap() const& { return static_cast<OptionalInternal<T> const&>(this->m_opt).get(); }
     constexpr inline T&& unwrap() && { return std::move(this->m_opt).get(); }
-    constexpr inline T const&& unwrap() const&& { return std::move(this->m_opt).get(); }
+    constexpr inline T const&& unwrap() const&& { return static_cast<OptionalInternal<T> const&&>(std::move(this->m_opt)).get(); }
     
     /**
      * \brief Construct a value of type `T` in place in this Optional, replacing any result that used to be contained
@@ -162,8 +155,6 @@ public:
 
     inline void to_json() const requires(ser::JsonSerializable<OptionalInternal<T>>) { return this->m_opt.to_json(); }
     inline static void from_json(Optional<T>& self, json const& json) requires(ser::JsonSerializable<OptionalInternal<T>>) { OptionalInternal<T>::from_json(self.m_opt, json); }
-
-    virtual ~Optional() = default;
 private:
     OptionalInternal<T> m_opt;
 };
