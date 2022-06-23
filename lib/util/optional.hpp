@@ -59,7 +59,7 @@ private:
 
 /**
  * \brief Wrapper around an `std::optional` that allows easier template specialization for types that 
- * have an invariant that means they should be considered none, and allows for JSON serialization
+ * have an invariant that means they should be considered none, and allows for JSON serialization.
  */
 template<typename T>
 class Optional final {
@@ -128,6 +128,12 @@ public:
     constexpr inline T&& unwrap() && { return std::move(this->m_opt).get(); }
     constexpr inline T const&& unwrap() const&& { return static_cast<OptionalInternal<T> const&&>(std::move(this->m_opt)).get(); }
     
+    /** \brief Unwrap this `Optional`, or `other` if this contains no value */
+    constexpr inline T& unwrap_or(T& other) & noexcept { return this->has_value() ? this->unwrap() : other; }
+    constexpr inline T const& unwrap_or(T const& other) const& noexcept { return this->has_value() ? this->unwrap() : other; }
+    constexpr inline T&& unwrap_or(T&& other) && noexcept { return this->has_value() ? this->unwrap() : other; }
+    constexpr inline T const&& unwrap_or(T const&& other) const&& noexcept { return this->has_value() ? this->unwrap() : other; }
+
     /**
      * \brief Construct a value of type `T` in place in this Optional, replacing any result that used to be contained
      * \tparam Args Argument types that `T` can be constructed from
