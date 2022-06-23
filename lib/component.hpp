@@ -6,6 +6,7 @@
 
 #include <ser/ser.hpp>
 #include <geom.hpp>
+#include "data.hpp"
 #include "ser/store.hpp"
 #include "unit.hpp"
 #include "util/hash.hpp"
@@ -85,6 +86,8 @@ private:
     Footprint m_fp;
     /** Mass of the component, if any is given */
     Optional<Mass> m_mass;
+    /** Where to buy this part and a list of expected costs if any are given */
+    Optional<PurchaseData> m_purchasedata;
 
     friend class BoardGraph;
     friend class ComponentLoader;

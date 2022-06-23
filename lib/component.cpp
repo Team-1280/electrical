@@ -3,8 +3,11 @@
 #include <fstream>
 #include <stdexcept>
 
+#include "data.hpp"
 #include "geom.hpp"
 #include "util/log.hpp"
+
+static_assert(ser::StringSerializable<Optional<Mass>>);
 
 std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string_view id) const {
     const auto& port = this->m_ports.find(id);
@@ -33,7 +36,10 @@ Ref<Component> ComponentLoader::load(std::string_view id, const json &json_val, 
     json_val.at("name").get_to<std::string>(component->m_name);
     json_val.at("footprint").get_to<Footprint>(component->m_fp);
     if(json_val.contains("mass")) {
-        component->m_mass.emplace(json_val.at("mass").get<Mass>());
+        json_val.at("mass").get_to<Optional<Mass>>(component->m_mass);
+    }
+    if(json_val.contains("purchase")) {
+        json_val.at("purchase").get_to<Optional<PurchaseData>>(component->m_purchasedata);
     }
     for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
         auto elem = component->m_ports.emplace(port_id, ConnectionPort{}).first;

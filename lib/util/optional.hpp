@@ -41,16 +41,6 @@ public:
     requires(std::constructible_from<T, Args...>)
     constexpr inline void emplace(Args&&... args) { this->opt.emplace(std::forward<Args>(args)...); }
 
-    static void from_json(OptionalInternal<T>& self, json const& json) requires(ser::JsonSerializable<T>) {
-        if(json.is_null()) { self.reset(); }
-        else {
-            self.emplace();
-            json.get_to<T>(self.get());
-        }
-    }
-
-    json to_json() const requires(ser::JsonSerializable<T>) { return this->has_value() ? this->get().to_json() : nullptr; }
-
     virtual ~OptionalInternal() = default;
 private:
     std::optional<T> opt;
@@ -102,16 +92,6 @@ public:
     constexpr inline void emplace(Args&&... args) {
         this->opt = T{std::forward<Args>(args)...};
     }
-
-    static void from_json(OptionalInternal<T>& self, json const& json) requires(ser::JsonSerializable<T>) {
-        if(json.is_null()) { self.reset(); }
-        else {
-            self.emplace();
-            json.get_to<T>(self.get());
-        }
-    }
-
-    json to_json() const requires(ser::JsonSerializable<T>) { return this->has_value() ? this->get().to_json() : nullptr; }
 
     virtual ~OptionalInternal() = default;
 private:
@@ -219,10 +199,23 @@ public:
     template<std::invocable<T const&> IfSome>
     constexpr Optional<std::invoke_result_t<IfSome, T const&>> map(IfSome&& if_some) const& {
         return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional{};
-    } 
+    }
 
-    inline void to_json() const requires(ser::JsonSerializable<OptionalInternal<T>>) { return this->m_opt.to_json(); }
-    inline static void from_json(Optional<T>& self, json const& json) requires(ser::JsonSerializable<OptionalInternal<T>>) { OptionalInternal<T>::from_json(self.m_opt, json); }
+    static void from_json(Optional<T>& self, json const& json) requires(ser::JsonSerializable<T>) {
+        if(json.is_null()) { self.reset(); }
+        else {
+            self.emplace();
+            json.get_to<T>(self.get());
+        }
+    }
+
+    json to_json() const requires(ser::JsonSerializable<T>) { return this->has_value() ? this->get().to_json() : nullptr; }
+
+    inline std::string to_string() const requires(ser::StringSerializable<T>) { return this->map(T::to_string).unwrap_or(std::string{}); }
+    inline static void from_string(Optional<T>& self, std::string_view str) requires(ser::StringSerializable<T>) {
+        self.emplace();
+        T::from_string(self.get(), str);
+    }
 private:
     OptionalInternal<T> m_opt;
 };
