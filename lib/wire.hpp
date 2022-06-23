@@ -1,5 +1,6 @@
 #pragma once
 
+#include "data.hpp"
 #include "ser/ser.hpp"
 #include "ser/store.hpp"
 #include <string_view>
@@ -17,7 +18,8 @@ public:
     Connector() = default;
     
     /** \brief Get the string ID of this connector type */
-    inline constexpr std::string_view id() const { return this->m_id; }
+    inline constexpr const std::string_view id() const { return this->m_id; }
+    inline constexpr Optional<std::reference_wrapper<const PurchaseData>> purchase_data() const { return this->m_purchasedata; }
 private:
     /** 
      * \brief User-created ID string of this connector, 
@@ -30,6 +32,9 @@ private:
      * \brief Name of this connector type
      */
     std::string m_name;
+    
+    /** \brief Where to buy this connector, if any is given */
+    Optional<PurchaseData> m_purchasedata;
 
     friend class ConnectorLoader;
 };

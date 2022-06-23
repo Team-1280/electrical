@@ -7,7 +7,6 @@
 #include "geom.hpp"
 #include "util/log.hpp"
 
-static_assert(ser::StringSerializable<Optional<Mass>>);
 
 std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string_view id) const {
     const auto& port = this->m_ports.find(id);

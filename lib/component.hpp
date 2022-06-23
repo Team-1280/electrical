@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <optional>
 
 #include <ser/ser.hpp>
@@ -62,7 +63,9 @@ public:
     constexpr inline const Footprint& footprint() const { return this->m_fp; }
     /** Get the mass of this component, if it exists */
     constexpr inline const Optional<std::reference_wrapper<Mass const>> mass() const { return this->m_mass; }
-    
+    /** Get a list of places to purchase this component, if any */
+    constexpr inline Optional<std::reference_wrapper<PurchaseData const>> purchase_data() const { return this->m_purchasedata; }
+
     /** Get a port by name, O(1) lookup time */
     std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
     /** Get a port pointer by name */
