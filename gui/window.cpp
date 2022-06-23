@@ -13,6 +13,15 @@
 #include <glibmm/main.h>
 #include <iostream>
 
+ContextMenu::ContextMenu(GraphRender& p) : Gtk::Box{Gtk::Orientation::VERTICAL}, parent{p}, m_search{}, m_results{} {
+    this->m_search.set_hexpand(true);
+    this->m_results.set_hexpand(true);
+    this->m_search.set_size_request(-1, 50);
+    this->append(this->m_search);
+    this->append(this->m_results);
+    this->set_size_request(100, 100);
+}
+
 MainWindow::MainWindow() : 
     m_click_event{Gtk::GestureClick::create()},
     m_layout{Gtk::Orientation::VERTICAL},

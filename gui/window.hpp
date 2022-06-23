@@ -5,6 +5,8 @@
 #include "gtkmm/application.h"
 #include "gtkmm/enums.h"
 #include "gtkmm/popover.h"
+#include "gtkmm/scrolledwindow.h"
+#include "gtkmm/searchbar.h"
 #include "lib.hpp"
 #include "ser/store.hpp"
 #include <gtkmm/eventcontrollermotion.h>
@@ -25,11 +27,15 @@ class GraphRender;
  */
 class ContextMenu : public Gtk::Box {
 public:
-    ContextMenu(GraphRender& p) : Gtk::Box{Gtk::Orientation::VERTICAL}, parent{p} {}
+    ContextMenu(GraphRender& p);
 
     virtual ~ContextMenu() = default;
 private:
     GraphRender& parent;
+    /** \brief Search bar that the user can query component types by name */
+    Gtk::SearchBar m_search;
+    /** \brief Scrolled content area containing search results */
+    Gtk::ScrolledWindow m_results;
 };
 
 /** 

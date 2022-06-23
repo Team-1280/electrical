@@ -70,7 +70,6 @@ public:
     /** \brief Get an iterator over thte ports of this component type */
     port_map_type::const_iterator begin() const { return this->m_ports.begin(); }
     port_map_type::const_iterator end() const { return this->m_ports.end(); }
-
 private:
     /* User-facing name of the component type */
     std::string m_name;
