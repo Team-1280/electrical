@@ -46,10 +46,10 @@ int main(int argc, const char* argv[]) {
         if(help_match.has_value()) {
             args.print_usage();
             fmt::print("\n\n");
-            args.print_help(std::cout, help_match->get().long_name);
+            args.print_help(std::cout, help_match.unwrap().get().long_name);
             return 0;
         } else if(matches.has(version_flag) && args.version().has_value()) {
-            fmt::print("e1280 version {}\n", args.version()->get());
+            fmt::print("e1280 version {}\n", args.version().unwrap().get());
             return 0;
         }
 
@@ -58,7 +58,7 @@ int main(int argc, const char* argv[]) {
             throw std::runtime_error{"No input file given"};
         }
 
-        BoardGraph graph{*input_file, false, false};
+        BoardGraph graph{input_file.unwrap(), false, false};
         std::cout << std::setw(2) << graph.to_json() << std::endl;
          
     } catch(const std::exception& e) {

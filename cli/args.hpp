@@ -250,13 +250,9 @@ private:
         }
 
         if(!found_arg.has_value()) {
-            if(this->m_subcommand.has_value()) {
-                return (*this->m_subcommand)->find_arg(p);
-            } else {
-                return {};
-            }
+            return this->m_subcommand.map([this, p](Args const& subcmd) { return subcmd.find_arg(std::forward<Predicate>(p)); });
         } else {
-            return std::make_pair(*found_arg, ArgId { .idx = idx, .parent = this->m_args.m_id });
+            return std::make_pair(found_arg.unwrap(), ArgId { .idx = idx, .parent = this->m_args.m_id });
         }
     }
 

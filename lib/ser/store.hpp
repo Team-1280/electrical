@@ -1,22 +1,20 @@
 #pragma once
 
-#include "ser.hpp"
 #include <filesystem>
 #include <memory>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <concepts>
 #include <vector>
+
+#include "util/optional.hpp"
+#include "ser.hpp"
 
 template<typename T>
 using Ref = std::shared_ptr<T>;
 
 template<typename T>
 using WeakRef = std::weak_ptr<T>;
-
-template<typename T>
-using Optional = std::optional<T>;
 
 /**
  * \brief Concept ensuring that the parameter pack Other contains type T

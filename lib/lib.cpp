@@ -115,7 +115,7 @@ void BoardGraph::load_node(const std::string& id, const json::object_t& root_val
         node->m_pos = json_val.at("pos").get<Point>();
         for(const auto& conn_json : json_val.at("conns")) {
             ConnectionPortRef port = *node->m_ty->get_port_ref(conn_json.at("port").get<std::string_view>());
-            auto edge = *this->get_edge(conn_json.at("edge").get<std::string_view>());
+            auto edge = this->get_edge(conn_json.at("edge").get<std::string_view>()).unwrap();
             node->m_edges[port] = ComponentNode::EdgeConnection{
                 .edge = edge,
                 .side = conn_json.at("side").get<WireEdge::Side>()
@@ -153,7 +153,7 @@ void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val
             edge->m_conns[i].m_connector = this->m_res.try_get<Connector>(conn_json.at("connector").get<std::string_view>());
             
             if(conn_json.contains("node") && conn_json.contains("port")) {
-                edge->m_conns[i].m_component = *this->get_node(conn_json.at("node").get<std::string_view>());
+                edge->m_conns[i].m_component = this->get_node(conn_json.at("node").get<std::string_view>()).unwrap();
                 edge->m_conns[i].m_port = *edge->m_conns[i].m_component.lock()->type()->get_port_ref(conn_json.at("port").get<std::string_view>());
             } else if(conn_json.contains("pos")) {
                 conn_json.at("pos").get_to<Point>(edge->m_conns[i].m_pos);
