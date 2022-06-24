@@ -37,6 +37,7 @@ Ref<Component> ComponentLoader::load(std::string_view id, const json &json_val, 
     if(json_val.contains("mass")) {
         json_val.at("mass").get_to<Optional<Mass>>(component->m_mass);
     }
+
     if(json_val.contains("purchase")) {
         json_val.at("purchase").get_to<Optional<PurchaseData>>(component->m_purchasedata);
     }

@@ -3,8 +3,10 @@
 #include "ser/ser.hpp"
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 /** 
@@ -198,14 +200,44 @@ public:
      */
     template<std::invocable<T const&> IfSome>
     constexpr Optional<std::invoke_result_t<IfSome, T const&>> map(IfSome&& if_some) const& {
-        return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional{};
+        return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T const&>>{};
+    }
+
+    /**
+     * \brief Apply the given function to this Optional and return a new Optional containing its result
+     * \tparam IfSome type of function to run on the value contained in this `Optional` if it has a value
+     * \return An `Optional` containing either the result of the function or no value
+     */
+    template<std::invocable<T&> IfSome>
+    constexpr Optional<std::invoke_result_t<IfSome, T&>> map(IfSome&& if_some) & {
+        return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T&>>{};
+    }
+
+    /**
+     * \brief Apply the given function to this Optional and return a new Optional containing its result
+     * \tparam IfSome type of function to run on the value contained in this `Optional` if it has a value
+     * \return An `Optional` containing either the result of the function or no value
+     */
+    template<std::invocable<T&&> IfSome>
+    constexpr Optional<std::invoke_result_t<IfSome, T&&>> map(IfSome&& if_some) && {
+        return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T&&>>{};
+    }
+
+    /**
+     * \brief Apply the given function to this Optional and return a new Optional containing its result
+     * \tparam IfSome type of function to run on the value contained in this `Optional` if it has a value
+     * \return An `Optional` containing either the result of the function or no value
+     */
+    template<std::invocable<T const&&> IfSome>
+    constexpr Optional<std::invoke_result_t<IfSome, T const&&>> map(IfSome&& if_some) const&& {
+        return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T const&&>>{};
     }
 
     static void from_json(Optional<T>& self, json const& json) requires(ser::JsonSerializable<T>) {
         if(json.is_null()) { self.reset(); }
         else {
             self.emplace();
-            json.get_to<T>(self.get());
+            json.get_to<T>(self.unwrap());
         }
     }
 
@@ -214,8 +246,99 @@ public:
     inline std::string to_string() const requires(ser::StringSerializable<T>) { return this->map(T::to_string).unwrap_or(std::string{}); }
     inline static void from_string(Optional<T>& self, std::string_view str) requires(ser::StringSerializable<T>) {
         self.emplace();
-        T::from_string(self.get(), str);
+        T::from_string(self.unwrap(), str);
     }
+    
+    /**
+     * \brief Check if two `Optional`s are equal
+     * \return true if both `Optional`s have no value, or if they both have a value and the values are equal
+     */
+    constexpr bool operator==(const Optional<T>& other) const requires requires(T v) {
+        {v == v} -> std::convertible_to<bool>;
+    } {
+        return (this->has_value() && other.has_value()) ? this->get() == other.get() : 
+            (!this->has_value() && !other.has_value()) ? true : false;
+    }
+
+    /**
+     * \brief Check if two `Optional`s are not equal
+     * \return true if both `Optional`s have no value, or if they both have a value and the values are not equal
+     */
+    constexpr bool operator!=(const Optional<T>& other) const requires requires(T v) {
+        {v != v} -> std::convertible_to<bool>;
+    } {
+        return (this->has_value() && other.has_value()) ? this->unwrap() != other.unwrap() : 
+            (!this->has_value() && !other.has_value()) ? false : true;
+    }
+    
+    /**
+     * \brief If the type stored in an `Optional` can be iterated over, this type will contain either an
+     * iterator over elements that `T` contains or an iterator that is always equal to the `end()` function
+     */
+    template<std::input_or_output_iterator Iter>
+    struct Iterator final {
+    public:
+        using iterator_category = typename std::iterator_traits<Iter>::iterator_category;
+        using difference_type = typename std::iterator_traits<Iter>::difference_type;
+        using value_type = typename std::iterator_traits<Iter>::value_type;
+        using pointer = typename std::iterator_traits<Iter>::pointer;
+        using reference = typename std::iterator_traits<Iter>::reference;
+        
+        inline constexpr Iterator() : m_internal{} {}
+        constexpr Iterator(Iter i) : m_internal{i} {}
+        constexpr Iterator(const Optional<Iter>& i) : m_internal{i} {}
+
+        constexpr reference operator*() const { return this->m_internal.unwrap().operator*(); }
+        constexpr pointer operator->() { return this->m_internal.unwrap().operator->(); }
+        constexpr Iterator& operator++() {
+            if(this->m_internal.has_value()) {
+                this->m_internal.unwrap().operator++();
+            }
+            return *this;
+        }
+        constexpr Iterator operator++(int) {
+            Iterator tmp{*this};
+            this->operator++();
+            return tmp;
+        }
+
+        constexpr bool operator==(const Iterator& other) const { return this->m_internal == other.m_internal; }
+        constexpr bool operator!=(const Iterator& other) const { return this->m_internal != other.m_internal; }
+    private:
+        /** Internal iterator or none */
+        Optional<Iter> m_internal;
+    };
+    
+    /** \brief Get an `Iterator` over the elements contained in `T` if it has a value, or an empty iterator */
+    constexpr auto begin() & requires requires(T v) {
+        requires std::input_or_output_iterator<decltype(v.begin())>;
+    } {
+        return Iterator<decltype(std::declval<T&>().begin())>{this->map([](T& v) { return v.begin(); })};
+    }
+
+
+    /** \brief Get an `Iterator` over the elements contained in `T` pointing to the end of the collection if it has a value, or an empty iterator */
+    constexpr auto end() & requires requires(T v) {
+        requires std::input_or_output_iterator<decltype(v.end())>;
+    } {
+        return Iterator<decltype(std::declval<T&>().begin())>{this->map([](T& v) { return v.end(); })};
+    }
+
+    /** \brief Get an `Iterator` over the elements contained in `T` if it has a value, or an empty iterator */
+    constexpr auto begin() const& requires requires(const T v) {
+        requires std::input_or_output_iterator<decltype(v.begin())>;
+    } {
+        return Iterator<decltype(std::declval<T const&>().begin())>{this->map([](T const& v) { return v.begin(); })};
+    }
+
+
+    /** \brief Get an `Iterator` over the elements contained in `T` pointing to the end of the collection if it has a value, or an empty iterator */
+    constexpr auto end() const& requires requires(const T v) {
+        requires std::input_or_output_iterator<decltype(v.end())>;
+    } {
+        return Iterator<decltype(std::declval<T const&>().begin())>{this->map([](T const& v) { return v.end(); })};
+    }
+
 private:
     OptionalInternal<T> m_opt;
 };
