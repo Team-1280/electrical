@@ -202,32 +202,17 @@ public:
     constexpr Optional<std::invoke_result_t<IfSome, T const&>> map(IfSome&& if_some) const& {
         return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T const&>>{};
     }
-
-    /**
-     * \brief Apply the given function to this Optional and return a new Optional containing its result
-     * \tparam IfSome type of function to run on the value contained in this `Optional` if it has a value
-     * \return An `Optional` containing either the result of the function or no value
-     */
+    
     template<std::invocable<T&> IfSome>
     constexpr Optional<std::invoke_result_t<IfSome, T&>> map(IfSome&& if_some) & {
         return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T&>>{};
     }
 
-    /**
-     * \brief Apply the given function to this Optional and return a new Optional containing its result
-     * \tparam IfSome type of function to run on the value contained in this `Optional` if it has a value
-     * \return An `Optional` containing either the result of the function or no value
-     */
     template<std::invocable<T&&> IfSome>
     constexpr Optional<std::invoke_result_t<IfSome, T&&>> map(IfSome&& if_some) && {
         return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T&&>>{};
     }
 
-    /**
-     * \brief Apply the given function to this Optional and return a new Optional containing its result
-     * \tparam IfSome type of function to run on the value contained in this `Optional` if it has a value
-     * \return An `Optional` containing either the result of the function or no value
-     */
     template<std::invocable<T const&&> IfSome>
     constexpr Optional<std::invoke_result_t<IfSome, T const&&>> map(IfSome&& if_some) const&& {
         return this->m_opt.has_value() ? std::invoke(std::forward<IfSome>(if_some), this->m_opt.get()) : Optional<std::invoke_result_t<IfSome, T const&&>>{};
@@ -315,30 +300,24 @@ public:
     } {
         return Iterator<decltype(std::declval<T&>().begin())>{this->map([](T& v) { return v.begin(); })};
     }
-
-
     /** \brief Get an `Iterator` over the elements contained in `T` pointing to the end of the collection if it has a value, or an empty iterator */
     constexpr auto end() & requires requires(T v) {
         requires std::input_or_output_iterator<decltype(v.end())>;
     } {
         return Iterator<decltype(std::declval<T&>().begin())>{this->map([](T& v) { return v.end(); })};
     }
-
     /** \brief Get an `Iterator` over the elements contained in `T` if it has a value, or an empty iterator */
     constexpr auto begin() const& requires requires(const T v) {
         requires std::input_or_output_iterator<decltype(v.begin())>;
     } {
         return Iterator<decltype(std::declval<T const&>().begin())>{this->map([](T const& v) { return v.begin(); })};
     }
-
-
     /** \brief Get an `Iterator` over the elements contained in `T` pointing to the end of the collection if it has a value, or an empty iterator */
     constexpr auto end() const& requires requires(const T v) {
         requires std::input_or_output_iterator<decltype(v.end())>;
     } {
         return Iterator<decltype(std::declval<T const&>().begin())>{this->map([](T const& v) { return v.end(); })};
     }
-
 private:
     OptionalInternal<T> m_opt;
 };
