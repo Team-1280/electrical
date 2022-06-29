@@ -76,6 +76,7 @@ int main(int argc, const char* argv[]) {
         auto bom_matches_opt = matches.get_subcommand(bom_subcmd);
         if(bom_matches_opt.has_value()) {
             auto bom_matches = bom_matches_opt.unwrap();
+             
         }
     } catch(const std::exception& e) {
         fmt::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), "Error: ");

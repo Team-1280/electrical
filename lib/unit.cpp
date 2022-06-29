@@ -1,27 +1,6 @@
 #include <stdexcept>
 #include <unit.hpp>
 
-constexpr const std::uint64_t FNV_PRIME = 1099511628211ULL;
-constexpr const std::uint64_t FNV_OFFSET = 14695981039346656037ULL;
-
-constexpr std::uint64_t fnv1a_lowercase(const std::string_view str) {
-    std::uint64_t hash = FNV_OFFSET;
-    for(const std::uint8_t c : str) {
-        hash = (hash ^ std::tolower(c)) * FNV_PRIME;
-    }
-
-    return hash;
-}
-
-/** Generate a compile-time constant hash, input must be lowercase */
-static consteval std::uint64_t operator""_h(const char *str, std::size_t len) {
-    std::uint64_t hash = FNV_OFFSET;
-    for(std::size_t i = 0; i < len; ++i) {
-        hash = (hash ^ str[i]) * FNV_PRIME;
-    }
-    return hash;
-}
-
 static inline std::string_view trim(const std::string_view ostr) {
     std::string_view str{ostr};
     while(str.starts_with(' ')) {
