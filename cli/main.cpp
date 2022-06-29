@@ -39,7 +39,21 @@ int main(int argc, const char* argv[]) {
         .short_help{"Specify a path to an input file that will be parsed and used for processing"}
     });
 
-    
+
+    auto bom_cmd = std::move(Args{"bom", "Generate a Bill of Materials"}
+        .with_long_desc("Generate a Bill of Materials by searching all placed components and connectors on the board")
+    );
+
+    auto bom_outfmt_opt = bom_cmd.arg(Arg {
+        .takes_arg = true,
+        .arg_name{"format"},
+        .short_name{'o'},
+        .long_name{"output-format"},
+        .short_help{"Select the format that BOM should be presented in"}
+    });
+
+    auto bom_subcmd = args.command(std::move(bom_cmd));
+
     try {
         auto matches = args.matches(argc, argv);
         auto help_match = matches.get(help_flag);
@@ -59,8 +73,10 @@ int main(int argc, const char* argv[]) {
         }
 
         BoardGraph graph{input_file.unwrap(), false, false};
-        std::cout << std::setw(2) << graph.to_json() << std::endl;
-         
+        auto bom_matches_opt = matches.get_subcommand(bom_subcmd);
+        if(bom_matches_opt.has_value()) {
+            auto bom_matches = bom_matches_opt.unwrap();
+        }
     } catch(const std::exception& e) {
         fmt::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), "Error: ");
         fmt::print("{}\n", e.what());
