@@ -166,7 +166,10 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
                 connectors_max_cost,
                 has_purchasedata_for_connectors ? "" : "(!)"
             );
-       }
+        } break;
+        case OutputFmt::Json: {
+
+        } break;
     }
    return 0;
 }

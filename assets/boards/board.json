@@ -18,6 +18,14 @@
         }
     },
     "nodes": {
-        "test": {}
+        "roborio": {
+            "conns": [],
+            "name": "Test",
+            "pos": [
+                "0.000000m",
+                "0.000000in"
+            ],
+            "type": "1280.test"
+        }
     }
 }

@@ -116,7 +116,9 @@ void BoardGraph::load_node(const std::string& id, const json& root_val) {
         node->m_pos = json_val.at("pos").get<Point>();
         for(const auto& conn_json : json_val.at("conns")) {
             ConnectionPortRef port = *node->m_ty->get_port_ref(conn_json.at("port").get<std::string_view>());
-            auto edge = this->get_edge(conn_json.at("edge").get<std::string_view>()).unwrap();
+            auto edge = this
+                ->get_edge(conn_json.at("edge").get<std::string_view>())
+                .unwrap_except(std::runtime_error{fmt::format("Node {} connects to nonexistent edge {}", id, conn_json.at("edge").get<std::string_view>())});
             node->m_edges[port] = ComponentNode::EdgeConnection{
                 .edge = edge,
                 .side = conn_json.at("side").get<WireEdge::Side>()

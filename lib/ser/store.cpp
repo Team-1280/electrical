@@ -3,6 +3,7 @@
 #include <exception>
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 
 std::size_t TypeId::IDX = 0;
 
@@ -87,22 +88,28 @@ Ref<void> LazyResourceStore::try_get_id(TypeId type_id, const char *type_name, c
     
     auto cached = elem->second.cache.find(id_str);
     if(cached != elem->second.cache.end() && !cached->second.expired()) {
-        //logger::trace("Found cached resource {}", id_str);
         return cached->second.lock();
     }
     
-    Id id{id_str};
-    id.to_path();
-    std::filesystem::path resource_path = elem->second.loader->dir() / id.str();
-    resource_path += ".json";
+    try {
+        Id id{id_str};
+        id.to_path();
+        std::filesystem::path resource_path = elem->second.loader->dir() / id.str();
+        resource_path += ".json";
 
-    logger::trace("Resource not found by ID, loading from {}", resource_path.c_str());
-    std::ifstream file{resource_path};
-    json j;
-    file >> j;
-    
-    auto [loaded, ins] = elem->second.cache.insert_or_assign(std::string{id_str}, WeakRef<void>{});
-    Ref<void> load = elem->second.loader->load_untyped(loaded->first, j, *this);
-    elem->second.cache.insert_or_assign(std::string{id_str}, WeakRef<void>{load});
-    return load;
+        logger::trace("Resource not found by ID, loading from {}", resource_path.c_str());
+        std::ifstream file{};
+        file.exceptions(std::ifstream::failbit);
+        file.open(resource_path);
+        json j;
+        file >> j;
+        
+        auto [loaded, ins] = elem->second.cache.insert_or_assign(std::string{id_str}, WeakRef<void>{});
+        Ref<void> load = elem->second.loader->load_untyped(loaded->first, j, *this);
+        elem->second.cache.insert_or_assign(std::string{id_str}, WeakRef<void>{load});
+        return load;
+    } catch(std::exception& e) {
+        logger::error("Failed to deserialize element of type '{}' with id '{}': {}", type_name, id_str.data(), e.what());
+        throw std::runtime_error{fmt::format("While loading '{}' with id '{}': {}", type_name, id_str.data(), e.what())};
+    }
 }
