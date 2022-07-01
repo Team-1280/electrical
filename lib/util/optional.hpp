@@ -280,8 +280,9 @@ public:
      * \brief Check if two `Optional`s are equal
      * \return true if both `Optional`s have no value, or if they both have a value and the values are equal
      */
-    constexpr bool operator==(const Optional<T>& other) const requires requires(T v) {
-        {v == v} -> std::convertible_to<bool>;
+    template<typename U = T>
+    constexpr bool operator==(const Optional<U>& other) const requires requires(T const& v, U const& u) {
+        {v == u} -> std::convertible_to<bool>;
     } {
         return (this->has_value() && other.has_value()) ? this->unwrap_unchecked() == other.unwrap_unchecked() : 
             (!this->has_value() && !other.has_value()) ? true : false;
@@ -291,11 +292,34 @@ public:
      * \brief Check if two `Optional`s are not equal
      * \return true if both `Optional`s have no value, or if they both have a value and the values are not equal
      */
-    constexpr bool operator!=(const Optional<T>& other) const requires requires(T v) {
-        {v != v} -> std::convertible_to<bool>;
+    template<typename U = T>
+    constexpr bool operator!=(const Optional<U>& other) const requires requires(T const& v, U const& u) {
+        {v != u} -> std::convertible_to<bool>;
     } {
-        return (this->has_value() && other.has_value()) ? this->unwrap() != other.unwrap() : 
+        return (this->has_value() && other.has_value()) ? this->unwrap_unchecked() != other.unwrap_unchecked() : 
             (!this->has_value() && !other.has_value()) ? false : true;
+    }
+    
+    /**
+     * \brief Test this `Optional` for equality with another value
+     * \return true if this `Optional` contains a value equal to `other`, or false if this optional is empty or contains a value not equal to `other`
+     */
+    template<typename U = T>
+    constexpr inline bool operator==(U const& other) const requires requires(T const& v, U const& u) {
+        {v == u} -> std::convertible_to<bool>;
+    } {
+        return this->map([&other](T const& val) { return val == other; }).unwrap_or(false);
+    }
+    
+    /**
+     * \brief Test this `Optional` for inequality with another value
+     * \return true if this contains a value inequal to `other`, and false if this does not contain a value or the contained value is equal to `other`
+     */
+    template<typename U = T>
+    constexpr inline bool operator!=(U const& other) const requires requires(T const& v, U const& u) {
+        {v != u} -> std::convertible_to<bool>;
+    } {
+        return this->map([&other](T const& val) { return val != other; }).unwrap_or(false);
     }
     
     /**
