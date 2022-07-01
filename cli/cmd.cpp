@@ -114,11 +114,11 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
                     components_min_cost += min_cost;
                 }
             );
-
+            
             fmt::print(
-                fmt::emphasis::bold | (has_purchasedata_for_components ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
+                fmt::emphasis::bold | (!has_purchasedata_for_components ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
                 "Total cost of components: ${} to ${} {}\n",
-                std::min(components_min_cost, std::uint32_t{}),
+                components_min_cost,
                 components_max_cost,
                 has_purchasedata_for_components ? "" : "(!)"
             );
@@ -159,9 +159,9 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             );
 
             fmt::print(
-                fmt::emphasis::bold | (has_purchasedata_for_connectors ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
+                fmt::emphasis::bold | (!has_purchasedata_for_connectors ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
                 "Total cost of connectors: ${} to ${} {}\n",
-                std::min(connectors_min_cost, std::uint32_t{}),
+                connectors_min_cost,
                 connectors_max_cost,
                 has_purchasedata_for_connectors ? "" : "(!)"
             );
