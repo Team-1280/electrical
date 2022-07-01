@@ -15,7 +15,7 @@ Args::Args(std::string&& name, std::string&& desc) :
 }
 
 ArgId Args::arg(Arg &&arg) {
-    this->m_args.push_back(std::move(arg));
+    this->m_args.push_back(arg);
     return ArgId {
         .idx = this->m_args.size() - 1,
         .parent = this->m_id
@@ -35,37 +35,30 @@ ArgMatches::ArgMatches(Args const& args) : m_args{args} {}
 Optional<std::reference_wrapper<ArgMatch const>> ArgMatches::get(const ArgId arg) const {
     auto match = this->m_matches.find(arg.idx);
     if(match == this->m_matches.end() || arg.parent != this->m_args.m_id) {
-        if(this->m_subcommand.has_value()) {
-            return (*this->m_subcommand)->get(arg);
-        } else {
-            return {};
-        }
+        return this->m_subcommand.map([arg](auto& subcmd) { return subcmd->get(arg); }).flatten();
     } else {
         return std::cref(match->second);
     }
 }
 
 Optional<std::string_view const> ArgMatches::get_arg(const ArgId arg) const {
-    auto match = this->get(arg);
-    if(match.has_value() && match->get().arg.has_value()) {
-        return match->get().arg;
-    } else {
-        return {};
-    }
+    return this->get(arg)
+        .map([](std::reference_wrapper<ArgMatch const> match) { return match.get().arg; })
+        .unwrap_or(Optional<std::string_view const>{});
 }
 
 Optional<std::reference_wrapper<ArgMatches const>> ArgMatches::get_subcommand(const ArgsId command) const {
-    if(!this->m_subcommand.has_value() || (*this->m_subcommand)->m_args.m_id != command.id) {
+    if(!this->m_subcommand.has_value() || this->m_subcommand.unwrap_unchecked()->m_args.m_id != command.id) {
         return {};
     } else {
-        return std::cref(**this->m_subcommand); 
+        return std::cref(*this->m_subcommand.unwrap_unchecked()); 
     }
 }
 
 bool ArgMatches::add_opt(ArgId id, ArgMatch&& match) {
     if(id.parent != this->m_args.m_id) {
         if(this->m_subcommand.has_value()) {
-            return (*this->m_subcommand)->add_opt(id, std::move(match));
+            return this->m_subcommand.unwrap_unchecked()->add_opt(id, std::move(match));
         } else {
             return false;
         }
@@ -81,15 +74,15 @@ static std::size_t name_len(Arg const& arg) {
         if(arg.long_name.has_value()) {
             return fmt::formatted_size(
                 "-{}, --{} {}",
-                *arg.short_name,
-                *arg.long_name,
-                arg.arg_name.has_value() ? arg.arg_name->c_str() : ""
+                arg.short_name.unwrap_unchecked(),
+                arg.long_name.unwrap_unchecked(),
+                arg.arg_name.map([](std::string const& name) { return name.c_str(); }).unwrap_or("")
             );
         } else {
-            return fmt::formatted_size("-{} {}", *arg.short_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
+            return fmt::formatted_size("-{} {}", arg.short_name.unwrap_unchecked(), arg.arg_name.map([](std::string const& name) { return name.c_str(); }).unwrap_or(""));
         }
     } else if(arg.long_name.has_value()) {
-        return fmt::formatted_size("--{} {}", *arg.long_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
+        return fmt::formatted_size("--{} {}", arg.long_name.unwrap_unchecked(), arg.arg_name.map([](auto const& name) { return name.c_str(); }).unwrap_or(""));
     }
 
     return 0;
@@ -103,15 +96,15 @@ static void write_arg(std::ostream& ostream, bool verbose, std::size_t longest_n
         if(arg.long_name.has_value()) {
             name = fmt::format(
                 "-{}, --{} {}",
-                *arg.short_name,
-                *arg.long_name,
-                arg.arg_name.has_value() ? arg.arg_name->c_str() : ""
+                arg.short_name.unwrap_unchecked(),
+                arg.long_name.unwrap_unchecked(),
+                arg.arg_name.map(&std::string::c_str).unwrap_or("")
             );
         } else {
-            name = fmt::format("-{} {}", *arg.short_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
+            name = fmt::format("-{} {}", arg.short_name.unwrap_unchecked(), arg.arg_name.map(&std::string::c_str).unwrap_or(""));
         }
     } else if(arg.long_name.has_value()) {
-        name = fmt::format("--{} {}", *arg.long_name, arg.arg_name.has_value() ? arg.arg_name->c_str() : "");
+        name = fmt::format("--{} {}", arg.long_name.unwrap_unchecked(), arg.arg_name.map(&std::string::c_str).unwrap_or(""));
     }
     
     fmt::print(
@@ -121,18 +114,18 @@ static void write_arg(std::ostream& ostream, bool verbose, std::size_t longest_n
         BORDER_CHAR,
         longest_name,
         name,
-        (verbose && arg.long_help.has_value()) ? *arg.long_help : arg.short_help
+        verbose ? arg.long_help.unwrap_or(arg.short_help) : arg.short_help
     );
 }
 
 void Args::print_help(std::ostream& ostream, bool verbose, std::size_t space) const {
     if(this->m_version.has_value()) {
-        fmt::print(ostream, "{1:>{0}} {2} (v{3})\n", space, BORDER_CHAR, this->m_name, *this->m_version);
+        fmt::print(ostream, "{1:>{0}} {2} (v{3})\n", space, BORDER_CHAR, this->m_name, this->m_version.unwrap_unchecked());
     } else {
         fmt::print(ostream, "{1:>{0}} {2}\n", space, BORDER_CHAR, this->m_name);
     }
 
-    fmt::print(ostream, "{1:>{0}} {2}\n", space, BORDER_CHAR, (verbose && this->m_long_desc.has_value()) ? *this->m_long_desc : this->m_short_desc); 
+    fmt::print(ostream, "{1:>{0}} {2}\n", space, BORDER_CHAR, verbose ? this->m_long_desc.unwrap_or(this->m_short_desc) : this->m_short_desc); 
     
     std::size_t longest = 0;
     auto longest_elem = std::max_element(
@@ -173,13 +166,13 @@ void Args::print_usage(std::ostream& ostream) {
         fmt::print(ostream, "[-");
         for(const auto& flag : this->m_args) {
             if(flag.arg_name.has_value() || !flag.short_name.has_value()) { continue; }
-            fmt::print(ostream, "{}", *flag.short_name);
+            fmt::print(ostream, "{}", flag.short_name.unwrap_unchecked());
         }
         fmt::print(ostream, "] ");
     }
     for(const auto& opt : this->m_args) {
         if(!opt.arg_name.has_value() || !opt.short_name.has_value()) { continue; }
-        fmt::print(ostream, "[-{} {}] ", *opt.short_name, *opt.arg_name);
+        fmt::print(ostream, "[-{} {}] ", opt.short_name.unwrap_unchecked(), opt.arg_name.unwrap_unchecked());
     }
 }
 
@@ -204,7 +197,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                     if(!opt_found.has_value()) {
                         throw std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})};
                     }
-                    opt.emplace(*opt_found);
+                    opt.emplace(opt_found.unwrap_unchecked());
                     optarg = arg.substr(eq + 1);
                 } else {
                     std::string_view long_name = arg.substr(2);
@@ -213,23 +206,27 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                         throw std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})};
                     }
 
-                    if(opt_found->first.takes_arg) {
+                    if(opt_found.unwrap_unchecked().first.takes_arg) {
                         if(i + 1 < argc) {
                             i += 1;
                             optarg = std::string_view{argv[i]};
                         }
                     }
 
-                    opt.emplace(*opt_found);
+                    opt.emplace(opt_found.unwrap_unchecked());
                 }
 
                 root.add_opt(
-                    opt->second,
+                    opt.unwrap_unchecked().second,
                     ArgMatch{ .arg = optarg, .long_name = true }
                 );
             } else if(arg.length() > 1) {
                 char first = arg.at(1);
-                auto opt = root.find_arg([first](Arg const& a) { return a.short_name.has_value() && a.short_name == first; });
+                auto opt = root.find_arg([&first](Arg const& a) {
+                    return a.short_name.map([&first](auto const& name) {
+                        return name == first;
+                    }).unwrap_or(false);
+                });
                 if(!opt.has_value()) {
                     throw std::runtime_error{fmt::format("Short command-line option {} not found", first)};
                 }
