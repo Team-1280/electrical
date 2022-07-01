@@ -170,12 +170,12 @@ void Args::print_help(std::ostream& ostream, bool verbose, std::size_t space) co
     if(!this->m_commands.empty()) {
         fmt::print(ostream, "{1:>{0}} [Subcommands]\n", space, BORDER_CHAR);
         for(const auto& subcmd : this->m_commands) {
-            subcmd.print_help(ostream, verbose, space + 5);
+            subcmd.print_help(ostream, verbose, space + 3);
         }
     }
 }
 
-void Args::print_usage(std::ostream& ostream) {
+void Args::print_usage(std::ostream& ostream) const {
     fmt::print(ostream, "Usage: {} ", this->m_name);
     if(std::any_of(this->m_args.begin(), this->m_args.end(), [](const auto& arg) { return !arg.arg_name.has_value() && arg.short_name.has_value(); })) {
         fmt::print(ostream, "[-");

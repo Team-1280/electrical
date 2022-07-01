@@ -58,9 +58,9 @@ int main(int argc, const char* argv[]) {
         auto matches = args.matches(argc, argv);
         auto help_match = matches.get(help_flag);
         if(help_match.has_value()) {
-            args.print_usage();
+            matches.get_deepest_subcommand().args().print_usage();
             fmt::print("\n\n");
-            args.print_help(std::cout, help_match.unwrap().get().long_name);
+            matches.get_deepest_subcommand().args().print_help(std::cout, help_match.unwrap().get().long_name);
             return 0;
         } else if(matches.has(version_flag) && args.version().has_value()) {
             fmt::print("e1280 version {}\n", args.version().unwrap().get());

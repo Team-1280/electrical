@@ -123,7 +123,7 @@ public:
      * \brief Print a usage message to the given output stream 
      * \param ostream The output stream to write a usage message to
      */
-    void print_usage(std::ostream& ostream = std::cout);
+    void print_usage(std::ostream& ostream = std::cout) const;
     
     /**
      * \brief Builder-style method to set the version of this program
@@ -161,10 +161,8 @@ private:
     std::vector<Arg> m_args;
     /** \brief Sub programs of this arguments structure */
     std::vector<Args> m_commands;
-    
     /** \brief Unique identifier for this Args structure, used to make processing argument matches less ambiguous */
     std::size_t m_id;
-
     /** \brief ID counter for generating unique argument IDs */
     static std::size_t m_id_cnt;
 
@@ -205,13 +203,29 @@ public:
      * \return An empty Optional if the given subcommand was not passed, or argument matches for the given subcommand
      */
     Optional<std::reference_wrapper<ArgMatches const>> get_subcommand(const ArgsId command) const;
-    
+    /** \brief Get the subcommand `ArgMatches` that was passed, if any */
+    inline constexpr Optional<std::reference_wrapper<ArgMatches const>> get_subcommand() const { return this->m_subcommand.map([](auto const& ptr) { return std::cref(*ptr); }); }
+    /**
+     * \brief Get the last subcommand passed to this program, so for a call with arguments:
+     * ./program foo bar bat
+     * `get_deepest_subcommand` will return the subcommand matches for `bat`
+     */
+    inline constexpr ArgMatches const& get_deepest_subcommand() const {
+        return this->m_subcommand
+            .map([](auto const& subcmd) -> std::reference_wrapper<ArgMatches const> { return std::cref(subcmd->get_deepest_subcommand()); })
+            .unwrap_or(std::cref(*this))
+            .get();
+    }
+
     /**
      * \brief Check if the given argument ID is present in this ArgMatches structure or any subcommands
      * \param arg The argument ID to check
      * \return true if the argument at the given ID was passed to the program 
      */
     inline bool has(const ArgId arg) const { return this->get(arg).has_value(); }
+    
+    /** \brief Get a reference to the `Args` structure that parsed this `ArgMatches` */
+    constexpr inline Args const& args() const noexcept { return this->m_args; }
 private:
     /** Map of argument indices to their parsed options */
     Map<std::size_t, ArgMatch> m_matches{};
@@ -219,7 +233,7 @@ private:
     Optional<std::unique_ptr<ArgMatches>> m_subcommand{}; 
     /** Reference to the arguments structure this represents */
     Args const& m_args;
-    
+
     /**
      * \brief Add an option match to this `ArgMatches` structure or the subcommands of this structure
      * \param id The argument ID to insert a match into
