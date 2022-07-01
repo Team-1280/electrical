@@ -130,7 +130,7 @@ public:
     template<typename U = T>
     constexpr Optional(Optional<U>&& val) requires(std::constructible_from<T, U&&>) : OptionalInternal<T>{} {
         if(val.has_value()) {
-            this->template emplace<U&&>(std::move(val).unwrap());   
+            this->template emplace<U&&>(std::move(val).unwrap_unchecked());   
         }
     }
     
@@ -138,7 +138,7 @@ public:
     template<typename U = T>
     constexpr Optional(const Optional<U>& other) requires(std::constructible_from<T, U const&>) : OptionalInternal<T>{} {
         if(other.has_value()) {
-            this->template emplace<T const&>(other.unwrap());
+            this->template emplace<T const&>(other.unwrap_unchecked());
         }
     }
     
@@ -289,8 +289,12 @@ public:
 
     json to_json() const requires(ser::JsonSerializable<T>) { return this->has_value() ? this->unwrap_unchecked().to_json() : nullptr; }
 
-    inline std::string to_string() const requires(ser::StringSerializable<T>) { return this->map(T::to_string).unwrap_or(std::string{}); }
+    inline std::string to_string() const requires(ser::StringSerializable<T>) { return this->map(&T::to_string).unwrap_or(std::string{}); }
     inline static void from_string(Optional<T>& self, std::string_view str) requires(ser::StringSerializable<T>) {
+        if(str.empty()) {
+            self.reset();
+            return;
+        }
         self.emplace();
         T::from_string(self.unwrap(), str);
     }
@@ -303,8 +307,15 @@ public:
     constexpr bool operator==(const Optional<U>& other) const requires requires(T const& v, U const& u) {
         {v == u} -> std::convertible_to<bool>;
     } {
-        return (this->has_value() && other.has_value()) ? this->unwrap_unchecked() == other.unwrap_unchecked() : 
-            (!this->has_value() && !other.has_value()) ? true : false;
+         if(this->has_value()) {
+            if(other->has_value()) {
+                return this->unwrap_unchecked() == other.unwrap_unchecked();
+            } else {
+                return false;
+            }
+        } else {
+            return !other.has_value();
+        }
     }
 
     /**
@@ -315,9 +326,16 @@ public:
     constexpr bool operator!=(const Optional<U>& other) const requires requires(T const& v, U const& u) {
         {v != u} -> std::convertible_to<bool>;
     } {
-        return (this->has_value() && other.has_value()) ? this->unwrap_unchecked() != other.unwrap_unchecked() : 
-            (!this->has_value() && !other.has_value()) ? false : true;
-    }
+         if(this->has_value()) {
+            if(other->has_value()) {
+                return this->unwrap_unchecked() != other.unwrap_unchecked();
+            } else {
+                return false;
+            }
+        } else {
+            return !other.has_value();
+        }
+   }
     
     /**
      * \brief Test this `Optional` for equality with another value
@@ -380,25 +398,25 @@ public:
     };
     
     /** \brief Get an `Iterator` over the elements contained in `T` if it has a value, or an empty iterator */
-    constexpr auto begin() & requires requires(T v) {
+    constexpr auto begin() requires requires(T v) {
         requires std::input_or_output_iterator<decltype(v.begin())>;
     } {
         return Iterator<decltype(std::declval<T&>().begin())>{this->map([](T& v) { return v.begin(); })};
     }
     /** \brief Get an `Iterator` over the elements contained in `T` pointing to the end of the collection if it has a value, or an empty iterator */
-    constexpr auto end() & requires requires(T v) {
+    constexpr auto end() requires requires(T v) {
         requires std::input_or_output_iterator<decltype(v.end())>;
     } {
         return Iterator<decltype(std::declval<T&>().begin())>{this->map([](T& v) { return v.end(); })};
     }
     /** \brief Get an `Iterator` over the elements contained in `T` if it has a value, or an empty iterator */
-    constexpr auto begin() const& requires requires(const T v) {
+    constexpr auto begin() const requires requires(const T v) {
         requires std::input_or_output_iterator<decltype(v.begin())>;
     } {
         return Iterator<decltype(std::declval<T const&>().begin())>{this->map([](T const& v) { return v.begin(); })};
     }
     /** \brief Get an `Iterator` over the elements contained in `T` pointing to the end of the collection if it has a value, or an empty iterator */
-    constexpr auto end() const& requires requires(const T v) {
+    constexpr auto end() const requires requires(const T v) {
         requires std::input_or_output_iterator<decltype(v.end())>;
     } {
         return Iterator<decltype(std::declval<T const&>().begin())>{this->map([](T const& v) { return v.end(); })};

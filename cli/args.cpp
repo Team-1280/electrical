@@ -1,6 +1,7 @@
 #include "args.hpp"
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <stdexcept>
 #include <ranges>
 #include <fmt/color.h>
@@ -70,50 +71,64 @@ bool ArgMatches::add_opt(ArgId id, ArgMatch&& match) {
 
 //**MUST** be the same length as `write_arg`'s name is
 static std::size_t name_len(Arg const& arg) {
+    std::size_t len = 0;
     if(arg.short_name.has_value()) {
-        if(arg.long_name.has_value()) {
-            return fmt::formatted_size(
-                "-{}, --{} {}",
-                arg.short_name.unwrap_unchecked(),
-                arg.long_name.unwrap_unchecked(),
-                arg.arg_name.map(&std::string::c_str).unwrap_or("")
-            );
-        } else {
-            return fmt::formatted_size("-{} {}", arg.short_name.unwrap_unchecked(), arg.arg_name.map(&std::string::c_str).unwrap_or(""));
-        }
-    } else if(arg.long_name.has_value()) {
-        return fmt::formatted_size("--{} {}", arg.long_name.unwrap_unchecked(), arg.arg_name.map(&std::string::c_str).unwrap_or(""));
+        len += fmt::formatted_size(
+            "-{}",
+            arg.short_name.unwrap_unchecked()
+        );
+    }
+    if(arg.long_name.has_value()) {
+        len += fmt::formatted_size(
+            "{}--{}",
+            arg.short_name.has_value() ? ", " : "",
+            arg.long_name.unwrap_unchecked()
+        );
+    }
+    if(arg.arg_name.has_value()) {
+        len += fmt::formatted_size(
+            " {}",
+            arg.arg_name.unwrap_unchecked()
+        );
     }
 
-    return 0;
+    return len;
 }
 
 static constexpr const char * BORDER_CHAR = "│";
 
 static void write_arg(std::ostream& ostream, bool verbose, std::size_t longest_name, std::size_t space, Arg const& arg) {
-    std::string name;
-    if(arg.short_name.has_value()) {
-        if(arg.long_name.has_value()) {
-            name = fmt::format(
-                "-{}, --{} {}",
-                arg.short_name.unwrap_unchecked(),
-                arg.long_name.unwrap_unchecked(),
-                arg.arg_name.map(&std::string::c_str).unwrap_or("")
-            );
-        } else {
-            name = fmt::format("-{} {}", arg.short_name.unwrap_unchecked(), arg.arg_name.map(&std::string::c_str).unwrap_or(""));
-        }
-    } else if(arg.long_name.has_value()) {
-        name = fmt::format("--{} {}", arg.long_name.unwrap_unchecked(), arg.arg_name.map(&std::string::c_str).unwrap_or(""));
+    fmt::memory_buffer name{};
+     if(arg.short_name.has_value()) {
+        fmt::format_to(
+            std::back_inserter(name),
+            "-{}",
+            arg.short_name.unwrap_unchecked()
+        );
     }
-    
+    if(arg.long_name.has_value()) {
+        fmt::format_to(
+            std::back_inserter(name),
+            "{}--{}",
+            arg.short_name.has_value() ? ", " : "",
+            arg.long_name.unwrap_unchecked()
+        );
+    }
+    if(arg.arg_name.has_value()) {
+        fmt::format_to(
+            std::back_inserter(name),
+            " {}",
+            arg.arg_name.unwrap_unchecked()
+        );
+    }
+  
     fmt::print(
         ostream,
         "{1:>{0}}  {3:>{2}}   {4}\n",
         space,
         BORDER_CHAR,
         longest_name,
-        name,
+        std::string_view(name.data(), name.size()),
         verbose ? arg.long_help.unwrap_or(arg.short_help) : arg.short_help
     );
 }
