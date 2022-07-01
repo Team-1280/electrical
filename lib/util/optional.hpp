@@ -173,7 +173,7 @@ public:
     /** Get the value contained in this `Optional` or throw an exception / panic */
     constexpr inline T& unwrap() & {
         assert(this->has_value() && "Attempt to unwrap an empty Optional");
-        return this->unwrap_unchecked();
+        return static_cast<OptionalInternal<T>&>(*this).unwrap_unchecked();
     }
     constexpr inline T const& unwrap() const& {
         assert(this->has_value() && "Attempt to unwrap an empty Optional");
@@ -187,12 +187,23 @@ public:
         assert(this->has_value() && "Attempt to unwrap an empty Optipnal");
         return static_cast<OptionalInternal<T> const&&>(std::move(*this)).unwrap_unchecked();
     }
+        
+    /**
+     * \brief Unwrap this `Optional` to obtain the contained value, or return the provided default
+     */
+    template<typename U>
+    constexpr inline T unwrap_or(U&& other) const& {
+        return this->has_value() ? 
+            static_cast<Optional const&>(*this).unwrap_unchecked() :
+            T{std::forward<U>(other)};
+    }
     
     template<typename U>
-    constexpr inline T unwrap_or(U&& other) const& { return this->has_value() ? this->unwrap_unchecked() : T{std::forward<U>(other)}; }
-    
-    template<typename U>
-    constexpr inline T unwrap_or(U&& other) && { return this->has_value() ? std::move(*this).unwrap_unchecked() : T{std::forward<U>(other)}; }
+    constexpr inline T unwrap_or(U&& other) && {
+        return this->has_value() ?
+            std::move(*this).unwrap_unchecked() :
+            T{std::forward<U>(other)};
+    }
 
     /**
      * \brief Apply the given function to this Optional and return a new Optional containing its result
@@ -203,7 +214,7 @@ public:
     constexpr auto map(IfSome&& if_some) & {
         using Res = std::invoke_result_t<IfSome, T&>;
         return this->has_value() ? 
-            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), this->unwrap_unchecked())} :
+            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), static_cast<Optional&>(*this).unwrap_unchecked())} :
             Optional<Res>{};
     }
 
@@ -211,7 +222,7 @@ public:
     constexpr auto map(IfSome&& if_some) const& {
         using Res = std::invoke_result_t<IfSome, T const&>;
         return this->has_value() ?
-            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), this->unwrap_unchecked())} :
+            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), static_cast<Optional const&>(*this).unwrap_unchecked())} :
             Optional<Res>{};
     }
 
@@ -219,7 +230,7 @@ public:
     constexpr auto map(IfSome&& if_some) && {
         using Res = std::invoke_result_t<IfSome, T&&>;
         return this->has_value() ?
-            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), this->unwrap_unchecked())} :
+            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), std::move(*this).unwrap_unchecked())} :
             Optional<Res>{};
     }
 
@@ -227,7 +238,7 @@ public:
     constexpr auto map(IfSome&& if_some) const&& {
         using Res = std::invoke_result_t<IfSome, T const&&>;
         return this->has_value() ?
-            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), this->unwrap_unchecked())} :
+            Optional<Res>{std::invoke(std::forward<IfSome>(if_some), static_cast<Optional const&&>(std::move(*this)).unwrap_unchecked())} :
             Optional<Res>{};
     }
     
@@ -240,7 +251,7 @@ public:
     template<typename U = typename _detail::OptionalContained<T>::Ty>
     requires(std::same_as<T, Optional<U>>)
     constexpr inline Optional<U> flatten() const& noexcept {
-        return this->has_value() ? this->unwrap_unchecked() : Optional<U>{};
+        return this->has_value() ? static_cast<Optional const&>(*this).unwrap_unchecked() : Optional<U>{};
     }
     
     /**
@@ -248,17 +259,25 @@ public:
      * \param e Exception to throw if this `Optional` does not contain a value
      */
     template<typename Exception>
-    constexpr inline T unwrap_except(Exception&& e) && {
-        if(this->has_value()) { return this->unwrap_unchecked(); }
+    constexpr inline T& unwrap_except(Exception&& e) & {
+        if(this->has_value()) { return static_cast<Optional&>(*this).unwrap_unchecked(); }
         else { throw std::forward<Exception>(e); }
     }
-
     template<typename Exception>
-    constexpr inline T unwrap_except(Exception&& e) const& {
-        if(this->has_value()) { return this->unwrap_unchecked(); }
+    constexpr inline T const& unwrap_except(Exception&& e) const& {
+        if(this->has_value()) { return static_cast<Optional const&>(*this).unwrap_unchecked(); }
         else { throw std::forward<Exception>(e); }
     }
-
+    template<typename Exception>
+    constexpr inline T&& unwrap_except(Exception&& e) && {
+        if(this->has_value()) { return std::move(*this).unwrap_unchecked(); }
+        else { throw std::forward<Exception>(e); }
+    }
+    template<typename Exception>
+    constexpr inline T const&& unwrap_except(Exception&& e) const&& {
+        if(this->has_value()) { return static_cast<Optional const&&>(std::move(*this)).unwrap_unchecked(); }
+        else { throw std::forward<Exception>(e); }
+    }
 
    static void from_json(Optional<T>& self, json const& json) requires(ser::JsonSerializable<T>) {
         if(json.is_null()) { self.reset(); }

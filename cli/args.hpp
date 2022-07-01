@@ -251,7 +251,7 @@ private:
 
         if(!found_arg.has_value()) {
             return this->m_subcommand
-                .map([this, p](Args const& subcmd) { return subcmd.find_arg(std::forward<Predicate>(p)); })
+                .map([this, p](std::unique_ptr<ArgMatches>& subcmd) mutable { return subcmd->find_arg(std::forward<Predicate>(p)); })
                 .flatten();
         } else {
             return std::make_pair(found_arg.unwrap(), ArgId { .idx = idx, .parent = this->m_args.m_id });
