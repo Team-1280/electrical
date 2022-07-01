@@ -283,7 +283,12 @@ public:
         if(json.is_null()) { self.reset(); }
         else {
             self.emplace();
-            json.get_to<T>(self.unwrap());
+            try {
+                json.get_to<T>(self.unwrap_unchecked());
+            } catch(std::exception& e) {
+                self.reset();
+                throw e;
+            }
         }
     }
 
@@ -296,7 +301,12 @@ public:
             return;
         }
         self.emplace();
-        T::from_string(self.unwrap(), str);
+        try {
+            T::from_string(self.unwrap_unchecked(), str);
+        } catch(std::exception& e) {
+            self.reset();
+            throw e;
+        }
     }
     
     /**

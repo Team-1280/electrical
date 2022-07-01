@@ -168,7 +168,7 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             );
         } break;
         case OutputFmt::Json: {
-
+            
         } break;
     }
    return 0;

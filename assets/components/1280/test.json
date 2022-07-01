@@ -11,5 +11,8 @@
             "pos": ["0cm", "0 inches"],
             "name": "PWM0"
         }
-    }
+    },
+    "purchase": [
+        {"price": 500, "url": "example.com"}
+    ]
 }
