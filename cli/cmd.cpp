@@ -42,8 +42,8 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
         std::size_t num;
     };
     
-    Map<Ref<Component>, std::size_t> components;
-    Map<Ref<Connector>, std::size_t> connectors;
+    Map<Ref<Component>, std::size_t> components{};
+    Map<Ref<Connector>, std::size_t> connectors{};
     bool has_unknown_purchasedata = false;
     std::for_each(
         graph.nodes().begin(),
@@ -76,10 +76,9 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
 
     std::uint32_t components_max_cost = 0, components_min_cost = 0;
     std::uint32_t connectors_max_cost = 0, connectors_min_cost = 0;
-    
     switch(format) {
         case OutputFmt::Text: {
-             fmt::print(fmt::emphasis::bold, "[Components]\n");
+            fmt::print(fmt::emphasis::bold, "[Components]\n");
             bool has_purchasedata_for_components = true;
             std::for_each(
                 components.cbegin(),
@@ -117,9 +116,9 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             );
 
             fmt::print(
-                fmt::emphasis::bold | (has_purchasedata_for_components ? fmt::fg(fmt::color::light_yellow) : fmt::fg(fmt::color::white)),
+                fmt::emphasis::bold | (has_purchasedata_for_components ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
                 "Total cost of components: ${} to ${} {}\n",
-                components_min_cost,
+                std::min(components_min_cost, std::uint32_t{}),
                 components_max_cost,
                 has_purchasedata_for_components ? "" : "(!)"
             );
@@ -160,9 +159,9 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             );
 
             fmt::print(
-                fmt::emphasis::bold | (has_purchasedata_for_connectors ? fmt::fg(fmt::color::light_yellow) : fmt::fg(fmt::color::white)),
+                fmt::emphasis::bold | (has_purchasedata_for_connectors ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
                 "Total cost of connectors: ${} to ${} {}\n",
-                connectors_min_cost,
+                std::min(connectors_min_cost, std::uint32_t{}),
                 connectors_max_cost,
                 has_purchasedata_for_connectors ? "" : "(!)"
             );

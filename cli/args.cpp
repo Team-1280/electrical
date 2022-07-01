@@ -27,7 +27,8 @@ ArgsId Args::command(Args &&command) {
     this->m_commands.push_back(std::move(command));
     return ArgsId {
         .idx = this->m_commands.size() - 1,
-        .parent = this->m_id
+        .parent = this->m_id,
+        .id = command.m_id
     };
 }
 
