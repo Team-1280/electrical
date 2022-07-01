@@ -6,14 +6,19 @@
 
 /** Identifier for a single `Arg` structure in an `Args` object */
 struct ArgId {
+    /** Index in the arguments vector of the parent `Args` structure */
     std::size_t idx;
+    /** ID of the `Args` structure that contains this option */
     std::size_t parent;
 };
 
 /** Identifier for a single `Args` subcommand in an `Args` object */
 struct ArgsId {
+    /** Index of this subcommand in the parent `Args` structure */
     std::size_t idx;
+    /** ID of the parent `Args` structure */
     std::size_t parent;
+    /** ID of this `Args` structure */
     std::size_t id;
 };
 
@@ -97,13 +102,13 @@ public:
      */
     template<typename Predicate>
     requires requires(Predicate&& p, Arg const& arg) {
-        {p(arg)} -> std::same_as<bool>;
+        {std::invoke(std::forward<Predicate>(p), arg)} -> std::same_as<bool>;
     }
     Optional<ArgId> find_arg(Predicate&& p) {
         auto elem = std::find(
             this->m_args.begin(),
             this->m_args.end(),
-            p
+            std::forward<Predicate>(p)
         );
         if(elem == this->m_args.cend()) {
             return {};
@@ -203,8 +208,12 @@ public:
      * \return An empty Optional if the given subcommand was not passed, or argument matches for the given subcommand
      */
     Optional<std::reference_wrapper<ArgMatches const>> get_subcommand(const ArgsId command) const;
+    
     /** \brief Get the subcommand `ArgMatches` that was passed, if any */
-    inline constexpr Optional<std::reference_wrapper<ArgMatches const>> get_subcommand() const { return this->m_subcommand.map([](auto const& ptr) { return std::cref(*ptr); }); }
+    inline constexpr Optional<std::reference_wrapper<ArgMatches const>> get_subcommand() const {
+        return this->m_subcommand.map([](auto const& ptr) { return std::cref(*ptr); });
+    }
+
     /**
      * \brief Get the last subcommand passed to this program, so for a call with arguments:
      * ./program foo bar bat

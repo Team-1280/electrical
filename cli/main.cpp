@@ -4,6 +4,7 @@
 
 #include "args.hpp"
 #include "buildopts.h"
+#include "cmd.hpp"
 #include "fmt/color.h"
 #include "geom.hpp"
 #include "util/freelist.hpp"
@@ -36,23 +37,10 @@ int main(int argc, const char* argv[]) {
         .arg_name{"file"},
         .short_name{'i'},
         .long_name{"input"},
-        .short_help{"Specify a path to an input file that will be parsed and used for processing"}
+        .short_help{"Specify a path to an input file containing electrical board JSON data"}
     });
-
-
-    auto bom_cmd = std::move(Args{"bom", "Generate a Bill of Materials"}
-        .with_long_desc("Generate a Bill of Materials by searching all placed components and connectors on the board")
-    );
-
-    auto bom_outfmt_opt = bom_cmd.arg(Arg {
-        .takes_arg = true,
-        .arg_name{"format"},
-        .short_name{'o'},
-        .long_name{"output-format"},
-        .short_help{"Select the format that BOM should be presented in"}
-    });
-
-    auto bom_subcmd = args.command(std::move(bom_cmd));
+    
+    BomCommand bom{args};
 
     try {
         auto matches = args.matches(argc, argv);
@@ -67,16 +55,13 @@ int main(int argc, const char* argv[]) {
             return 0;
         }
 
-        auto input_file = matches.get_arg(input_file_opt);
-        if(!input_file.has_value()) {
-            throw std::runtime_error{"No input file given"};
-        }
+        auto input_file = matches
+            .get_arg(input_file_opt)
+            .unwrap_except(std::runtime_error{"No input file given"});
 
-        BoardGraph graph{input_file.unwrap(), false, false};
-        auto bom_matches_opt = matches.get_subcommand(bom_subcmd);
-        if(bom_matches_opt.has_value()) {
-            auto bom_matches = bom_matches_opt.unwrap();
-             
+        BoardGraph graph{input_file, false, false};
+        if(matches.get_subcommand(bom.id).has_value()) {
+            return bom.run(graph, matches.get_subcommand(bom.id).unwrap_unchecked());
         }
     } catch(const std::exception& e) {
         fmt::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), "Error: ");

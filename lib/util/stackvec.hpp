@@ -194,5 +194,3 @@ private:
     /** \brief Length of the vector, includes stack space */
     size_type m_len{0};
 };
-
-extern StackVec<int> i;

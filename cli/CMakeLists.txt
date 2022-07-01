@@ -3,6 +3,7 @@ set(
     SRC
     "main.cpp"
     "args.cpp"
+    "cmd.cpp"
 )
 
 set(NAME "e1280_cli")
