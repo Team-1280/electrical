@@ -242,6 +242,22 @@ public:
     constexpr inline Optional<U> flatten() const& noexcept {
         return this->has_value() ? this->unwrap_unchecked() : Optional<U>{};
     }
+    
+    /**
+     * \brief Attempt to unwrap this `Optional`, or throw the given exception
+     * \param e Exception to throw if this `Optional` does not contain a value
+     */
+    template<typename Exception>
+    constexpr inline T unwrap_except(Exception&& e) && {
+        if(this->has_value()) { return this->unwrap_unchecked(); }
+        else { throw std::forward<Exception>(e); }
+    }
+
+    template<typename Exception>
+    constexpr inline T unwrap_except(Exception&& e) const& {
+        if(this->has_value()) { return this->unwrap_unchecked(); }
+        else { throw std::forward<Exception>(e); }
+    }
 
 
    static void from_json(Optional<T>& self, json const& json) requires(ser::JsonSerializable<T>) {

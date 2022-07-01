@@ -193,27 +193,24 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                 std::size_t eq = arg.find('=');
                 if(eq != std::string_view::npos) {
                     std::string_view long_name = arg.substr(2, eq - 2);
-                    auto opt_found = root.find_arg([long_name](Arg const& a) { return a.long_name == long_name; });
-                    if(!opt_found.has_value()) {
-                        throw std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})};
-                    }
-                    opt.emplace(opt_found.unwrap_unchecked());
+                    auto opt_found = root
+                        .find_arg([long_name](Arg const& a) { return a.long_name == Optional<std::string_view>{long_name}; })
+                        .unwrap_except(std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})});
+                    opt.emplace(opt_found);
                     optarg = arg.substr(eq + 1);
                 } else {
                     std::string_view long_name = arg.substr(2);
-                    auto opt_found= root.find_arg([long_name](Arg const& a) { return a.long_name == long_name; });
-                    if(!opt_found.has_value()) {
-                        throw std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})};
-                    }
-
-                    if(opt_found.unwrap_unchecked().first.takes_arg) {
+                    auto opt_found = root
+                        .find_arg([long_name](Arg const& a) { return a.long_name == long_name; })
+                        .unwrap_except(std::runtime_error{fmt::format("Unknown command-line option {}", std::string{long_name})});
+                    if(opt_found.first.takes_arg) {
                         if(i + 1 < argc) {
                             i += 1;
                             optarg = std::string_view{argv[i]};
                         }
                     }
 
-                    opt.emplace(opt_found.unwrap_unchecked());
+                    opt.emplace(opt_found);
                 }
 
                 root.add_opt(
@@ -226,28 +223,25 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                     return a.short_name.map([&first](auto const& name) {
                         return name == first;
                     }).unwrap_or(false);
-                });
-                if(!opt.has_value()) {
-                    throw std::runtime_error{fmt::format("Short command-line option {} not found", first)};
-                }
+                })
+                .unwrap_except(std::runtime_error{fmt::format("Short command-line option {} not found", first)});
 
-                if(opt->first.takes_arg) {
+                if(opt.first.takes_arg) {
                     if(arg.length() > 2) {
-                        root.add_opt(opt->second, ArgMatch { .arg = arg.substr(2), .long_name = false }); 
+                        root.add_opt(opt.second, ArgMatch { .arg = arg.substr(2), .long_name = false }); 
                         continue;
                     } else if(i + 1 < argc) {
                         i += 1;
-                        root.add_opt(opt->second, ArgMatch { .arg{argv[i]}, .long_name = false }); 
+                        root.add_opt(opt.second, ArgMatch { .arg{argv[i]}, .long_name = false }); 
                         continue;
                     }
                 } //fallthrough if option takes an argument but none was found
 
                 for(char opt_flag : arg.substr(1)) {
-                    auto flag = root.find_arg([opt_flag](Arg const& a){ return a.short_name.has_value() && a.short_name == opt_flag;});
-                    if(!flag.has_value()) {
-                        throw std::runtime_error{fmt::format("Unknown short command-line option {}", opt_flag)};
-                    }
-                    root.add_opt(flag->second, ArgMatch{});
+                    auto flag = root
+                        .find_arg([opt_flag](Arg const& a){ return a.short_name  == Optional<char>{opt_flag};})
+                        .unwrap_except(std::runtime_error{fmt::format("Unknown short command-line option {}", opt_flag)});
+                    root.add_opt(flag.second, ArgMatch{});
                 }
             }
         } else {
@@ -255,7 +249,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
             for(const auto& subcommand : tail->m_args.m_commands) {
                 if(subcommand.m_name == arg) {
                     tail->m_subcommand = std::unique_ptr<ArgMatches>{new ArgMatches{subcommand}};
-                    tail = tail->m_subcommand->get();
+                    tail = tail->m_subcommand.unwrap_unchecked()->get();
                     has_subcommand = true;
                     break;
                 }
