@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <functional>
 #include <iomanip>
+#include <iostream>
 #include <stdexcept>
 #include <unordered_set>
 #include <numeric>
@@ -98,7 +99,7 @@ Optional<Ref<WireEdge>> BoardGraph::get_edge(const std::string_view id) const {
     }
 }
 
-void BoardGraph::load_node(const std::string& id, const json::object_t& root_val) {
+void BoardGraph::load_node(const std::string& id, const json& root_val) {
     const auto existing = this->get_node(id);
     if(existing.has_value()) {
         return;
@@ -107,7 +108,7 @@ void BoardGraph::load_node(const std::string& id, const json::object_t& root_val
 
     auto [entry, ins] = this->m_nodes.emplace(id, Ref<ComponentNode>{new ComponentNode{}});
     try {
-        const auto json_val = root_val.at("nodes").at(id).get<json::object_t>();
+        const auto json_val = root_val.at("nodes").at(id);
         Ref<ComponentNode> node{new ComponentNode{}};
         node->m_name = json_val.at("name").get<std::string>();
         node->m_id = entry->first;
@@ -127,14 +128,14 @@ void BoardGraph::load_node(const std::string& id, const json::object_t& root_val
         node->m_aabb.min += node->m_pos;
         
         entry->second = node;
-    } catch(const std::exception& e) {
+    } catch(std::exception& e) {
         this->m_nodes.erase(id);
-        throw std::runtime_error{fmt::format("Failed to load graph edge with ID {}: {}", id, e.what())}; 
+        throw std::runtime_error{fmt::format("Failed to load graph node with ID {}: {}", id, e.what())}; 
     }
 
 }
 
-void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val) {
+void BoardGraph::load_edge(const std::string& id, const json& root_val) {
     const auto& existing = this->get_edge(id);
     if(existing.has_value()) {
         return;
@@ -143,7 +144,7 @@ void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val
     auto [entry, ins] = this->m_edges.emplace(id, Ref<WireEdge>{});
 
     try {
-        const auto json_val = root_val.at("edges").at(id).get<json::object_t>();
+        const auto json_val = root_val.at("edges").at(id);
         Ref<WireEdge> edge{new WireEdge()};
         edge->m_id = entry->first;
         for(std::size_t i = 0; const auto& conn_json : json_val.at("conns")) {
@@ -164,7 +165,7 @@ void BoardGraph::load_edge(const std::string& id, const json::object_t& root_val
         }
 
         entry->second = edge;
-    } catch(const std::exception& e) {
+    } catch(std::exception& e) {
         this->m_edges.erase(id);
         throw std::runtime_error{fmt::format("Failed to load graph edge with ID {}: {}", id, e.what())}; 
     }
@@ -213,15 +214,13 @@ BoardGraph::~BoardGraph() {
     }
 }
 
-void BoardGraph::from_json(BoardGraph& self, const json& j) {
-    json::object_t obj = j.get<json::object_t>();
-    const auto& nodes = obj.at("nodes").get<json::object_t>();
-    const auto& edges = obj.at("edges").get<json::object_t>();
-    for(const auto& [id, node] : nodes) {
-        (void)id;
+void BoardGraph::from_json(BoardGraph& self, const json& obj) {
+    const auto& nodes = obj.at("nodes");
+    const auto& edges = obj.at("edges");
+    for(const auto& [id, node] : nodes.items()) {
         self.load_node(id, obj);
     }
-    for(const auto& [id, edge] : edges) {
+    for(const auto& [id, edge] : edges.items()) {
         self.load_edge(id, obj);
     }
 }

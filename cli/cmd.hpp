@@ -9,7 +9,7 @@ public:
     BomCommand(Args& args);
     
     /** \brief Run this subcommand with a graph opened from an input file and parsed arguments */
-    int run(BoardGraph const& graph, ArgMatches const& args);
+    int run(BoardGraph& graph, ArgMatches const& args);
     
     /** \brief All output formats that can be passed to the `outfmt` command-line option */
     enum class OutputFmt {

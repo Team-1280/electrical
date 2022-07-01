@@ -20,6 +20,7 @@ public:
     /** \brief Get the string ID of this connector type */
     inline constexpr const std::string_view id() const { return this->m_id; }
     inline constexpr Optional<std::reference_wrapper<const PurchaseData>> purchase_data() const { return this->m_purchasedata; }
+    inline constexpr std::string const& name() const noexcept { return this->m_name; }
 private:
     /** 
      * \brief User-created ID string of this connector, 

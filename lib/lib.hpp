@@ -336,13 +336,13 @@ private:
      * \param id The ID string of the node, must be a valid UUID or the node will not be loaded
      * \param obj Root JSON object passed to `from_json`
      */
-    void load_node(const std::string& id, const json::object_t& obj);
+    void load_node(const std::string& id, const json& obj);
     /**
      * \brief Ensure that an edge with the given ID has been loaded from the root object
      * \param id The ID string, must be a valid UUID
      * \param obj Root JSON object passed to `from_json`
      */
-    void load_edge(const std::string& id, const json::object_t& obj);
+    void load_edge(const std::string& id, const json& obj);
     
     /** \brief Path to a file used for saving and loading this board graph */
     std::filesystem::path m_path;

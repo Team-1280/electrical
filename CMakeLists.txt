@@ -36,6 +36,7 @@ include(FetchContent)
 set(JSON_ImplicitConversions CACHE BOOL OFF)
 set(JSON_Diagnostics CACHE BOOL ON "")
 set(JSON_BuildTests OFF CACHE INTERNAL "")
+add_compile_definitions(JSON_DIAGNOSTICS=1)
 FetchContent_Declare(
     nlohmann-json URL https://github.com/nlohmann/json/releases/download/v3.10.5/json.tar.xz
 )
