@@ -5,6 +5,7 @@
 
 #include "ser/ser.hpp"
 #include "util/optional.hpp"
+#include "util/singlevec.hpp"
 
 
 /** 
@@ -40,14 +41,16 @@ public:
 
     /** \brief Create a new empty `PurchaseData` structure with no links to buy the product */
     inline constexpr PurchaseData() : m_items{} {}
-    
-    inline constexpr operator std::vector<Item> const&() const { return this->m_items; }
-    inline constexpr operator std::vector<Item>&() { return this->m_items; }
-    
+   
+    inline constexpr SingleVec<Item>::iterator begin() { return this->m_items.begin(); }
+    inline constexpr SingleVec<Item>::iterator end() { return this->m_items.end(); }
+    inline constexpr SingleVec<Item>::const_iterator begin() const { return this->m_items.begin(); }
+    inline constexpr SingleVec<Item>::const_iterator end() const { return this->m_items.end(); }
+
     /** \brief Implementing the `Noneable` concept, check if this `PurchaseData` is none */
-    inline constexpr bool is_none() const noexcept { return this->m_items.empty(); }
+    inline constexpr bool is_none() const noexcept { return this->m_items.is_none(); }
     /** \brief Implementing the `Noneable` concept, clear all `Item`s from this `PurchaseData` */
-    inline constexpr void make_none() { this->m_items.clear(); }
+    inline constexpr void make_none() { this->m_items.make_none(); }
     
     /** \brief Deserialize a list of `Item`s from the given JSON value */
     static void from_json(PurchaseData& self, json const& json);
@@ -55,7 +58,7 @@ public:
     json to_json() const;
 private:
     /** \brief List of places to purchase the part */
-    std::vector<Item> m_items;
+    SingleVec<Item> m_items;
 };
 
 static_assert(ser::JsonSerializable<PurchaseData::Item>);

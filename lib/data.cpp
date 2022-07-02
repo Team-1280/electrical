@@ -1,7 +1,7 @@
 #include "data.hpp"
 
 void PurchaseData::from_json(PurchaseData &self, const json &json) {
-    json.get_to<std::vector<Item>>(self.m_items);
+    json.get_to<SingleVec<Item>>(self.m_items);
 }
 
 json PurchaseData::to_json() const {

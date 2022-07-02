@@ -420,7 +420,7 @@ public:
     constexpr auto end() requires requires(T v) {
         requires std::input_or_output_iterator<decltype(v.end())>;
     } {
-        return Iterator<decltype(std::declval<T&>().begin())>{this->map([](T& v) { return v.end(); })};
+        return Iterator<decltype(std::declval<T&>().end())>{this->map([](T& v) { return v.end(); })};
     }
     /** \brief Get an `Iterator` over the elements contained in `T` if it has a value, or an empty iterator */
     constexpr auto begin() const requires requires(const T v) {
@@ -432,6 +432,6 @@ public:
     constexpr auto end() const requires requires(const T v) {
         requires std::input_or_output_iterator<decltype(v.end())>;
     } {
-        return Iterator<decltype(std::declval<T const&>().begin())>{this->map([](T const& v) { return v.end(); })};
+        return Iterator<decltype(std::declval<T const&>().end())>{this->map([](T const& v) { return v.end(); })};
     }
 };

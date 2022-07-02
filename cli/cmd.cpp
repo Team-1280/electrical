@@ -73,7 +73,7 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
     };
     static const auto get_range = [](PurchaseData const& data) -> Optional<PriceRange> {
         Optional<PriceRange> range{};
-        for(const auto& item : (std::vector<PurchaseData::Item>const&)data) {
+        for(const auto& item : data) {
             range = range
                 .map([&item](PriceRange& r) { r.update(item.cost); return r; })
                 .unwrap_or(PriceRange{.min = item.cost, .max = item.cost});
