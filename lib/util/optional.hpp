@@ -340,7 +340,7 @@ public:
         {v != u} -> std::convertible_to<bool>;
     } {
          if(this->has_value()) {
-            if(other->has_value()) {
+            if(other.has_value()) {
                 return this->unwrap_unchecked() != other.unwrap_unchecked();
             } else {
                 return false;

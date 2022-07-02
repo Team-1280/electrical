@@ -55,6 +55,21 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
     struct PurchasedData {
         Optional<PriceRange> price_range{};
         std::size_t num;
+
+        json to_json() const {
+            return {
+                {
+                    "price_range",
+                    this
+                        ->price_range
+                        .map([](const auto& range) {
+                            return json::array({range.min, range.max});
+                        })
+                        .unwrap_or(nullptr)
+                },
+                {"num", this->num}
+            };    
+        }
     };
     static const auto get_range = [](PurchaseData const& data) -> Optional<PriceRange> {
         Optional<PriceRange> range{};
@@ -223,8 +238,19 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             );
         } break;
         case OutputFmt::Json: {
-            
+            json::object_t root{};
+            json::object_t components_json{};
+            json::object_t connectors_json{};
+            for(const auto& [component, data] : components) {
+                components_json.emplace(component->id(), data.to_json());
+            }
+            for(const auto& [connector, data] : connectors) {
+                connectors_json.emplace(connector->id(), data.to_json());
+            }
+            root.emplace("components", std::move(components_json));
+            root.emplace("connectors", std::move(connectors_json));
+            std::cout << std::setw(2) << root << std::endl;
         } break;
     }
-   return 0;
+    return 0;
 }
