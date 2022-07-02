@@ -47,7 +47,9 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
         }
 
         inline std::string to_string() const {
-            return fmt::format(std::locale("en_US.UTF-8"), "${:L} - ${:L}", this->min, this->max);
+            return this->min == this->max ?
+                fmt::format(std::locale("en_US.UTF-8"), "${:L}", this->min) :
+                fmt::format(std::locale("en_US.UTF-8"), "${:L} - ${:L}", this->min, this->max);
         }
     };
     struct PurchasedData {
@@ -173,7 +175,7 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
                             .second
                             .price_range
                             .map(&PriceRange::to_string)
-                            .unwrap_or("No purchase data")
+                            .unwrap_or("[No Data]")
                     );
                }
             );
@@ -206,7 +208,7 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
                             .second
                             .price_range
                             .map(&PriceRange::to_string)
-                            .unwrap_or("No purchase data")
+                            .unwrap_or("[No Data]")
                     );
                 }
             );
