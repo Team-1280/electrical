@@ -32,19 +32,44 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             }
         })
         .unwrap_or(OutputFmt::Text);
-
-    struct PurchasedComponent {
-        Ref<Component> purchased;
-        std::size_t num;
-    };
-    struct PurchasedConnector {
-        Ref<Connector> purchased;
-        std::size_t num;
-    };
     
-    Map<Ref<Component>, std::size_t> components{};
-    Map<Ref<Connector>, std::size_t> connectors{};
-    bool has_unknown_purchasedata = false;
+    struct PriceRange {
+        std::uint32_t min;
+        std::uint32_t max;
+
+        constexpr inline void update(std::uint32_t n) noexcept {
+            this->min = std::min(this->min, n);
+            this->max = std::max(this->max, n);
+        }
+        constexpr inline void update(PriceRange const& other) noexcept {
+            this->update(other.min);
+            this->update(other.max);
+        }
+
+        inline std::string to_string() const {
+            return fmt::format("${} - ${}", this->min, this->max);
+        }
+    };
+    struct PurchasedData {
+        Optional<PriceRange> price_range{};
+        std::size_t num;
+    };
+    static const auto get_range = [](PurchaseData const& data) -> Optional<PriceRange> {
+        Optional<PriceRange> range{};
+        for(const auto& item : (std::vector<PurchaseData::Item>const&)data) {
+            range = range
+                .map([&item](PriceRange& r) { r.update(item.cost); return r; })
+                .unwrap_or(PriceRange{.min = item.cost, .max = item.cost});
+        }
+        return range;
+    };
+
+    Map<Ref<Component>, PurchasedData> components{};
+    Map<Ref<Connector>, PurchasedData> connectors{};
+    Optional<PriceRange> connector_price_range;
+    Optional<PriceRange> component_price_range;
+    bool all_component_purchasedata = true;
+    bool all_connector_purchasedata = true;
     std::for_each(
         graph.nodes().begin(),
         graph.nodes().end(),
@@ -52,9 +77,15 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             const auto& [_, node] = elem;
             auto existing = components.find(node->type());
             if(existing != components.end()) {
-                existing->second += 1;
+                existing->second.num += 1;
             } else {
-                components.emplace(node->type(), 1);
+                components.emplace(
+                    node->type(),
+                    PurchasedData {
+                        .price_range = node->type()->purchase_data().map(get_range).flatten(),
+                        .num = 1
+                    }
+                );
             }
         }
     );
@@ -62,29 +93,69 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
         graph.edges().begin(),
         graph.edges().end(),
         [&](auto const& elem) mutable {
-            const auto& [_, node] = elem;
-            for(const auto& side : node->connections()) {
+            const auto& [_, edge] = elem;
+            for(const auto& side : edge->connections()) {
                 auto existing = connectors.find(side.connector());
                 if(existing != connectors.end()) {
-                    existing->second += 1;
+                    existing->second.num += 1;
                 } else {
-                    connectors.emplace(side.connector(), 1);
+                    connectors.emplace(
+                        side.connector(),
+                        PurchasedData {
+                            .price_range = side.connector()->purchase_data().map(get_range).flatten(),
+                            .num = 1
+                        }
+                    );
                 }
             }
         }
     );
 
-    std::uint32_t components_max_cost = 0, components_min_cost = 0;
-    std::uint32_t connectors_max_cost = 0, connectors_min_cost = 0;
+    std::for_each(
+        components.cbegin(),
+        components.cend(),
+        [&component_price_range,&all_component_purchasedata](auto const& elem) {
+            const auto& purchased = elem.second;
+            if(purchased.price_range.has_value()) {
+                component_price_range = component_price_range
+                    .map([&purchased](PriceRange& range) {
+                        range.min += purchased.price_range.unwrap_unchecked().min;
+                        range.max += purchased.price_range.unwrap_unchecked().max;
+                        return range;
+                    })
+                    .unwrap_or(purchased.price_range.unwrap_unchecked());
+            } else {
+                all_component_purchasedata = false;
+            }
+        }
+    );
+
+    std::for_each(
+        connectors.cbegin(),
+        connectors.cend(),
+        [&connector_price_range,&all_connector_purchasedata](auto const& elem) {
+            const auto& purchased = elem.second;
+            if(purchased.price_range.has_value()) {
+                connector_price_range = connector_price_range
+                    .map([&purchased](PriceRange& range) {
+                        range.min += purchased.price_range.unwrap_unchecked().min;
+                        range.max += purchased.price_range.unwrap_unchecked().max;
+                        return range;
+                    })
+                    .unwrap_or(purchased.price_range.unwrap_unchecked());
+            } else {
+                all_connector_purchasedata = false;
+            }
+        }
+    );
+
     switch(format) {
         case OutputFmt::Text: {
             fmt::print(fmt::emphasis::bold, "[Components]\n");
-            bool has_purchasedata_for_components = true;
             std::for_each(
                 components.cbegin(),
                 components.cend(),
                 [&](auto const& purchased) {
-                    std::uint32_t max_cost = std::numeric_limits<std::uint32_t>::min(), min_cost = std::numeric_limits<std::uint32_t>::max();
                     fmt::print(" - {} x{}: {}\n", 
                         fmt::styled(
                             purchased.first->name(),
@@ -93,43 +164,31 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
                                 fmt::fg(fmt::color::pale_violet_red)
                             )
                         ),
-                        purchased.second,
-                        purchased.first
-                            ->purchase_data()
-                            .map([&](const auto& data) mutable {
-                                for(const auto& item : (std::vector<PurchaseData::Item>const&)data.get()) {
-                                    max_cost = std::max(item.cost, max_cost);
-                                    min_cost = std::min(item.cost, min_cost);
-                                }
-                                max_cost *= purchased.second;
-                                min_cost *= purchased.second;
-                                return fmt::format("${} to ${}", min_cost, max_cost);
-                            })
+                        purchased.second.num,
+                        purchased
+                            .second
+                            .price_range
+                            .map(&PriceRange::to_string)
                             .unwrap_or("No purchase data")
                     );
-                    if(!purchased.first->purchase_data().has_value()) {
-                        has_purchasedata_for_components = false;
-                    }
-                    components_max_cost += max_cost;
-                    components_min_cost += min_cost;
-                }
+               }
             );
             
             fmt::print(
-                fmt::emphasis::bold | (!has_purchasedata_for_components ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
-                "Total cost of components: ${} to ${} {}\n",
-                components_min_cost,
-                components_max_cost,
-                has_purchasedata_for_components ? "" : "(!)"
+                fmt::emphasis::bold | (!all_component_purchasedata ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
+                "Total cost of components: {} {}\n",
+                component_price_range
+                    .map(&PriceRange::to_string)
+                    .unwrap_or("[No Data]"),
+                all_component_purchasedata ? "" : "(!)"
             );
 
             fmt::print(fmt::emphasis::bold, "[Connectors]\n");
-            bool has_purchasedata_for_connectors = true;
+
             std::for_each(
                 connectors.cbegin(),
                 connectors.cend(),
                 [&](auto const& purchased) {
-                    std::uint32_t max_cost = std::numeric_limits<std::uint32_t>::min(), min_cost = std::numeric_limits<std::uint32_t>::max();
                     fmt::print(" - {} x{}: {}\n", 
                         fmt::styled(
                             purchased.first->name(),
@@ -138,32 +197,23 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
                                 fmt::fg(fmt::color::pale_violet_red)
                             )
                         ),
-                        purchased.second,
-                        purchased.first
-                            ->purchase_data()
-                            .map([&](const auto& data) mutable {
-                                for(const auto& item : (std::vector<PurchaseData::Item>const&)data.get()) {
-                                    max_cost = std::max(item.cost, max_cost);
-                                    min_cost = std::min(item.cost, min_cost);
-                                }
-                                return fmt::format("${} to ${}", min_cost, max_cost);
-                            })
+                        purchased.second.num,
+                        purchased
+                            .second
+                            .price_range
+                            .map(&PriceRange::to_string)
                             .unwrap_or("No purchase data")
                     );
-                    if(!purchased.first->purchase_data().has_value()) {
-                        has_purchasedata_for_connectors = false;
-                    }
-                    connectors_max_cost += max_cost;
-                    connectors_min_cost += min_cost;
                 }
             );
 
             fmt::print(
-                fmt::emphasis::bold | (!has_purchasedata_for_connectors ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
-                "Total cost of connectors: ${} to ${} {}\n",
-                connectors_min_cost,
-                connectors_max_cost,
-                has_purchasedata_for_connectors ? "" : "(!)"
+                fmt::emphasis::bold | (!all_connector_purchasedata ? fmt::fg(fmt::color::yellow) : fmt::fg(fmt::color::white)),
+                "Total cost of connectors: {} {}\n",
+                connector_price_range
+                    .map(&PriceRange::to_string)
+                    .unwrap_or("[No Data]"),
+                all_connector_purchasedata ? "" : "(!)"
             );
         } break;
         case OutputFmt::Json: {

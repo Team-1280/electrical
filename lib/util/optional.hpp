@@ -242,6 +242,9 @@ public:
             Optional<Res>{};
     }
     
+    /**
+     * \brief Flatten this `Optional` cointaining another `Optional` into a single `Optional`
+     */
     template<typename U = typename _detail::OptionalContained<T>::Ty>
     requires(std::same_as<T, Optional<U>>)
     constexpr inline Optional<U> flatten() && noexcept {
@@ -294,7 +297,7 @@ public:
 
     json to_json() const requires(ser::JsonSerializable<T>) { return this->has_value() ? this->unwrap_unchecked().to_json() : nullptr; }
 
-    inline std::string to_string() const requires(ser::StringSerializable<T>) { return this->map(&T::to_string).unwrap_or(std::string{}); }
+    inline std::string to_string() const requires(ser::ToStringable<T>) { return this->map(&T::to_string).unwrap_or(std::string{}); }
     inline static void from_string(Optional<T>& self, std::string_view str) requires(ser::StringSerializable<T>) {
         if(str.empty()) {
             self.reset();

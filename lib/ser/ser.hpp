@@ -46,13 +46,22 @@ concept JsonSerializable = requires(const T v) {
 };
 
 /**
+ * \brief Concept specifying that a type can be represented as a string, separate from 
+ * `StringSerializable` in that `StringSerializable` requires that the type be able to be converted from a string as well
+ */
+template<typename T>
+concept ToStringable = requires(const T v) {
+    {v.to_string()} -> std::convertible_to<std::string>;
+};
+
+/**
  * \brief Concept specifying that a type can be converted to / from a string.
  * Note that if this is implemented and JsonSerializable is not, JsonSerializable will be implemented
  * using from / to string. Also note that a move assignment operator is recommended.
  */
 template<typename T>
 concept StringSerializable = requires(const T v) {
-    {v.to_string()} -> std::convertible_to<std::string>;
+    requires ToStringable<T>;    
     {T::from_string(std::declval<T&>(), std::declval<std::string_view>())};
 };
 
@@ -60,7 +69,7 @@ concept StringSerializable = requires(const T v) {
 
 namespace fmt {
 
-template <ser::StringSerializable T>
+template <ser::ToStringable T>
 struct formatter<T> {
     constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
       // Check if reached the end of the range:
