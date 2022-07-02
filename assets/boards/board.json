@@ -26,6 +26,15 @@
                 "0.000000in"
             ],
             "type": "1280.test"
+        },
+        "test": {
+            "conns": [],
+            "name": "Another Testing Component",
+            "pos": [
+                "0.5m",
+                "10in"
+            ],
+            "type": "1280.test"
         }
     }
 }

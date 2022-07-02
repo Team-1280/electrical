@@ -47,7 +47,7 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
         }
 
         inline std::string to_string() const {
-            return fmt::format("${} - ${}", this->min, this->max);
+            return fmt::format(std::locale("en_US.UTF-8"), "${:L} - ${:L}", this->min, this->max);
         }
     };
     struct PurchasedData {
@@ -112,11 +112,13 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
     );
 
     std::for_each(
-        components.cbegin(),
-        components.cend(),
-        [&component_price_range,&all_component_purchasedata](auto const& elem) {
-            const auto& purchased = elem.second;
+        components.begin(),
+        components.end(),
+        [&component_price_range,&all_component_purchasedata](auto& elem) {
+            auto& purchased = elem.second;
             if(purchased.price_range.has_value()) {
+                purchased.price_range.unwrap_unchecked().min *= purchased.num;
+                purchased.price_range.unwrap_unchecked().max *= purchased.num;
                 component_price_range = component_price_range
                     .map([&purchased](PriceRange& range) {
                         range.min += purchased.price_range.unwrap_unchecked().min;
@@ -131,11 +133,13 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
     );
 
     std::for_each(
-        connectors.cbegin(),
-        connectors.cend(),
-        [&connector_price_range,&all_connector_purchasedata](auto const& elem) {
-            const auto& purchased = elem.second;
+        connectors.begin(),
+        connectors.end(),
+        [&connector_price_range,&all_connector_purchasedata](auto& elem) {
+            auto& purchased = elem.second;
             if(purchased.price_range.has_value()) {
+                purchased.price_range.unwrap_unchecked().min *= purchased.num;
+                purchased.price_range.unwrap_unchecked().max *= purchased.num;
                 connector_price_range = connector_price_range
                     .map([&purchased](PriceRange& range) {
                         range.min += purchased.price_range.unwrap_unchecked().min;
