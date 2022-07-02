@@ -3,6 +3,7 @@
 #include "ser/store.hpp"
 #include "util/stackvec.hpp"
 #include "util/freelist.hpp"
+#include "util/singlevec.hpp"
 #include <limits>
 #include <type_traits>
 #include <unit.hpp>
@@ -189,10 +190,10 @@ public:
     /**
      * \brief Create a new footprint from a list of connected points
      */
-    Footprint(const std::vector<Point>& pts) : Footprint(std::vector{pts}) {}
-    Footprint(std::vector<Point>&& pts);
+    Footprint(const SingleVec<Point>& pts) : Footprint(SingleVec{pts}) {}
+    Footprint(SingleVec<Point>&& pts);
     
-    constexpr operator std::vector<Point> const&() const noexcept {
+    constexpr inline operator SingleVec<Point> const&() const noexcept {
         return this->m_pts;
     }
     
@@ -201,12 +202,12 @@ public:
      */
     inline constexpr AABB const& aabb() const noexcept { return this->m_aabb; }
 
-    std::vector<Point>::const_iterator begin() const { return this->m_pts.begin(); }
-    std::vector<Point>::const_iterator end() const { return this->m_pts.end(); }
+    SingleVec<Point>::const_iterator begin() const { return this->m_pts.begin(); }
+    SingleVec<Point>::const_iterator end() const { return this->m_pts.end(); }
 
 private:
-    /** \brief A vector of points that each connect to the prior one, must have at least one point */
-    std::vector<Point> m_pts;
+    /** \brief A vector of points that each connect to the prior one */
+    SingleVec<Point> m_pts;
     /** \brief Axis-aligned bounding box for the footprint */
     AABB m_aabb;
         

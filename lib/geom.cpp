@@ -18,7 +18,7 @@ json Footprint::to_json() const {
     return arr;
 }
 
-Footprint::Footprint(std::vector<Point>&& pts) :
+Footprint::Footprint(SingleVec<Point>&& pts) :
     m_pts{std::move(pts)},
     m_aabb{}
 {

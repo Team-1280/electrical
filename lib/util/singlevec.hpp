@@ -9,6 +9,11 @@
 template<typename T>
 class SingleVec {
 public: 
+    using size_type = typename std::vector<T>::size_type;
+    using iterator = typename std::vector<T>::iterator;
+    using const_iterator = typename std::vector<T>::const_iterator;
+
+
     SingleVec() = default;
     
     /**
@@ -22,28 +27,22 @@ public:
     }
     
     /** \brief Move construct this `SingleVec` from another `SingleVec` */
-    SingleVec(SingleVec<T>&& other) : m_elems{std::move(other.m_elems)} {}
-    SingleVec(SingleVec<T> const& other) : m_elems{other.m_elems} {}
-   
-    SingleVec<T>& operator=(SingleVec<T>&& other) {
-        this->m_elems = std::move(other.m_elems);
-        return *this;
-    }
-    SingleVec<T>& operator=(SingleVec<T> const& other) {
-        this->m_elems = other.m_elems;
-        return *this;
-    }
-
+    SingleVec(SingleVec<T>&& other) = default;
+    SingleVec(SingleVec<T> const& other) = default;
+    SingleVec<T>& operator=(SingleVec<T>&& other) = default;
+    SingleVec<T>& operator=(SingleVec<T> const& other) = default;
     /**
      * \brief Append `elem` to this `SingleVec`
      */
-    template<typename U = T>
-    inline constexpr void push_back(U&& elem) {
-        this->m_elems.push_back(std::forward<U>(elem));
+    inline constexpr void push_back(T&& elem) {
+        this->m_elems.push_back(std::move(elem));
+    }
+    inline constexpr void push_back(T const& elem) {
+        this->m_elems.push_back(elem);
     }
 
-    using iterator = typename std::vector<T>::iterator;
-    using const_iterator = typename std::vector<T>::const_iterator;
+    inline constexpr T& operator[](size_type idx) { return this->m_elems[idx]; }
+    inline constexpr T const& operator[](size_type idx) const { return this->m_elems[idx]; }
 
     inline constexpr iterator begin() { return this->m_elems.begin(); }
     inline constexpr iterator end() { return this->m_elems.end(); }
