@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 
+#include "currency.hpp"
 #include "ser/ser.hpp"
 #include "util/optional.hpp"
 #include "util/singlevec.hpp"
@@ -24,10 +25,10 @@ public:
     public:
         /** \brief URL of a website page to purchase the item from */
         std::string url;
-        /** \brief Last recorded cost of the item in USD, up to $4B */
-        uint32_t cost;
+        /** \brief Recorded cost of the item in USD */
+        USD cost;
         /** \brief Create a new item from owned link string and cost */
-        Item(std::string&& link, uint32_t cost) : url{std::move(link)}, cost{cost} {}
+        Item(std::string&& link, USD cost) : url{std::move(link)}, cost{cost} {}
         /** \brief Default-construct an item, should only be used for JSON deserialization */
         Item() {}
         

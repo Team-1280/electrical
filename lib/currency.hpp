@@ -6,24 +6,37 @@
 #include <cstdint>
 #include <stdexcept>
 
+namespace _detail {
+
+/**
+ * \brief Compile-time function to raise a number to a given power,
+ * only works with fixed-point numbers
+ */
+template<typename T>
+inline consteval T pow(T num, std::size_t power) noexcept {
+    return (power > 0) ? num * pow(num, power - 1) : 1;
+}
+
+}
+
 /** 
  * \brief Class representing an amount of US dollars as a dollars and cents amount to avoid
  * floating-point imprecision
  */
-template<std::uint64_t DEC_PLACES = 6>
 class USD {
 public:
-    static_assert(DEC_PLACES >= 2);
-
     using storage = std::uint64_t;
-    static constexpr const storage DOLLARS_SCALE = std::pow(10, DEC_PLACES);
-    static constexpr const storage CENTS_SCALE = std::pow(10, DEC_PLACES - 2);
+    static constexpr const storage DEC_PLACES = 6;
+    static constexpr const storage DOLLARS_SCALE = _detail::pow<storage>(10, DEC_PLACES);
+    static constexpr const storage CENTS_SCALE = _detail::pow<storage>(10, DEC_PLACES - 2);
 
     /** \brief Create a new dollar amount from a floating-point number */
     explicit inline constexpr USD(double val) : m_dec{static_cast<storage>(std::round(val * DOLLARS_SCALE))} {}
     /** \brief Create a new dollar amount from dollars and cents */
     inline constexpr USD(storage dollars, storage cents = 0) : m_dec{dollars * DOLLARS_SCALE + cents * CENTS_SCALE} {}
-    
+    /** \brief Create a new USD amount containing $0.00 */
+    inline constexpr USD() = default;
+
     /** \brief Get the number of whole dollars in this decimal amount */
     inline constexpr storage dollars() const noexcept { return this->m_dec / DOLLARS_SCALE; }
     /** \brief Set the dollar amount for this currency */
