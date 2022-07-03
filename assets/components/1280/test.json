@@ -13,6 +13,6 @@
         }
     },
     "purchase": [
-        {"price": 500, "url": "example.com"}
+        {"price": "$500", "url": "example.com"}
     ]
 }

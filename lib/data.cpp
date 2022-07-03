@@ -9,7 +9,7 @@ json PurchaseData::to_json() const {
 }
 
 void PurchaseData::Item::from_json(Item &self, const json &json) {
-    json.at("price").get_to<uint32_t>(self.cost);
+    json.at("price").get_to<USD>(self.cost);
     json.at("url").get_to<std::string>(self.url);
 }
 

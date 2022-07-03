@@ -32,12 +32,11 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
             }
         })
         .unwrap_or(OutputFmt::Text);
-    
     struct PriceRange {
-        std::uint32_t min;
-        std::uint32_t max;
+        USD min;
+        USD max;
 
-        constexpr inline void update(std::uint32_t n) noexcept {
+        constexpr inline void update(USD n) noexcept {
             this->min = std::min(this->min, n);
             this->max = std::max(this->max, n);
         }
@@ -48,8 +47,8 @@ int BomCommand::run(BoardGraph &graph, const ArgMatches &args) {
 
         inline std::string to_string() const {
             return this->min == this->max ?
-                fmt::format(std::locale("en_US.UTF-8"), "${:L}", this->min) :
-                fmt::format(std::locale("en_US.UTF-8"), "${:L} - ${:L}", this->min, this->max);
+                fmt::format("{}", this->min) :
+                fmt::format("{} - {}", this->min, this->max);
         }
     };
     struct PurchasedData {

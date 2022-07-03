@@ -108,8 +108,8 @@ Ref<void> LazyResourceStore::try_get_id(TypeId type_id, const char *type_name, c
         Ref<void> load = elem->second.loader->load_untyped(loaded->first, j, *this);
         elem->second.cache.insert_or_assign(std::string{id_str}, WeakRef<void>{load});
         return load;
-    } catch(std::exception& e) {
+    } catch(const std::exception& e) {
         logger::error("Failed to deserialize element of type '{}' with id '{}': {}", type_name, id_str.data(), e.what());
-        throw std::runtime_error{fmt::format("While loading '{}' with id '{}': {}", type_name, id_str.data(), e.what())};
+        throw std::runtime_error(fmt::format("While loading '{}' with id '{}': {}", type_name, id_str.data(), e.what()));
     }
 }
