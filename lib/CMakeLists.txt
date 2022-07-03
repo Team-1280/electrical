@@ -8,6 +8,7 @@ set(
     "wire.cpp"
     "ser/store.cpp"
     "data.cpp"
+    "currency.cpp"
 )
 
 set(
