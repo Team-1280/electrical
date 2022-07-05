@@ -34,7 +34,8 @@ public:
     explicit inline constexpr USD(double val) : m_dec{static_cast<storage>(std::round(val * DOLLARS_SCALE))} {}
     /** \brief Create a new dollar amount from dollars and cents */
     explicit inline constexpr USD(storage dollars, storage cents = 0) : m_dec{dollars * DOLLARS_SCALE + cents * CENTS_SCALE} {}
-    static inline constexpr USD raw(storage decimal) { USD usd{}; usd.m_dec = decimal; return usd; }
+    /** \brief Construct a new `USD` decimal value from the given raw number */
+    static inline constexpr USD raw(storage decimal) noexcept { USD usd{}; usd.m_dec = decimal; return usd; }
     /** \brief Create a new USD amount containing $0.00 */
     inline constexpr USD() : m_dec{} {};
 
@@ -60,14 +61,13 @@ public:
     inline constexpr USD operator+(USD const& other) const noexcept { return raw(this->m_dec + other.m_dec); }
     /** \brief Subtract the dollar amount from `this`, returning 0 if `other` is greater than `this` */
     inline constexpr USD operator-(USD const& other) const noexcept { return other > *this ? raw(0) : raw(this->m_dec - other.m_dec); }
-    inline constexpr USD operator*(USD const& other) const noexcept { return raw(this->m_dec * other.m_dec); }
     inline constexpr USD& operator+=(USD const& other) noexcept { *this = *this + other; return *this; }
     /** 
      * \brief Subtract the given dollar amount from this dollar amount, setting to 0 if `other` is greater than `this`
      */
     inline constexpr USD& operator-=(USD const& other) { *this = *this - other; return *this; }
-    inline constexpr USD& operator*=(USD const& other) noexcept { *this = *this * other; return *this; }
     
+    /** \brief Scale this quantity by any number */
     template<typename T>
     requires requires(storage s, T v) {
         {s * v} -> std::convertible_to<storage>;
@@ -84,8 +84,6 @@ public:
         this->m_dec *= scale;
         return *this;
     }
-
-
 
    template<typename T>
     requires requires(storage s, T v) {

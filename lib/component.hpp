@@ -44,6 +44,9 @@ private:
 };
 
 using ConnectionPortRef = const ConnectionPort *;
+/*struct ConnectionPortRef {
+
+};*/
 
 /**
  * \brief A component in the board design with required parameters like
