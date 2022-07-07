@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.4)
 
 project(
     "e1280"
@@ -29,6 +29,9 @@ elseif(NOT "${CMAKE_BUILD_TYPE}" IN_LIST BUILD_TYPES)
     message(FATAL_ERROR "Invalid build type ${CMAKE_BUILD_TYPE}, available build types are: ${BUILD_TYPES}")
 endif()
 
+if("${CMAKE_BUILD_TYPE}" STREQUAL Debug) 
+    set(BUILD_RELEASE)
+endif()
 
 configure_file("${CMAKE_SOURCE_DIR}/build/buildopts.h.in" "generated/buildopts.h")
 include_directories("${CMAKE_BINARY_DIR}/generated")
@@ -62,5 +65,5 @@ if(FRONTEND STREQUAL  "cli")
 elseif(FRONTEND STREQUAL "gui")
     add_subdirectory(gui)
 else()
-
+    message(FATAL "Invalid frontend option ${FRONTEND}")
 endif()

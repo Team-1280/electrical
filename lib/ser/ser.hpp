@@ -2,6 +2,7 @@
 #include "nlohmann/json.hpp"
 #include <exception>
 #include <concepts>
+#include <doctest.h>
 
 #include "util/hash.hpp"
 #include "util/log.hpp"
@@ -132,4 +133,20 @@ struct adl_serializer<T> {
     } 
 };
 
+}
+
+namespace doctest {
+    template<ser::JsonSerializable T>
+    struct StringMaker<T> {
+        static String convert(const T& value) {
+            return doctest::toString(value.to_json().dump());
+        }
+    };
+    template<typename T>
+    requires(ser::StringSerializable<T> && !ser::JsonSerializable<T>)
+    struct StringMaker<T> {
+        static String convert(const T& value) {
+            return doctest::toString(value.to_string());
+        }
+    };
 }

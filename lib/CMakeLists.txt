@@ -36,6 +36,12 @@ if(DOXYGEN_FOUND AND BUILD_CORE_DOCS)
 elseif(BUILD_CORE_DOCS)
     message("Install doxygen to build documentation")
 endif()
+
+if(BUILD_RELEASE)
+    message("Build type is release, disabling tests")
+    set(DOCTEST_CONFIG_DISABLE ON)
+endif()
+
 include(CTest)
 enable_testing()
 FetchContent_Declare(
@@ -43,17 +49,30 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/doctest/doctest.git
 )
 FetchContent_MakeAvailable(doctest)
-list(APPEND CMAKE_MODULE_PATH "${doctest_SOURCE_DIR}/scripts/cmake")
-include(doctest)
+#list(APPEND CMAKE_MODULE_PATH "${doctest_SOURCE_DIR}/scripts/cmake")
+#include(doctest)
 include("${CMAKE_CURRENT_SOURCE_DIR}/doctest_force_static_link_lib_in_target.cmake")
-include_directories("${doctest_SOURCE_DIR}/doctest")
+#include_directories("${doctest_SOURCE_DIR}/doctest")
 
 target_compile_options(${NAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
 )
-target_include_directories(${NAME} PUBLIC ./)
+target_include_directories(${NAME} PUBLIC ./ "${doctest_SOURCE_DIR}/doctest")
 target_link_libraries(${NAME} PUBLIC nlohmann_json::nlohmann_json fmt::fmt doctest)
 
-#doctest_discover_tests(${NAME})
 doctest_make_exe_for_static_lib(${TESTNAME} ${NAME})
+#doctest_discover_tests(${TESTNAME})
+
+if(NOT BUILD_RELEASE)
+    message("Build type is debug, tests will be run every build")
+    add_custom_command(
+        TARGET ${TESTNAME}
+        POST_BUILD
+        COMMAND CTEST_OUTPUT_ON_FAILURE=1 ctest
+        WORKING_DIRECTORY $<TARGET_FILE_DIR:${TESTNAME}>
+        VERBATIM
+        USES_TERMINAL
+        COMMENT "Running tests..."
+    )
+endif()
