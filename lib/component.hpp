@@ -23,7 +23,7 @@ public:
     /** Get this connection port's name */
     constexpr inline const std::string& name() const { return this->m_name; }
     /** Get this connection port's ID */
-    constexpr inline const std::string_view id() const { return this->m_id; }
+    constexpr inline const std::string& id() const { return this->m_id; }
     /** Get the offset from the component base of this connection port */
     constexpr inline const Point& pos() const { return this->m_pt; }
 
@@ -36,20 +36,14 @@ private:
     Point m_pt;
     /** Name of the port */
     std::string m_name;
-    /** Internal ID of this connection port, shared with the parent Component and guranteed to be NULL terminated */
-    std::string_view m_id;
+    /** Internal ID of this connection port */
+    std::string m_id;
     
     friend class ComponentLoader;
     friend class Component;
 };
 
-struct ConnectionPortRef {
-public:
-    ConnectionPortRef() 
-private:
-    Ref<Component> m_components;
-
-};
+using ConnectionPortIdx = FreeList<ConnectionPort>::size_type;
 
 /**
  * \brief A component in the board design with required parameters like
@@ -57,7 +51,6 @@ private:
  */ 
 class Component {
 public:
-    using port_map_type = std::unordered_map<std::string, ConnectionPort, StringHasher, std::equal_to<>>;
     Component(Component&& other) = default; 
     Component() = default;
     
@@ -73,9 +66,11 @@ public:
     constexpr inline Optional<std::reference_wrapper<PurchaseData const>> purchase_data() const { return this->m_purchasedata; }
 
     /** Get a port by name, O(1) lookup time */
-    std::optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
+    Optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
+    /** \brief Get the port at the given index into the `FreeList` containing all `ConnectionPort`s */
+    constexpr Optional<std::reference_wrapper<const ConnectionPort>> get_port(ConnectionPortIdx idx) const;
     /** Get a port pointer by name */
-    std::optional<ConnectionPortRef> get_port_ref(const std::string_view id);
+    Optional<ConnectionPortIdx> get_port_idx(const std::string_view id) const;
     
     /** \brief Get an iterator over thte ports of this component type */
     FreeList<ConnectionPort>::const_iterator begin() const { return this->m_ports.begin(); }
@@ -87,8 +82,6 @@ private:
     std::string_view m_id;
     /* 
      * Map of IDs to connection points for this component 
-     * Note: The WireEdge class contains pointers into this map, meaning that
-     * after construction elements MUST not be removed
      */
     FreeList<ConnectionPort> m_ports;
     /* Shape of the component in the workspace */ 

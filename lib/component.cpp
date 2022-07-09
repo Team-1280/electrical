@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <component.hpp>
 #include <exception>
 #include <fstream>
@@ -8,19 +9,31 @@
 #include "util/log.hpp"
 
 
-std::optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string_view id) const {
-    const auto& port = this->m_ports.find(id);
-    if(port != this->m_ports.end()) {
-        return std::cref(port->second);
+Optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const std::string_view id) const {
+    const auto& port = std::find_if(
+        this->m_ports.cbegin(),
+        this->m_ports.cend(),
+        [&id](auto const& port) { return port.name() == id; }
+    );
+    if(port != this->m_ports.cend()) {
+        return std::cref(*port);
     } else {
-        return std::optional<std::reference_wrapper<const ConnectionPort>>{};
+        return Optional<std::reference_wrapper<const ConnectionPort>>{};
     }
 }
 
-std::optional<ConnectionPortRef> Component::get_port_ref(const std::string_view id) {
-    const auto& port = this->m_ports.find(id);
+constexpr Optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(ConnectionPortIdx idx) const {
+    return this->m_ports.at(idx);
+}
+
+Optional<ConnectionPortIdx> Component::get_port_idx(const std::string_view id) {
+    const auto& port = std::find_if(
+        this->m_ports.cbegin(),
+        this->m_ports.cend(),
+        [&id](auto const& port) { return port.name() == id; }
+    );
     if(port != this->m_ports.end()) {
-        return &port->second;
+        return port.idx();
     } else {
         return {};
     }
@@ -42,11 +55,11 @@ Ref<Component> ComponentLoader::load(std::string_view id, const json &json_val, 
         json_val.at("purchase").get_to<Optional<PurchaseData>>(component->m_purchasedata);
     }
     for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
-        auto elem = component->m_ports.emplace(port_id, ConnectionPort{}).first;
+        auto elem = component->m_ports.emplace(ConnectionPort{});
             
-        port_json.at("name").get_to<std::string>(elem->second.m_name);
-        port_json.at("pos").get_to<Point>(elem->second.m_pt);
-        elem->second.m_id = std::string_view{elem->first};
+        port_json.at("name").get_to<std::string>(this->m_ports[elem].m_name);
+        port_json.at("pos").get_to<Point>(this->m_ports[elem].m_pt);
+        this->m_ports[elem].m_id = port_id;
     }
 
     return component;

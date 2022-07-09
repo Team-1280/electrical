@@ -40,7 +40,7 @@ public:
     struct Connection {
     public:
         /** Create a new connection point using a component and pointer to a connection port */
-        inline Connection(WeakRef<ComponentNode> component, ConnectionPort * port) :
+        inline Connection(WeakRef<ComponentNode> component, ConnectionPortIdx port) :
             m_component{component}, m_port{port} {}
     
         /**
@@ -89,11 +89,11 @@ public:
          */
         union {
             /** 
-             * \brief Pointer to a connection port on the component node's type 
+             * \brief Index of a connection port on the component node's type 
              *
              * Implementation note: This MUST not be invalid if m_component is not expired
              */
-            ConnectionPortRef m_port;
+            ConnectionPortIdx m_port;
             
             /** \brief Position of the connector in the workspace if this end is 'floating' */
             Point m_pos;
@@ -179,7 +179,7 @@ public:
      * \return A structure detailing all connected edges on the specific port, or 
      * an empty optional if there is no connection to the port
      */
-    Optional<std::reference_wrapper<EdgeConnection>> port(ConnectionPortRef port);
+    Optional<std::reference_wrapper<EdgeConnection>> port(ConnectionPortIdx port);
     
     /**
      * \brief Add a port if it does not exist by port reference
@@ -191,13 +191,18 @@ public:
      * an empty optional if this component's type does not have the given port or 
      * force is false and there is already a connection to the port
      */
-    Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> connnect_port(ConnectionPortRef port, Ref<WireEdge> edge, const WireEdge::Side side, bool force = true);
+    Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> connnect_port(
+        ConnectionPortIdx port,
+        Ref<WireEdge> edge,
+        const WireEdge::Side side,
+        bool force = true
+    );
     
     /**
      * \brief Remove a port's connections from this node
      * \param port The port to remove connections from
      */
-    inline void remove_port(ConnectionPortRef port) {
+    inline void remove_port(ConnectionPortIdx port) {
         this->m_edges.erase(port);
     }
     
@@ -218,7 +223,7 @@ private:
     AABB m_aabb;
     
     /** \brief All graph edges connecting this component node to others */
-    std::map<ConnectionPortRef, EdgeConnection> m_edges;
+    std::vector<EdgeConnection> m_edges;
 
     friend class BoardGraph;
     friend class ConnectedNodesIterator;

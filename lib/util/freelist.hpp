@@ -112,20 +112,20 @@ public:
         );
         this->free = pos;
     }
-    
+   
     /** \brief Iterator over all occupied slots in a `FreeList` */
     struct Iterator {
     public:
         using Iter = typename std::vector<ListElem>::iterator;
         using iterator_category = typename std::iterator_traits<Iter>::iterator_category;
         using difference_type = typename std::iterator_traits<Iter>::difference_type;
-        using value_type = typename std::iterator_traits<Iter>::value_type;
-        using pointer = typename std::iterator_traits<Iter>::pointer;
-        using reference = typename std::iterator_traits<Iter>::reference;
+        using value_type = T;
+        using pointer = T*; 
+        using reference = T&;
 
         constexpr Iterator(Iter const& iter, Iter const& end) : m_iter{iter}, m_end{end} {}
-        constexpr reference operator*() const { return this->m_iter.operator*(); }
-        constexpr pointer operator->() { return this->m_iter.operator->(); }
+        constexpr reference operator*() const { return std::get<T>(*this->m_iter); }
+        constexpr pointer operator->() const { return std::addressof(std::get<T>(*this->m_iter)); }
         constexpr Iterator& operator++() {
             Iter current = this->m_iter;
             while(current != this->m_end && std::visit(_detail::Visitor {
@@ -143,10 +143,74 @@ public:
             ++(*this);
             return tmp;
         }
+
+        constexpr inline bool operator==(Iterator const&) const = default;
+        constexpr inline bool operator!=(Iterator const&) const = default;
+    
+        /** \brief Get the index of this iterator in the `FreeList` */
+        constexpr inline size_type idx() const noexcept {
+            return this->m_iter;
+        }
     private:
         Iter m_iter;
         Iter m_end;
     };
+
+
+
+    /** \brief Constant iterator over all occupied slots in a `FreeList` */
+    struct ConstIterator {
+    public:
+        using Iter = typename std::vector<ListElem>::const_iterator;
+        using iterator_category = typename std::iterator_traits<Iter>::iterator_category;
+        using difference_type = typename std::iterator_traits<Iter>::difference_type;
+        using value_type = T;
+        using pointer = T const *;
+        using reference = T const&;
+
+        constexpr ConstIterator(Iter const& iter, Iter const& end) : m_iter{iter}, m_end{end} {}
+        constexpr reference operator*() const { return std::get<T>(*this->m_iter); }
+        constexpr pointer operator->() const { return std::addressof(std::get<T>(*this->m_iter)); }
+        constexpr Iterator& operator++() {
+            Iter current = this->m_iter;
+            while(current != this->m_end && std::visit(_detail::Visitor {
+                    [](T&) { return false; },
+                    [](auto) { return true; }
+                }, *current
+            )) {
+                    current++;
+            }
+            this->m_iter = current;
+            return *this;
+        }
+        constexpr ConstIterator& operator++(int) const {
+            ConstIterator tmp{this->m_iter, this->m_end};
+            ++(*this);
+            return tmp;
+        }
+    
+        /** \brief Get the index of this iterator in the `FreeList` */
+        constexpr inline size_type idx() const noexcept {
+            return this->m_iter;
+        }
+
+        constexpr inline bool operator==(ConstIterator const&) const = default;
+        constexpr inline bool operator!=(ConstIterator const&) const = default;
+    private:
+        Iter m_iter;
+        Iter m_end;
+    };
+
+    using iterator = Iterator;
+    using const_iterator = ConstIterator;
+
+    inline constexpr iterator begin() noexcept { return Iterator{this->m_vec.begin(), this->m_vec.end()}; }
+    inline constexpr iterator end() noexcept { return Iterator{this->m_vec.end(), this->m_vec.end()}; }
+    inline constexpr const_iterator begin() const noexcept { return ConstIterator{this->m_vec.cbegin(), this->m_vec.cend()}; }
+    inline constexpr const_iterator end() const noexcept { return ConstIterator{this->m_vec.cend(), this->m_vec.cend()}; }
+    inline constexpr const_iterator cbegin() const noexcept { return ConstIterator{this->m_vec.cbegin(), this->m_vec.cend()}; }
+    inline constexpr const_iterator cend() const noexcept { return ConstIterator{this->m_vec.cend(), this->m_vec.cend()}; }
+
 
     ~FreeList() = default;
 private:     
