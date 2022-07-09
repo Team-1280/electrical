@@ -8,6 +8,7 @@
 #include <variant>
 #include <vector>
 #include <concepts>
+#include <assert.h>
 
 namespace _detail {
 template<typename... Ts>
@@ -27,12 +28,18 @@ public:
     using size_type = std::uint32_t;
     /** \brief An index value reserved for indicating an invalid index */
     static constexpr const size_type npos = std::numeric_limits<size_type>::max();
-
+    
 private:
 
     /** \brief Extra struct for using an std::variant with a separate type to T */
     struct Next { size_type next; };
-
+        
+    /**
+     * \brief Elements in the `FreeList` may be either real elements or a single index pointing to the next 
+     * element that is free, forming a kind of second linked list that records data about what slots in the vector 
+     * are empty
+     */
+    using ListElem = std::variant<T, Next>;
 public:
     FreeList() = default;
     FreeList(const FreeList<T>& other) = default;
@@ -105,17 +112,44 @@ public:
         );
         this->free = pos;
     }
+    
+    /** \brief Iterator over all occupied slots in a `FreeList` */
+    struct Iterator {
+    public:
+        using Iter = typename std::vector<ListElem>::iterator;
+        using iterator_category = typename std::iterator_traits<Iter>::iterator_category;
+        using difference_type = typename std::iterator_traits<Iter>::difference_type;
+        using value_type = typename std::iterator_traits<Iter>::value_type;
+        using pointer = typename std::iterator_traits<Iter>::pointer;
+        using reference = typename std::iterator_traits<Iter>::reference;
+
+        constexpr Iterator(Iter const& iter, Iter const& end) : m_iter{iter}, m_end{end} {}
+        constexpr reference operator*() const { return this->m_iter.operator*(); }
+        constexpr pointer operator->() { return this->m_iter.operator->(); }
+        constexpr Iterator& operator++() {
+            Iter current = this->m_iter;
+            while(current != this->m_end && std::visit(_detail::Visitor {
+                    [](T&) { return false; },
+                    [](auto) { return true; }
+                }, *current
+            )) {
+                    current++;
+            }
+            this->m_iter = current;
+            return *this;
+        }
+        constexpr Iterator& operator++(int) const {
+            Iterator tmp{this->m_iter, this->m_end};
+            ++(*this);
+            return tmp;
+        }
+    private:
+        Iter m_iter;
+        Iter m_end;
+    };
 
     ~FreeList() = default;
-private:
-
-    /**
-     * \brief Elements in the `FreeList` may be either real elements or a single index pointing to the next 
-     * element that is free, forming a kind of second linked list that records data about what slots in the vector 
-     * are empty
-     */
-    using ListElem = std::variant<T, Next>;
-      
+private:     
     /** \brief Backing container of the list */
     std::vector<ListElem> m_vec;
     /** \brief Index of the first free element */

@@ -384,7 +384,7 @@ public:
         using value_type = typename std::iterator_traits<Iter>::value_type;
         using pointer = typename std::iterator_traits<Iter>::pointer;
         using reference = typename std::iterator_traits<Iter>::reference;
-        
+       
         inline constexpr Iterator() : m_internal{} {}
         constexpr Iterator(Iter i) : m_internal{i} {}
         constexpr Iterator(const Optional<Iter>& i) : m_internal{i} {}

@@ -43,10 +43,13 @@ private:
     friend class Component;
 };
 
-using ConnectionPortRef = const ConnectionPort *;
-/*struct ConnectionPortRef {
+struct ConnectionPortRef {
+public:
+    ConnectionPortRef() 
+private:
+    Ref<Component> m_components;
 
-};*/
+};
 
 /**
  * \brief A component in the board design with required parameters like
@@ -75,8 +78,8 @@ public:
     std::optional<ConnectionPortRef> get_port_ref(const std::string_view id);
     
     /** \brief Get an iterator over thte ports of this component type */
-    port_map_type::const_iterator begin() const { return this->m_ports.begin(); }
-    port_map_type::const_iterator end() const { return this->m_ports.end(); }
+    FreeList<ConnectionPort>::const_iterator begin() const { return this->m_ports.begin(); }
+    FreeList<ConnectionPort>::const_iterator end() const { return this->m_ports.end(); }
 private:
     /* User-facing name of the component type */
     std::string m_name;
@@ -87,7 +90,7 @@ private:
      * Note: The WireEdge class contains pointers into this map, meaning that
      * after construction elements MUST not be removed
      */
-    port_map_type m_ports;
+    FreeList<ConnectionPort> m_ports;
     /* Shape of the component in the workspace */ 
     Footprint m_fp;
     /** Mass of the component, if any is given */

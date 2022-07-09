@@ -4,6 +4,8 @@ set(
     "unit.cpp"
     "geom.cpp"
     "util/log.cpp"
+    "util/freelist.cpp"
+    "util/optional.cpp"
     "component.cpp"
     "wire.cpp"
     "ser/store.cpp"
@@ -49,8 +51,8 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/doctest/doctest.git
 )
 FetchContent_MakeAvailable(doctest)
-#list(APPEND CMAKE_MODULE_PATH "${doctest_SOURCE_DIR}/scripts/cmake")
-#include(doctest)
+list(APPEND CMAKE_MODULE_PATH "${doctest_SOURCE_DIR}/scripts/cmake")
+include(doctest)
 include("${CMAKE_CURRENT_SOURCE_DIR}/doctest_force_static_link_lib_in_target.cmake")
 #include_directories("${doctest_SOURCE_DIR}/doctest")
 
@@ -62,7 +64,7 @@ target_include_directories(${NAME} PUBLIC ./ "${doctest_SOURCE_DIR}/doctest")
 target_link_libraries(${NAME} PUBLIC nlohmann_json::nlohmann_json fmt::fmt doctest)
 
 doctest_make_exe_for_static_lib(${TESTNAME} ${NAME})
-#doctest_discover_tests(${TESTNAME})
+doctest_discover_tests(${TESTNAME})
 
 if(NOT BUILD_RELEASE)
     message("Build type is debug, tests will be run every build")

@@ -54,4 +54,3 @@ constexpr Length Point::distance(const Point &other) const {
         )
     );
 }
-

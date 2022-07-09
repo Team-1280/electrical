@@ -121,3 +121,10 @@ std::string MassUnit::to_string() const noexcept {
 Length operator ""_m(long double val) {
     return Length(LengthUnit::Meters, (float)val);
 }
+
+#include <doctest.h>
+
+TEST_CASE("Length Operations") {
+    Length a{LengthUnit::Feet, 12};
+    CHECK_EQ(a, Length{LengthUnit::Feet, 12});
+}
