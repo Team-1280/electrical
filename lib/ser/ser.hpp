@@ -135,6 +135,7 @@ struct adl_serializer<T> {
 
 }
 
+
 namespace doctest {
     template<ser::JsonSerializable T>
     struct StringMaker<T> {
@@ -150,3 +151,4 @@ namespace doctest {
         }
     };
 }
+

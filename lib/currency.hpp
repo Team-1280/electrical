@@ -5,8 +5,8 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
-
 #include <doctest.h>
+
 
 namespace _detail {
 
@@ -146,6 +146,7 @@ private:
     storage m_dec;
 };
 
+
 TEST_CASE("Currency handling correctness") {
     USD six1{5, 100};
     CHECK_EQ(six1, USD{6});
@@ -161,3 +162,4 @@ TEST_CASE("Currency handling correctness") {
         CHECK_THROWS(USD::from_string(from_str, "$40c"));
     }
 }
+

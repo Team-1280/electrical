@@ -12,7 +12,6 @@
 #include <unordered_set>
 #include <numeric>
 
-
 std::optional<std::reference_wrapper<const ConnectionPort>> WireEdge::Connection::port() const {
     if(!this->is_floating()) {
         return std::cref(*this->m_port);

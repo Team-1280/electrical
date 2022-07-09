@@ -1,3 +1,4 @@
+#define DOCTEST_CONFIG_IMPLEMENT
 #include <iostream>
 #include <lib.hpp>
 #include <util/log.hpp>

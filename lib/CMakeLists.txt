@@ -74,5 +74,5 @@ if(NOT BUILD_RELEASE)
         VERBATIM
         USES_TERMINAL
         COMMENT "Running tests..."
-    )
+     )
 endif()
