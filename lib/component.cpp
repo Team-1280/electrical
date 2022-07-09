@@ -22,18 +22,14 @@ Optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const
     }
 }
 
-constexpr Optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(ConnectionPortIdx idx) const {
-    return this->m_ports.at(idx);
-}
-
-Optional<ConnectionPortIdx> Component::get_port_idx(const std::string_view id) {
+Optional<ConnectionPortIdx> Component::get_port_idx(const std::string_view id) const {
     const auto& port = std::find_if(
         this->m_ports.cbegin(),
         this->m_ports.cend(),
         [&id](auto const& port) { return port.name() == id; }
     );
     if(port != this->m_ports.end()) {
-        return port.idx();
+        return port.index();
     } else {
         return {};
     }
@@ -57,9 +53,9 @@ Ref<Component> ComponentLoader::load(std::string_view id, const json &json_val, 
     for(const auto& [port_id, port_json] : json_val.at("ports").items()) {
         auto elem = component->m_ports.emplace(ConnectionPort{});
             
-        port_json.at("name").get_to<std::string>(this->m_ports[elem].m_name);
-        port_json.at("pos").get_to<Point>(this->m_ports[elem].m_pt);
-        this->m_ports[elem].m_id = port_id;
+        port_json.at("name").get_to<std::string>(component->m_ports[elem].m_name);
+        port_json.at("pos").get_to<Point>(component->m_ports[elem].m_pt);
+        component->m_ports[elem].m_id = port_id;
     }
 
     return component;

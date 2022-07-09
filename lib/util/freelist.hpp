@@ -123,17 +123,22 @@ public:
         using pointer = T*; 
         using reference = T&;
 
-        constexpr Iterator(Iter const& iter, Iter const& end) : m_iter{iter}, m_end{end} {}
+        inline constexpr difference_type operator-(Iterator const& other) const {
+            return this->m_iter - other.m_iter;
+        }
+
+        constexpr Iterator(Iter const& iter, Iter const& end, size_type idx = 0) : m_iter{iter}, m_end{end}, m_idx{idx} {}
         constexpr reference operator*() const { return std::get<T>(*this->m_iter); }
         constexpr pointer operator->() const { return std::addressof(std::get<T>(*this->m_iter)); }
         constexpr Iterator& operator++() {
             Iter current = this->m_iter;
             while(current != this->m_end && std::visit(_detail::Visitor {
-                    [](T&) { return false; },
-                    [](auto) { return true; }
+                    [](T const &) { return false; },
+                    [](auto const) { return true; }
                 }, *current
             )) {
                     current++;
+                    this->m_idx += 1;
             }
             this->m_iter = current;
             return *this;
@@ -146,14 +151,15 @@ public:
 
         constexpr inline bool operator==(Iterator const&) const = default;
         constexpr inline bool operator!=(Iterator const&) const = default;
-    
-        /** \brief Get the index of this iterator in the `FreeList` */
-        constexpr inline size_type idx() const noexcept {
-            return this->m_iter;
+        
+        /** \brief Get the index of this iterator */
+        inline constexpr size_type index() const noexcept {
+            return this->m_idx;
         }
-    private:
+   private:
         Iter m_iter;
         Iter m_end;
+        size_type m_idx;
     };
 
 
@@ -168,17 +174,22 @@ public:
         using pointer = T const *;
         using reference = T const&;
 
-        constexpr ConstIterator(Iter const& iter, Iter const& end) : m_iter{iter}, m_end{end} {}
+        inline constexpr difference_type operator-(ConstIterator const& other) const {
+            return this->m_iter - other.m_iter;
+        }
+
+        constexpr ConstIterator(Iter const& iter, Iter const& end, size_type idx = 0) : m_iter{iter}, m_end{end}, m_idx{idx} {}
         constexpr reference operator*() const { return std::get<T>(*this->m_iter); }
         constexpr pointer operator->() const { return std::addressof(std::get<T>(*this->m_iter)); }
-        constexpr Iterator& operator++() {
+        constexpr ConstIterator& operator++() {
             Iter current = this->m_iter;
             while(current != this->m_end && std::visit(_detail::Visitor {
-                    [](T&) { return false; },
-                    [](auto) { return true; }
+                    [](T const&) -> bool { return false; },
+                    [](auto const) -> bool { return true; }
                 }, *current
             )) {
                     current++;
+                    this->m_idx += 1;
             }
             this->m_iter = current;
             return *this;
@@ -189,16 +200,18 @@ public:
             return tmp;
         }
     
-        /** \brief Get the index of this iterator in the `FreeList` */
-        constexpr inline size_type idx() const noexcept {
-            return this->m_iter;
-        }
-
         constexpr inline bool operator==(ConstIterator const&) const = default;
         constexpr inline bool operator!=(ConstIterator const&) const = default;
+        
+        /** \brief Get the index of this iterator */
+        inline constexpr size_type index() const noexcept {
+            return this->m_idx;
+        }
+
     private:
         Iter m_iter;
         Iter m_end;
+        size_type m_idx;
     };
 
     using iterator = Iterator;

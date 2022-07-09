@@ -68,7 +68,9 @@ public:
     /** Get a port by name, O(1) lookup time */
     Optional<std::reference_wrapper<const ConnectionPort>> get_port(const std::string_view id) const;
     /** \brief Get the port at the given index into the `FreeList` containing all `ConnectionPort`s */
-    constexpr Optional<std::reference_wrapper<const ConnectionPort>> get_port(ConnectionPortIdx idx) const;
+    inline constexpr Optional<std::reference_wrapper<const ConnectionPort>> get_port(ConnectionPortIdx idx) const {
+        return this->m_ports.at(idx);
+    }
     /** Get a port pointer by name */
     Optional<ConnectionPortIdx> get_port_idx(const std::string_view id) const;
     

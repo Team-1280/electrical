@@ -44,7 +44,7 @@ public:
     requires(std::constructible_from<T, Args...>)
     constexpr inline void emplace(Args&&... args) { this->opt.emplace(std::forward<Args>(args)...); }
 
-    virtual ~OptionalInternal() = default;
+    ~OptionalInternal() = default;
 private:
     std::optional<T> opt;
 };
@@ -96,7 +96,7 @@ public:
         this->opt = T{std::forward<Args>(args)...};
     }
 
-    virtual ~OptionalInternal() = default;
+    ~OptionalInternal() = default;
 private:
     T opt;
 };
@@ -320,8 +320,8 @@ public:
     constexpr bool operator==(const Optional<U>& other) const requires requires(T const& v, U const& u) {
         {v == u} -> std::convertible_to<bool>;
     } {
-         if(this->has_value()) {
-            if(other->has_value()) {
+        if(this->has_value()) {
+            if(other.has_value()) {
                 return this->unwrap_unchecked() == other.unwrap_unchecked();
             } else {
                 return false;

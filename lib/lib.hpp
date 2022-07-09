@@ -46,10 +46,10 @@ public:
         /**
          * \brief Get the port that this connection is attached to on the component node
          *
-         * \return an empty std::optional if this connection end is not attached to any node in the graph
+         * \return an empty `Optional` if this connection end is not attached to any node in the graph
          * or a reference to the connection port on the attached component this is attached to
          */
-        std::optional<std::reference_wrapper<const ConnectionPort>> port() const;
+        Optional<std::reference_wrapper<const ConnectionPort>> port() const;
     
         /**
          * \brief Get the position of this connector, fetched either from the port that this is connected to
@@ -223,7 +223,7 @@ private:
     AABB m_aabb;
     
     /** \brief All graph edges connecting this component node to others */
-    std::vector<EdgeConnection> m_edges;
+    Map<ConnectionPortIdx, EdgeConnection> m_edges;
 
     friend class BoardGraph;
     friend class ConnectedNodesIterator;

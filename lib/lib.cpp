@@ -12,9 +12,9 @@
 #include <unordered_set>
 #include <numeric>
 
-std::optional<std::reference_wrapper<const ConnectionPort>> WireEdge::Connection::port() const {
+Optional<std::reference_wrapper<const ConnectionPort>> WireEdge::Connection::port() const {
     if(!this->is_floating()) {
-        return std::cref(*this->m_port);
+        return this->m_component.lock()->type()->get_port(this->m_port);
     } else {
         return {};
     }
@@ -22,7 +22,14 @@ std::optional<std::reference_wrapper<const ConnectionPort>> WireEdge::Connection
 
 Point const& WireEdge::Connection::pos() const {
     if(!this->is_floating()) {
-        return this->m_port->pos();
+        return this
+            ->m_component
+            .lock()
+            ->type()
+            ->get_port(this->m_port)
+            .unwrap_unchecked()
+            .get()
+            .pos();
     } else {
         return this->m_pos;
     }
@@ -30,14 +37,20 @@ Point const& WireEdge::Connection::pos() const {
 
 void WireEdge::Connection::detach() {
     if(!this->is_floating()) {
-        this->m_pos = this->m_component.lock()->pos() + this->m_port->pos();
+        auto component = this->m_component.lock();
+        this->m_pos = component->pos() + component
+            ->type()
+            ->get_port(this->m_port)
+            .unwrap_unchecked()
+            .get()
+            .pos();
         this->m_component.lock()->remove_port(this->m_port);
         this->m_component.reset();
     }
 }
 
-Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::connnect_port(ConnectionPortRef port, Ref<WireEdge> edge, const WireEdge::Side side, bool force) {
-    auto elem = this->m_ty->get_port(port->name());
+Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::connnect_port(ConnectionPortIdx port, Ref<WireEdge> edge, const WireEdge::Side side, bool force) {
+    auto elem = this->m_ty->get_port(port);
     if(!elem.has_value()) {
         return {};
     }
@@ -58,7 +71,7 @@ Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::c
     return std::ref(inserted->second);
 }
 
-Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::port(ConnectionPortRef port) {
+Optional<std::reference_wrapper<ComponentNode::EdgeConnection>> ComponentNode::port(ConnectionPortIdx port) {
     auto elem = this->m_edges.find(port);
     if(elem == this->m_edges.end()) {
         return {};
@@ -114,7 +127,10 @@ void BoardGraph::load_node(const std::string& id, const json& root_val) {
         node->m_ty = this->m_res.try_get<Component>(json_val.at("type").get<std::string_view>());
         node->m_pos = json_val.at("pos").get<Point>();
         for(const auto& conn_json : json_val.at("conns")) {
-            ConnectionPortRef port = *node->m_ty->get_port_idx(conn_json.at("port").get<std::string_view>());
+            ConnectionPortIdx port = node
+                ->m_ty
+                ->get_port_idx(conn_json.at("port").get<std::string_view>())
+                .unwrap();
             auto edge = this
                 ->get_edge(conn_json.at("edge").get<std::string_view>())
                 .unwrap_except(std::runtime_error{fmt::format("Node {} connects to nonexistent edge {}", id, conn_json.at("edge").get<std::string_view>())});
@@ -156,7 +172,13 @@ void BoardGraph::load_edge(const std::string& id, const json& root_val) {
             
             if(conn_json.contains("node") && conn_json.contains("port")) {
                 edge->m_conns[i].m_component = this->get_node(conn_json.at("node").get<std::string_view>()).unwrap();
-                edge->m_conns[i].m_port = *edge->m_conns[i].m_component.lock()->type()->get_port_idx(conn_json.at("port").get<std::string_view>());
+                edge->m_conns[i].m_port = edge
+                    ->m_conns[i]
+                    .m_component
+                    .lock()
+                    ->type()
+                    ->get_port_idx(conn_json.at("port").get<std::string_view>())
+                    .unwrap();
             } else if(conn_json.contains("pos")) {
                 conn_json.at("pos").get_to<Point>(edge->m_conns[i].m_pos);
             } else {
@@ -239,7 +261,7 @@ json BoardGraph::to_json() const {
         json::array_t conns{};
         for(const auto& [port, edge] : node->m_edges) {
             json::object_t conn_json{};
-            conn_json.emplace("port", port->id());
+            conn_json.emplace("port", node->type()->get_port(port).unwrap().get().id());
             conn_json.emplace("edge", edge.edge->id());
             conn_json.emplace("side", edge.side);
             conns.push_back(std::move(conn_json));
@@ -259,7 +281,7 @@ json BoardGraph::to_json() const {
                 conn_json.emplace("pos", conn.pos());
             } else {
                 conn_json.emplace("node", conn.component().lock()->id());
-                conn_json.emplace("port", (*conn.port()).get().id());
+                conn_json.emplace("port", conn.port().unwrap_unchecked().get().id());
             }
 
             edge_json.at("conns").push_back(std::move(conn_json));
