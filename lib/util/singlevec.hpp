@@ -40,6 +40,16 @@ public:
     inline constexpr void push_back(T const& elem) {
         this->m_elems.push_back(elem);
     }
+    
+    /** \brief Remove the last element of this `SingleVec`, preserving the first item */
+    inline constexpr void pop_back() {
+        if(this->m_elems.size() > 1) {
+            this->m_elems.pop_back();
+        }
+    }
+    
+    /** \brief Get the length of this vector, always returns >= 1 if this `SingleVec` is in a valid state */
+    inline constexpr size_type size() const noexcept { return this->m_elems.size(); }
 
     inline constexpr T& operator[](size_type idx) { return this->m_elems[idx]; }
     inline constexpr T const& operator[](size_type idx) const { return this->m_elems[idx]; }

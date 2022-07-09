@@ -10,13 +10,26 @@
 #include "ser/ser.hpp"
 #include "util/log.hpp"
 
+namespace _detail {
+    constexpr std::string_view trim(const std::string_view ostr) {
+        std::string_view str{ostr};
+        while(str.starts_with(' ')) {
+            str.remove_prefix(1);
+        }
+        while(str.ends_with(' ')) {
+            str.remove_suffix(1);
+        }
+        return str;
+    }
+}
+
 
 /**
  * \brief Concept specifying the requirements for a unit type used
  * with the Quantity type 
  */
 template<typename T>
-concept Unit = requires {
+concept Unit = requires(T v) {
     {T::DEFAULT} -> std::convertible_to<T>;
     requires std::convertible_to<T, size_t>;
     {T::NUM} -> std::convertible_to<size_t>;
@@ -218,7 +231,11 @@ public:
         return this->m_val <=> other.m_val;
     }
     /** \brief Check if two Quanties are the equal */
-    constexpr inline bool operator==(const Quantity<U, V>& other) const = default;
+    constexpr inline bool operator==(const Quantity<U, V>& other) const requires requires(V v) {
+        {v == v} -> std::convertible_to<bool>;
+    } {
+        return this->m_val == other.m_val;
+    }
 
     /**
      * \brief Deserialize a quantity from a string
@@ -227,6 +244,7 @@ public:
      */
     static void from_string(Quantity<U, V>& self, std::string_view str) 
     requires ser::StringSerializable<U> && std::convertible_to<double, V> {
+        str = _detail::trim(str);
         double v = 0.;
         auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.length(), v);
         if(ec != std::errc()) {
@@ -348,10 +366,10 @@ public:
     static void from_string(MassUnit& self, const std::string_view unit_str);
     static constexpr std::array<float, NUM> CONV_FACTORS = {
         1.,
-        0.001,
         1000.,
-        453.592,
-        28.3495
+        0.001,
+        1. / 453.592,
+        1. / 28.3495
     };
     
     /** \brief Convert this unit to a string */

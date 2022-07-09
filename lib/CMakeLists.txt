@@ -6,6 +6,7 @@ set(
     "util/log.cpp"
     "util/freelist.cpp"
     "util/optional.cpp"
+    "util/singlevec.cpp"
     "component.cpp"
     "wire.cpp"
     "ser/store.cpp"
@@ -61,7 +62,9 @@ target_compile_options(${OBJNAME} PRIVATE
 target_include_directories(${OBJNAME} PUBLIC ./ "${doctest_SOURCE_DIR}/doctest")
 target_link_libraries(${OBJNAME} PUBLIC nlohmann_json::nlohmann_json fmt::fmt doctest)
 
-add_executable(${TESTNAME} "test.cpp" $<TARGET_OBJECTS:${OBJNAME}>)
+write_file("${CMAKE_CURRENT_BINARY_DIR}/generated/test-runner.cpp" "#include <doctest.h>")
+add_executable(${TESTNAME} "${CMAKE_CURRENT_BINARY_DIR}/generated/test-runner.cpp")
+target_compile_definitions(${TESTNAME} PRIVATE DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN=1)
 target_link_libraries(${TESTNAME} PUBLIC ${OBJNAME})
 doctest_discover_tests(${TESTNAME})
 

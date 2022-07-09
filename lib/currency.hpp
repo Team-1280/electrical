@@ -103,4 +103,3 @@ private:
     /** \brief Number that is split at the `DECIMAL_POS` digit into whole dollars and cents */
     storage m_dec;
 };
-

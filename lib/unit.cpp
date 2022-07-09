@@ -1,20 +1,10 @@
 #include <stdexcept>
 #include <unit.hpp>
-
-static inline std::string_view trim(const std::string_view ostr) {
-    std::string_view str{ostr};
-    while(str.starts_with(' ')) {
-        str.remove_prefix(1);
-    }
-    while(str.ends_with(' ')) {
-        str.remove_suffix(1);
-    }
-    return str;
-}
+#include <doctest.h>
 
 void LengthUnit::from_string(LengthUnit& self, std::string_view unit_str) {
     self.m_u = DEFAULT;
-    unit_str = trim(unit_str);
+    unit_str = _detail::trim(unit_str);
     if(unit_str.empty()) return;
     std::uint64_t hash = fnv1a_lowercase(unit_str);
 
@@ -66,7 +56,7 @@ std::string LengthUnit::to_string() const noexcept {
 
 void MassUnit::from_string(MassUnit &self, std::string_view unit_str) {
     self.m_u = DEFAULT;
-    unit_str = trim(unit_str);
+    unit_str = _detail::trim(unit_str);
     if(unit_str.empty()) { return; }
     std::uint64_t hash = fnv1a_lowercase(unit_str);
     switch(hash) {
@@ -117,14 +107,30 @@ std::string MassUnit::to_string() const noexcept {
     }
 }
 
-
 Length operator ""_m(long double val) {
     return Length(LengthUnit::Meters, (float)val);
 }
 
-#include <doctest.h>
+TEST_CASE("Units") {
+    SUBCASE("Length") {
+        SUBCASE("StringSerializable") {
+            Length fromstr{};
+            Length::from_string(fromstr, "5.3in");
+            CHECK(fromstr == Length{LengthUnit::Inches, 5.3});
+            fromstr = Length{};
+            Length::from_string(fromstr, "13.213");
+            CHECK(fromstr == Length{LengthUnit::Meters, 13.213});
+        }
+    }
 
-TEST_CASE("Length Operations") {
-    Length a{LengthUnit::Feet, 12};
-    CHECK_EQ(a, Length{LengthUnit::Feet, 12});
+    SUBCASE("Mass") {
+        SUBCASE("StringSerializable") {
+            Mass fromstr{};
+            Mass::from_string(fromstr, " 12.41 lbs");
+            CHECK(fromstr == Mass{MassUnit::Pounds, 12.41});
+            fromstr = Mass{};
+            Mass::from_string(fromstr, " 51g");
+            CHECK(fromstr == Mass{MassUnit::Milligrams, 51000});
+        }
+    }
 }

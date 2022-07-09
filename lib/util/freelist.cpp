@@ -9,4 +9,5 @@ TEST_CASE("FreeList") {
     CHECK_MESSAGE(list.free_slots() == 1, "List should have 1 free slot after emplacing two items and erasing one");
     auto placed = list.emplace(12);
     CHECK_MESSAGE(placed == first, "List does not emplace items in empty slots");
+    CHECK(list.at(1) == 14);
 }

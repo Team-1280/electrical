@@ -46,11 +46,11 @@ void USD::from_string(USD &self, const std::string_view str) {
  
 }
 
-TEST_CASE("Currency handling correctness") {
+TEST_CASE("Currency") {
     USD six1{5, 100};
     CHECK_EQ(six1, USD{6});
     CHECK_EQ(six1 * 2, USD{12});
-    SUBCASE("USD StringSerializable") {
+    SUBCASE("StringSerializable") {
         USD from_str{};
         USD::from_string(from_str, "$5.99");
         CHECK_EQ(from_str, USD{5, 99});

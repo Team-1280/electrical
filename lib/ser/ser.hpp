@@ -1,5 +1,5 @@
 #pragma once
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 #include <exception>
 #include <concepts>
 #include <doctest.h>
@@ -151,4 +151,3 @@ namespace doctest {
         }
     };
 }
-
