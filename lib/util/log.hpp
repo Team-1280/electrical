@@ -50,8 +50,8 @@ template<> constexpr const char * const lvl_data<LogLevel::Trace>::LVL_STR = "[T
  * output stream after all other write calls finish
  */ 
 template<LogLevel lvl>
-inline void log(fmt::string_view fmt, fmt::format_args args) {
-    if (lvl != LogLevel::Trace || BuildOpts::should_log_trace()) {
+void log(fmt::string_view fmt, fmt::format_args args) {
+    if constexpr(lvl != LogLevel::Trace || BuildOpts::should_log_trace()) {
         std::lock_guard lock{_detail::log_lock};
         fmt::print(_detail::log_stream.get(), _detail::lvl_data<lvl>::LVL_STR);
         fmt::vprint(_detail::log_stream.get(), fmt, args);

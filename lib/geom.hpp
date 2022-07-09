@@ -204,13 +204,11 @@ public:
 
     SingleVec<Point>::const_iterator begin() const { return this->m_pts.begin(); }
     SingleVec<Point>::const_iterator end() const { return this->m_pts.end(); }
-
 private:
     /** \brief A vector of points that each connect to the prior one */
     SingleVec<Point> m_pts;
     /** \brief Axis-aligned bounding box for the footprint */
     AABB m_aabb;
-        
     /** \brief Get the minimum and maximum x and y values of m_pts */
     void get_minmax();
 };
