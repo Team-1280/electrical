@@ -18,10 +18,10 @@ set(
     "e1280"
 )
 set(TESTNAME "${NAME}_test")
-
+set(OBJNAME "${NAME}_obj")
 set(CMAKE_CXX_STANDARD 20)
 
-add_library(${NAME} STATIC ${SRC})
+add_library(${OBJNAME} OBJECT ${SRC})
 
 include(FetchContent)
 
@@ -53,18 +53,20 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(doctest)
 list(APPEND CMAKE_MODULE_PATH "${doctest_SOURCE_DIR}/scripts/cmake")
 include(doctest)
-include("${CMAKE_CURRENT_SOURCE_DIR}/doctest_force_static_link_lib_in_target.cmake")
-#include_directories("${doctest_SOURCE_DIR}/doctest")
 
-target_compile_options(${NAME} PRIVATE
+target_compile_options(${OBJNAME} PRIVATE
   $<$<CXX_COMPILER_ID:MSVC>:/W4 /WX>
   $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -Werror>
 )
-target_include_directories(${NAME} PUBLIC ./ "${doctest_SOURCE_DIR}/doctest")
-target_link_libraries(${NAME} PUBLIC nlohmann_json::nlohmann_json fmt::fmt doctest)
+target_include_directories(${OBJNAME} PUBLIC ./ "${doctest_SOURCE_DIR}/doctest")
+target_link_libraries(${OBJNAME} PUBLIC nlohmann_json::nlohmann_json fmt::fmt doctest)
 
-doctest_make_exe_for_static_lib(${TESTNAME} ${NAME})
+add_executable(${TESTNAME} "test.cpp" $<TARGET_OBJECTS:${OBJNAME}>)
+target_link_libraries(${TESTNAME} PUBLIC ${OBJNAME})
 doctest_discover_tests(${TESTNAME})
+
+add_library(${NAME} STATIC)
+target_link_libraries(${NAME} ${OBJNAME})
 
 if(NOT BUILD_RELEASE)
     message("Build type is debug, tests will be run every build")
