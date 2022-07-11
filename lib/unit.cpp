@@ -107,12 +107,9 @@ std::string MassUnit::to_string() const noexcept {
     }
 }
 
-Length operator ""_m(long double val) {
-    return Length(LengthUnit::Meters, (float)val);
-}
-
 TEST_CASE("Units") {
     SUBCASE("Length") {
+        static constexpr Length MAX_ERR = 0.001_m;
         SUBCASE("StringSerializable") {
             Length fromstr{};
             Length::from_string(fromstr, "5.3in");
@@ -120,6 +117,11 @@ TEST_CASE("Units") {
             fromstr = Length{};
             Length::from_string(fromstr, "13.213");
             CHECK(fromstr == Length{LengthUnit::Meters, 13.213});
+        }
+        SUBCASE("Conversions") {
+            Length conv{LengthUnit::Inches, 17};
+            CHECK(std::abs(conv - Length{0.4318}) < MAX_ERR);
+            CHECK(std::abs(conv - (Length{LengthUnit::Feet, 1} + Length{LengthUnit::Inches, 5})) < MAX_ERR);
         }
     }
 
@@ -131,6 +133,13 @@ TEST_CASE("Units") {
             fromstr = Mass{};
             Mass::from_string(fromstr, " 51g");
             CHECK(fromstr == Mass{MassUnit::Milligrams, 51000});
+        }
+        SUBCASE("Conversions") {
+            static constexpr Mass MAX_ERR = Mass{MassUnit::Grams, 0.001};
+            Mass conv{MassUnit::Ounces, 35.2};
+            CHECK(std::abs(conv - Mass{MassUnit::Kilograms, 0.9979032}) < MAX_ERR);
+            CHECK(std::abs(conv - Mass{MassUnit::Pounds, 2.2}) < MAX_ERR);
+
         }
     }
 }

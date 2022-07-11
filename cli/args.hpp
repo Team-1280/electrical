@@ -277,7 +277,7 @@ private:
                 .map([this, p](std::unique_ptr<ArgMatches>& subcmd) mutable { return subcmd->find_arg(std::forward<Predicate>(p)); })
                 .flatten();
         } else {
-            return std::make_pair(found_arg.unwrap(), ArgId { .idx = idx, .parent = this->m_args.m_id });
+            return std::make_pair(found_arg.unwrap_unchecked(), ArgId { .idx = idx, .parent = this->m_args.m_id });
         }
     }
 

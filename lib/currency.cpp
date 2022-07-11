@@ -2,7 +2,6 @@
 #include <doctest.h>
 
 std::string USD::to_string() const {
-    fmt::print("{:L}\n", this->m_dec);
     return fmt::format(
         std::locale("en_US.UTF-8"),
         "${:L}.{}",

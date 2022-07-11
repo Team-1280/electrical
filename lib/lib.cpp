@@ -130,7 +130,11 @@ void BoardGraph::load_node(const std::string& id, const json& root_val) {
             ConnectionPortIdx port = node
                 ->m_ty
                 ->get_port_idx(conn_json.at("port").get<std::string_view>())
-                .unwrap();
+                .unwrap_except(std::runtime_error{fmt::format(
+                    "Component {} has no port with id {}",
+                    node->m_ty->id(),
+                    conn_json.at("port").get<std::string_view>()
+                )});
             auto edge = this
                 ->get_edge(conn_json.at("edge").get<std::string_view>())
                 .unwrap_except(std::runtime_error{fmt::format("Node {} connects to nonexistent edge {}", id, conn_json.at("edge").get<std::string_view>())});
@@ -171,14 +175,24 @@ void BoardGraph::load_edge(const std::string& id, const json& root_val) {
             edge->m_conns[i].m_connector = this->m_res.try_get<Connector>(conn_json.at("connector").get<std::string_view>());
             
             if(conn_json.contains("node") && conn_json.contains("port")) {
-                edge->m_conns[i].m_component = this->get_node(conn_json.at("node").get<std::string_view>()).unwrap();
+                edge->m_conns[i].m_component = this
+                    ->get_node(conn_json.at("node").get<std::string_view>())
+                    .unwrap_except(std::runtime_error{fmt::format(
+                        "Edge {} connects to nonexistent node with {}",
+                        edge->m_id,
+                        conn_json.at("node").get<std::string_view>()
+                    )});
                 edge->m_conns[i].m_port = edge
                     ->m_conns[i]
                     .m_component
                     .lock()
                     ->type()
                     ->get_port_idx(conn_json.at("port").get<std::string_view>())
-                    .unwrap();
+                    .unwrap_except(std::runtime_error{fmt::format(
+                        "Component {} has no port with ID {}",
+                        edge->m_conns[i].m_component.lock()->type()->id(),
+                        conn_json.at("port").get<std::string_view>()
+                    )});
             } else if(conn_json.contains("pos")) {
                 conn_json.at("pos").get_to<Point>(edge->m_conns[i].m_pos);
             } else {
@@ -261,7 +275,15 @@ json BoardGraph::to_json() const {
         json::array_t conns{};
         for(const auto& [port, edge] : node->m_edges) {
             json::object_t conn_json{};
-            conn_json.emplace("port", node->type()->get_port(port).unwrap().get().id());
+            conn_json.emplace(
+                "port",
+                node
+                    ->type()
+                    ->get_port(port)
+                    .unwrap_except(std::runtime_error{fmt::format("Component {} has no port with id {}", node->type()->id(), port)})
+                    .get()
+                    .id()
+            );
             conn_json.emplace("edge", edge.edge->id());
             conn_json.emplace("side", edge.side);
             conns.push_back(std::move(conn_json));

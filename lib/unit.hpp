@@ -69,7 +69,7 @@ public:
     /**
      * \brief Create a new Quantity using the default unit
      */
-    explicit inline Quantity(const V& v) : m_unit{U::DEFAULT}, m_val{v} {}
+    explicit inline constexpr Quantity(const V& v) : m_unit{U::DEFAULT}, m_val{v} {}
     
     /** \brief Copy construct this quantity from another quantity */
     constexpr Quantity(const Quantity& other) requires requires {
@@ -87,7 +87,7 @@ public:
     constexpr Quantity& operator=(const Quantity& other) requires requires {
         std::is_copy_assignable_v<U>;
         std::is_copy_assignable_v<V>;
-    }{
+    } {
         this->m_val = other.m_val;
         this->m_unit = other.m_unit;
         return *this;
@@ -216,7 +216,8 @@ public:
         this->m_val /= scale;
         return *this;
     }
-
+    
+    /** \brief Negate this quantity */
     constexpr inline Quantity<U, V> operator-() const requires requires(V v) {
         {-v}->std::convertible_to<V>;
     }{
@@ -285,6 +286,13 @@ private:
         return q;
     }
 };
+
+namespace std {
+template<Unit U, QuantityVal V>
+constexpr Quantity<U, V> abs(Quantity<U, V> const& quantity) {
+    return (quantity.normalized() < 0) ? -quantity : quantity;
+}
+}
 
 /**
  * \brief An enumeration of all length units 
@@ -391,4 +399,6 @@ static_assert(ser::StringSerializable<Mass>);
 
 
 /** \brief Custom suffix operator for creating a new length in meters */
-Length operator ""_m(long double);
+constexpr Length operator ""_m(long double val) {
+    return Length{(float)val};
+}

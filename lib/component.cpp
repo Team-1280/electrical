@@ -13,7 +13,7 @@ Optional<std::reference_wrapper<const ConnectionPort>> Component::get_port(const
     const auto& port = std::find_if(
         this->m_ports.cbegin(),
         this->m_ports.cend(),
-        [&id](auto const& port) { return port.name() == id; }
+        [&id](auto const& port) -> bool { return port.id() == id; }
     );
     if(port != this->m_ports.cend()) {
         return std::cref(*port);
@@ -26,7 +26,7 @@ Optional<ConnectionPortIdx> Component::get_port_idx(const std::string_view id) c
     const auto& port = std::find_if(
         this->m_ports.cbegin(),
         this->m_ports.cend(),
-        [&id](auto const& port) { return port.name() == id; }
+        [&id](auto const& port) { return port.id() == id; }
     );
     if(port != this->m_ports.end()) {
         return port.index();
