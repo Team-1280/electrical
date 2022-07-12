@@ -141,7 +141,8 @@ public:
             this->template emplace<T const&>(other.unwrap_unchecked());
         }
     }
-    
+
+
     /** \brief Clear the value from this `Optional` */
     constexpr inline Optional<T>& operator=(std::nullopt_t) noexcept {
         this->reset();

@@ -216,4 +216,3 @@ private:
 static_assert(ser::JsonSerializable<Footprint>);
 
 class ComponentNode;
-

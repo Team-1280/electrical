@@ -70,9 +70,7 @@ static std::vector<std::size_t> find_dots(const std::string_view str) {
 Id::Id(std::string&& str) : m_string{std::move(str)} {
     this->m_dots = find_dots(this->m_string);
 }
-Id::Id(const std::string& str) : m_string{str} {
-    this->m_dots = find_dots(this->m_string);
-}
+
 Id::Id(const std::string_view str) : m_string{str} {
     this->m_dots = find_dots(this->m_string);
 }

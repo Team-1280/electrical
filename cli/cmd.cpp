@@ -5,6 +5,10 @@
 #include <stdexcept>
 #include <util/hash.hpp>
 
+void Command::run(StackVec<std::string_view> const& args) {
+    this->m_run(args); 
+}
+
 BomCommand::BomCommand(Args& args) {
     auto cmd = std::move(Args{"bom", "Generate a Bill of Materials"}
         .with_long_desc("Generate a Bill of Materials by searching all placed components and connectors on the board")

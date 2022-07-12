@@ -10,7 +10,6 @@
 #include "geom.hpp"
 #include "util/freelist.hpp"
 
-
 int main(int argc, const char* argv[]) {
     logger::init("./log.txt");
 
@@ -41,8 +40,6 @@ int main(int argc, const char* argv[]) {
         .short_help{"Specify a path to an input file containing electrical board JSON data"}
     });
     
-    BomCommand bom{args};
-
     try {
         auto matches = args.matches(argc, argv);
         auto help_match = matches.get(help_flag);
@@ -61,9 +58,24 @@ int main(int argc, const char* argv[]) {
             .unwrap_except(std::runtime_error{"No input file given"});
 
         BoardGraph graph{input_file, false, false};
-        if(matches.get_subcommand(bom.id).has_value()) {
-            return bom.run(graph, matches.get_subcommand(bom.id).unwrap_unchecked());
-        }
+        std::vector<Command> commands = {
+            Command{
+                'b',
+                Args{},
+                [&](StackVec<std::string_view> const&) {
+
+                }
+            }.with_subcmds({
+                Command{
+                    'b',
+                    "bill: generate a bill of materials for the board",
+                    [&](StackVec<std::string_view> const&) {
+
+                    }
+                }
+            })
+        };
+
     } catch(const std::exception& e) {
         fmt::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), "Error: ");
         fmt::print("{}\n", e.what());

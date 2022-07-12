@@ -39,7 +39,7 @@ void LengthUnit::from_string(LengthUnit& self, std::string_view unit_str) {
             self.m_u = LengthUnit::Feet;
         } return;
 
-        default: throw std::runtime_error{fmt::format("Invalid length unit {}", std::string{unit_str})};
+        default: throw std::runtime_error{fmt::format("Invalid length unit {}", unit_str)};
     }    
 }
 

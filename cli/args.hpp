@@ -12,16 +12,6 @@ struct ArgId {
     std::size_t parent;
 };
 
-/** Identifier for a single `Args` subcommand in an `Args` object */
-struct ArgsId {
-    /** Index of this subcommand in the parent `Args` structure */
-    std::size_t idx;
-    /** ID of the parent `Args` structure */
-    std::size_t parent;
-    /** ID of this `Args` structure */
-    std::size_t id;
-};
-
 class Args;
 
 /**
@@ -78,13 +68,6 @@ public:
      * \return The ID of the argument, used to identify it in an `ArgMatches` structure
      */
     ArgId arg(Arg&& arg);
-
-    /**
-     * \brief Register a subcommand for this `Args` structure
-     * \param command The subcommand structure that takes all sub arguments
-     * \return ID of the added subcommand
-     */
-    ArgsId command(Args&& command); 
         
     /**
      * \brief Parse program arguments to an `ArgMatches` structure
@@ -135,9 +118,9 @@ public:
      * \param version A string containing the version number to display
      * \return A reference to `this` for calling additional builder methods
      */
-    inline constexpr Args& with_version(std::string&& version) {
+    inline constexpr Args&& with_version(std::string&& version) && {
         this->m_version = version;
-        return *this;
+        return std::move(*this);
     }
     
     /**
@@ -145,9 +128,9 @@ public:
      * \param desc The long description used when a verbose help message is printed
      * \return A reference to `this` for calling additional builder methods
      */
-    inline constexpr Args& with_long_desc(std::string&& desc) {
+    inline constexpr Args&& with_long_desc(std::string&& desc) && {
         this->m_long_desc = desc;
-        return *this;
+        return std::move(*this);
     }
     
     /** \brief Get the version string of this program */
@@ -164,8 +147,6 @@ private:
     Optional<std::string> m_version;
     /** \brief List of all registered command-line options */
     std::vector<Arg> m_args;
-    /** \brief Sub programs of this arguments structure */
-    std::vector<Args> m_commands;
     /** \brief Unique identifier for this Args structure, used to make processing argument matches less ambiguous */
     std::size_t m_id;
     /** \brief ID counter for generating unique argument IDs */
@@ -203,30 +184,6 @@ public:
     Optional<std::string_view const> get_arg(const ArgId arg) const; 
     
     /**
-     * \brief Get subcommand argument matches, if the given subcommand was passed
-     * \param command ID of the subcommand
-     * \return An empty Optional if the given subcommand was not passed, or argument matches for the given subcommand
-     */
-    Optional<std::reference_wrapper<ArgMatches const>> get_subcommand(const ArgsId command) const;
-    
-    /** \brief Get the subcommand `ArgMatches` that was passed, if any */
-    inline constexpr Optional<std::reference_wrapper<ArgMatches const>> get_subcommand() const {
-        return this->m_subcommand.map([](auto const& ptr) { return std::cref(*ptr); });
-    }
-
-    /**
-     * \brief Get the last subcommand passed to this program, so for a call with arguments:
-     * ./program foo bar bat
-     * `get_deepest_subcommand` will return the subcommand matches for `bat`
-     */
-    inline constexpr ArgMatches const& get_deepest_subcommand() const {
-        return this->m_subcommand
-            .map([](auto const& subcmd) -> std::reference_wrapper<ArgMatches const> { return std::cref(subcmd->get_deepest_subcommand()); })
-            .unwrap_or(std::cref(*this))
-            .get();
-    }
-
-    /**
      * \brief Check if the given argument ID is present in this ArgMatches structure or any subcommands
      * \param arg The argument ID to check
      * \return true if the argument at the given ID was passed to the program 
@@ -238,8 +195,6 @@ public:
 private:
     /** Map of argument indices to their parsed options */
     Map<std::size_t, ArgMatch> m_matches{};
-    /** Passed subcommand matches, if any */
-    Optional<std::unique_ptr<ArgMatches>> m_subcommand{}; 
     /** Reference to the arguments structure this represents */
     Args const& m_args;
 
@@ -271,14 +226,11 @@ private:
             }
             i += 1;
         }
-
-        if(!found_arg.has_value()) {
-            return this->m_subcommand
-                .map([this, p](std::unique_ptr<ArgMatches>& subcmd) mutable { return subcmd->find_arg(std::forward<Predicate>(p)); })
-                .flatten();
-        } else {
-            return std::make_pair(found_arg.unwrap_unchecked(), ArgId { .idx = idx, .parent = this->m_args.m_id });
-        }
+        
+        return found_arg
+            .map([idx,this](auto found) {
+                return std::make_pair(found, ArgId {.idx = idx, .parent = this->m_args.m_id });
+            });
     }
 
     friend class Args;

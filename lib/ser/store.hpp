@@ -99,8 +99,6 @@ public:
     inline Id() : m_string{}, m_dots{} {}
     /** Move an owned string into this ID */
     Id(std::string&& str);
-    /** Copy a string to this ID */
-    Id(const std::string& str);
     /** Copy a string_view to this ID */
     Id(const std::string_view str);
     

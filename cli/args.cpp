@@ -23,14 +23,6 @@ ArgId Args::arg(Arg &&arg) {
     };
 }
 
-ArgsId Args::command(Args &&command) {
-    this->m_commands.push_back(std::move(command));
-    return ArgsId {
-        .idx = this->m_commands.size() - 1,
-        .parent = this->m_id,
-        .id = command.m_id
-    };
-}
 
 ArgMatches::ArgMatches(Args const& args) : m_args{args} {}
 
@@ -49,21 +41,9 @@ Optional<std::string_view const> ArgMatches::get_arg(const ArgId arg) const {
         .unwrap_or(Optional<std::string_view const>{});
 }
 
-Optional<std::reference_wrapper<ArgMatches const>> ArgMatches::get_subcommand(const ArgsId command) const {
-    if(!this->m_subcommand.has_value() || this->m_subcommand.unwrap_unchecked()->m_args.m_id != command.id) {
-        return {};
-    } else {
-        return std::cref(*this->m_subcommand.unwrap_unchecked()); 
-    }
-}
-
 bool ArgMatches::add_opt(ArgId id, ArgMatch&& match) {
     if(id.parent != this->m_args.m_id) {
-        if(this->m_subcommand.has_value()) {
-            return this->m_subcommand.unwrap_unchecked()->add_opt(id, std::move(match));
-        } else {
-            return false;
-        }
+        return false;
     } else {
         this->m_matches.insert_or_assign(id.idx, std::move(match));
         return true;
@@ -193,9 +173,6 @@ void Args::print_usage(std::ostream& ostream) const {
 }
 
 ArgMatches Args::matches(int argc, const char *argv[]) {
-    ArgMatches root{*this};
-    ArgMatches *tail{&root};
-
     //Populate all subcommands from root so we know what arguments should be parsed
     for(int i = 1; i < argc; ++i) {
         std::string_view arg{argv[i]};
@@ -229,7 +206,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                     opt.emplace(opt_found);
                 }
 
-                root.add_opt(
+                this->add_opt(
                     opt.unwrap_unchecked().second,
                     ArgMatch{ .arg = optarg, .long_name = true }
                 );
@@ -261,19 +238,7 @@ ArgMatches Args::matches(int argc, const char *argv[]) {
                 }
             }
         } else {
-            bool has_subcommand = false;
-            for(const auto& subcommand : tail->m_args.m_commands) {
-                if(subcommand.m_name == arg) {
-                    tail->m_subcommand = std::unique_ptr<ArgMatches>{new ArgMatches{subcommand}};
-                    tail = tail->m_subcommand.unwrap_unchecked().get();
-                    has_subcommand = true;
-                    break;
-                }
-            }
-
-            if(!has_subcommand) {
-                throw std::runtime_error{fmt::format("Unknown subcommand {}", std::string{arg})};
-            }
+            throw std::runtime_error{fmt::format("Unknown subcommand {}", std::string{arg})};
         }
     }
 
