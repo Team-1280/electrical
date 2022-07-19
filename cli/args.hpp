@@ -31,6 +31,12 @@ public:
     std::string short_help{};
     /** \brief More verbose help message shown when the user passes the --help option */
     Optional<std::string> long_help{};
+    /** 
+     * \brief Index of the argument in the arguments list if passed
+     * implicitly i.e. in: ./foo "argument",
+     * "argument" would have index 0
+     */
+    Optional<std::uint8_t> idx{};
 };
 
 /** 
