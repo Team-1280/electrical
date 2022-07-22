@@ -1,15 +1,14 @@
-#include <giomm/resource.h>
-#include <gtkmm/application.h>
-
 #include "unit.hpp"
 #include "util/log.hpp"
-#include "window.hpp"
 #include <lib.hpp>
 
+#include "FL/Fl.H"
+#include <FL/Fl_Window.H>
 
 int main(int argc, char * argv[]) {
     logger::init("./log.txt");
-    auto application = Gtk::Application::create();//"com.1280.electrical");
-    
-    return application->make_window_and_run<MainWindow>(argc, argv);
+    Fl_Window win{1280, 720};
+    win.end();
+    win.show(argc, argv);
+    return Fl::run();
 }

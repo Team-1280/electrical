@@ -70,7 +70,7 @@ public:
      */
     template<typename U = T>
     requires requires(U&& val) {
-        std::constructible_from<T, U>;
+        requires std::constructible_from<T, U>;
     } inline constexpr Invariant(U&& val) : m_val{std::forward<U>(val)} {}
     
     /** \brief Check if this value is an invariant */
@@ -79,7 +79,7 @@ public:
     }
 
     constexpr void make_none() noexcept {
-        this->m_val = INVARIANT:
+        this->m_val = INVARIANT;
     }
 private:
     T m_val;
