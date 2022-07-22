@@ -1,3 +1,4 @@
+#define DOCTEST_CONFIG_IMPLEMENT
 #include "unit.hpp"
 #include "util/log.hpp"
 #include <lib.hpp>

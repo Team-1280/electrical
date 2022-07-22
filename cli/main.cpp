@@ -1,3 +1,4 @@
+
 #define DOCTEST_CONFIG_IMPLEMENT
 #include <iostream>
 #include <lib.hpp>
@@ -13,8 +14,7 @@
 int main(int argc, const char* argv[]) {
     logger::init("./log.txt");
 
-    Args args{"e1280", "Electrical board creator"};
-    args
+    auto args = Args{"e1280", "Electrical board creator"}
         .with_long_desc("Program to read and manipulate an electrical board represented as an undirected graph")
         .with_version(std::string{BuildOpts::version_str});
 
@@ -44,9 +44,9 @@ int main(int argc, const char* argv[]) {
         auto matches = args.matches(argc, argv);
         auto help_match = matches.get(help_flag);
         if(help_match.has_value()) {
-            matches.get_deepest_subcommand().args().print_usage();
+            matches.args().print_usage();
             fmt::print("\n\n");
-            matches.get_deepest_subcommand().args().print_help(std::cout, help_match.unwrap().get().long_name);
+            matches.args().print_help(std::cout, help_match.unwrap().get().long_name);
             return 0;
         } else if(matches.has(version_flag) && args.version().has_value()) {
             fmt::print("e1280 version {}\n", args.version().unwrap().get());
@@ -58,24 +58,6 @@ int main(int argc, const char* argv[]) {
             .unwrap_except(std::runtime_error{"No input file given"});
 
         BoardGraph graph{input_file, false, false};
-        std::vector<Command> commands = {
-            Command{
-                'b',
-                Args{},
-                [&](StackVec<std::string_view> const&) {
-
-                }
-            }.with_subcmds({
-                Command{
-                    'b',
-                    "bill: generate a bill of materials for the board",
-                    [&](StackVec<std::string_view> const&) {
-
-                    }
-                }
-            })
-        };
-
     } catch(const std::exception& e) {
         fmt::print(fmt::emphasis::bold | fmt::fg(fmt::color::red), "Error: ");
         fmt::print("{}\n", e.what());

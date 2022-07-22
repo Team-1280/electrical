@@ -20,7 +20,7 @@ public:
 
     Command() = delete;
     /** \brief Create a new `Command` with the given name */
-    Command(char prefix, Args&& args, Runner&& runner) : m_prefix{prefix}, m_args{std::move(args)}, m_run{std::move(runner)} {}
+    Command(char prefix, Args&& args) : m_prefix{prefix}, m_args{std::move(args)} {}
     
     /** \brief Set the list of subcommands for this `Command` */
     Command&& with_subcmds(std::vector<Command>&& subcmds) && {
